@@ -1,0 +1,14 @@
+{
+  "name": "snr-rentals-bridge-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bridge API: Google Form submissions → MongoDB (Vercel serverless)",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.106.2",
+    "dotenv": "^17.4.2",
+    "mongodb": "^6.12.0"
+  }
+}

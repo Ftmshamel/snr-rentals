@@ -1,0 +1,43 @@
+{
+  "run_id": "2026-09-13T18:12:21.964Z",
+  "script": "restore-unmirrored-bookings.js",
+  "count": 3,
+  "applied": [
+    {
+      "response_id": "manual_1788239684883_iy07sp",
+      "supabase_id": "203ae158-e2ec-4a7f-897d-ed6c6f841af3",
+      "name": "Ribo GJ",
+      "camera": "INSTA360 ACE PRO 2",
+      "pick_up_date": "2026-09-01",
+      "return_date": "2026-09-10",
+      "status": "pending",
+      "rental_fee": 4770,
+      "addons": [
+        "512gb",
+        "Dive case"
+      ]
+    },
+    {
+      "response_id": "manual_1788521198633_dm63wf",
+      "supabase_id": "f89e8381-ac76-4c04-9c78-3860dbc65171",
+      "name": "Mary Joy Salonn",
+      "camera": "FUJIFILM X-T100",
+      "pick_up_date": "2026-09-05",
+      "return_date": "2026-09-07",
+      "status": "approved",
+      "rental_fee": 1100,
+      "addons": []
+    },
+    {
+      "response_id": "PUBLIC-1789308900183-2W2B6V",
+      "supabase_id": "76ec1d40-881f-466a-a377-1aa314a859ea",
+      "name": "Mitch Buhat",
+      "camera": "CANON EOS R50",
+      "pick_up_date": "2026-09-14",
+      "return_date": "2026-09-15",
+      "status": "pending",
+      "rental_fee": 600,
+      "addons": []
+    }
+  ]
+}
