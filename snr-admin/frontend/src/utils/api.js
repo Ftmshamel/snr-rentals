@@ -1,5 +1,6 @@
-const DEFAULT_PROD_API_BASE = "https://s-r-rentals-app.vercel.app";
-
+// No default production API on purpose. The old default was the live
+// MongoDB/Supabase deployment (real bookings); a build of this Firebase
+// version must never fall back to it. Set VITE_API_BASE_URL.
 function apiBase() {
   const raw = import.meta.env.VITE_API_BASE_URL;
   const base = typeof raw === "string" ? raw.replace(/\/$/, "") : "";
@@ -9,7 +10,10 @@ function apiBase() {
     return "";
   }
 
-  return base || DEFAULT_PROD_API_BASE;
+  if (!base) {
+    throw new Error("VITE_API_BASE_URL is not set — cannot reach the API.");
+  }
+  return base;
 }
 
 export function apiUrl(path) {

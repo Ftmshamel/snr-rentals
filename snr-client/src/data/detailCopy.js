@@ -37,7 +37,18 @@ const CAMERA_DETAIL_COPY = {
   },
 };
 
-export function getCameraDetailCopy(cameraName) {
+// Accepts a catalogue camera (whose goodFor / perfectFor, set on the admin
+// Catalog page, take priority) or just a name.
+export function getCameraDetailCopy(cameraOrName) {
+  const camera = cameraOrName && typeof cameraOrName === "object" ? cameraOrName : null;
+  const base = bundledDetailCopy(camera ? camera.name : cameraOrName);
+  return {
+    goodFor: camera?.goodFor || base.goodFor,
+    perfectFor: camera?.perfectFor || base.perfectFor,
+  };
+}
+
+function bundledDetailCopy(cameraName) {
   const normalized = String(cameraName || "").trim().toLowerCase();
   return (
     CAMERA_DETAIL_COPY[cameraName] ||

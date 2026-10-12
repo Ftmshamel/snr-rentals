@@ -1,5 +1,5 @@
 const { setCorsJson } = require("../../lib/cors");
-const { AUTH_TOKEN, AUTH_USERS } = require("../../lib/authConfig");
+const { AUTH_TOKEN, OWNER_TOKEN, AUTH_USERS } = require("../../lib/authConfig");
 
 module.exports = async (req, res) => {
   setCorsJson(req, res);
@@ -28,7 +28,11 @@ module.exports = async (req, res) => {
   if (match) {
     return res
       .status(200)
-      .json({ ok: true, token: AUTH_TOKEN, role: match.role });
+      .json({
+        ok: true,
+        token: match.role === "owner" ? OWNER_TOKEN : AUTH_TOKEN,
+        role: match.role,
+      });
   }
 
   return res.status(401).json({ ok: false, error: "Invalid credentials" });

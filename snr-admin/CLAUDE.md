@@ -23,6 +23,24 @@ days after it was deleted.)
 
 Verify doc claims against the code rather than asserting them.
 
+## Firebase is the database now (Oct 2026)
+
+`DATASOURCE=firebase` (the default) runs everything on **Firestore** — bookings,
+uploaded documents, expenses, date notes and the **camera catalogue**. It
+started empty; nothing was migrated.
+
+**MongoDB and Supabase hold the real pre-Firebase data. Do not connect to,
+write to, or "clean up" either of them.** Firebase mode never loads their
+clients (`lib/dataSource.js` and the routes require them lazily, only in
+legacy mode), and the frontends have no default API URL so a build can't fall
+back to the old live deployment. Everything below about the Mongo/Supabase
+split describes the legacy mode and the historical data.
+
+- Firestore layout + queries: `backend/lib/firestoreQueries.js`
+- Catalogue rules (validation, price/unit history, fees): `backend/lib/catalog.js`
+- Catalogue API: `backend/api/catalog.js`; admin editor: `/catalog` (owner only)
+- First-run defaults: `backend/lib/defaultCatalog.js` ("Load default cameras")
+
 ## Read before writing data
 
 **`docs/ENGINEERING-NOTES.md`** — traps, past incidents, and why things are the
@@ -34,11 +52,13 @@ way they are. The three things most likely to cause real damage:
    *only* copy of an un-mirrored booking — **never bulk-delete Mongo rows that
    are missing from Supabase without checking their creation dates.**
 
-2. **`cameras.js` carries `priceHistory` and `unitHistory` on purpose.** Prices
+2. **Every camera carries `priceHistory` and `unitHistory` on purpose.** Prices
    and stock change over time, and this data describes the past as well as the
    present. Flattening either silently restates historical revenue or invents
-   overbookings. To record a change, move the old value into the history array
-   with its effective date — don't overwrite.
+   overbookings. The catalogue now lives in Firestore and the server records
+   history itself (`applyCameraUpdate` in `lib/catalog.js`): an edit on the
+   Catalog page asks for the date it takes effect. Never write `pricing` or
+   `units` to Firestore directly without going through that.
 
 3. **Analytics never computes fees** — it sums the stored `RENTAL_FEE`. So a
    null fee counts as ₱0 silently and a wrong fee shows forever. Revenue bugs
@@ -58,8 +78,8 @@ writes a backup to `database-backups/`. Keep that pattern for new ones.
 
 ## Constraints
 
-- **Vercel Hobby: 12 serverless functions max.** Currently 11 (`backend/api/**/*.js`).
-  A 13th breaks the build — multiplex on an existing route instead
+- **Vercel Hobby: 12 serverless functions max.** Currently **12** (`backend/api/**/*.js`,
+  `api/catalog.js` was the last slot). A 13th breaks the build — multiplex on an existing route instead
   (see `api/bookings/by.js`, which handles `type=camera|addon|unmirrored`).
 - `GET /api/bookings` deliberately omits base64 document columns (it was 12.5 MB).
   Rows carry `_partial: true`; fetch one booking by id when documents are needed.
@@ -70,10 +90,12 @@ writes a backup to `database-backups/`. Keep that pattern for new ones.
 
 - Admin is **light-only**. `ui-*` classes in `frontend/src/index.css` are the
   design system (`ui-panel`, `ui-btn`, `ui-input`, `ui-chip`, …). No `dark:` variants.
-- Camera/add-on data lives in `frontend/src/data/`, mirrored into
-  `backend/lib/transformBooking.js`, `backend/scripts/fill-rental-fees.js`, and
-  `backend/api/public-availability.js`. Update them together — see
-  `ENGINEERING-NOTES.md` §2 for the full list.
+- Camera data (names, units, rates, add-ons, inclusions) is the Firestore
+  `cameras` collection, read via `GET /api/catalog` by the admin
+  (`hooks/useCameras.js`) and the public site (`src/data/catalog.js`). The
+  static lists still in `transformBooking.js`, `fill-rental-fees.js` and
+  `public-availability.js` are legacy-mode only. Add-on **stock** counts are
+  still `frontend/src/data/addons.js`.
 - Verify against live data by replaying real rows through the real code paths.
   Most bugs here were found that way, not by reading code.
 

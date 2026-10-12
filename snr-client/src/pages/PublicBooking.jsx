@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CAMERAS } from "../data/cameras.js";
+import { findCamera, useCatalog } from "../data/catalog.js";
 import { getCameraAssets } from "../data/assets.js";
 import { getContractForCamera } from "../data/contracts.js";
 import { getCameraDetailCopy } from "../data/detailCopy.js";
@@ -182,17 +182,10 @@ const STEPS = [
 ];
 
 function initialCameraName() {
-  // Landing-page cards link here as /book?camera=<name>; match loosely so
-  // display-name casing differences don't break the preselect.
-  const requested = new URLSearchParams(window.location.search).get("camera");
-  if (requested) {
-    const match = CAMERAS.find(
-      (camera) =>
-        camera.name.trim().toLowerCase() === requested.trim().toLowerCase(),
-    );
-    if (match) return match.name;
-  }
-  return "";
+  // Landing-page cards link here as /book?camera=<name>. The catalogue loads
+  // asynchronously, so this is only the requested name — PublicBooking
+  // resolves it against the catalogue (loosely, ignoring case) once loaded.
+  return new URLSearchParams(window.location.search).get("camera")?.trim() || "";
 }
 
 function hasRequirementUpload(value) {
@@ -619,7 +612,7 @@ function DateRangePicker({ pickupDate, returnDate, onChange, invalid = false }) 
 
 function CameraChooserCard({ camera, selected, onSelect }) {
   const assets = getCameraAssets(camera);
-  const detailCopy = getCameraDetailCopy(camera.name);
+  const detailCopy = getCameraDetailCopy(camera);
   const startingPrice = camera.pricing?.[0]?.pricePerDay;
 
   return (
@@ -1279,6 +1272,8 @@ export default function PublicBooking() {
   const [validatedSteps, setValidatedSteps] = useState(() => new Set());
   const [draftReady, setDraftReady] = useState(false);
   const [cameraName, setCameraName] = useState(initialCameraName);
+  const catalog = useCatalog();
+  const cameras = catalog.cameras;
   const [selectedAddOns, setSelectedAddOns] = useState([]);
   const [brandLogo, setBrandLogo] = useState(COMPANY_LOGO);
   const [repSignature, setRepSignature] = useState("");
@@ -1316,7 +1311,8 @@ export default function PublicBooking() {
           setForm(merged);
         }
         if (draft.files) setFiles({ ...initialFiles, ...draft.files });
-        if (CAMERAS.some((camera) => camera.name === draft.cameraName)) {
+        // Checked against the catalogue once it loads (effect below).
+        if (typeof draft.cameraName === "string" && draft.cameraName) {
           setCameraName(draft.cameraName);
         }
         if (Array.isArray(draft.selectedAddOns)) {
@@ -1353,9 +1349,18 @@ export default function PublicBooking() {
     return () => window.clearTimeout(timer);
   }, [cameraName, currentStep, draftReady, files, form, selectedAddOns, submitState.success]);
 
+  // A requested or restored camera that isn't (or is no longer) offered —
+  // removed, hidden, or a typo in a link — is dropped; casing is corrected.
+  useEffect(() => {
+    if (catalog.loading || catalog.error || !cameraName) return;
+    const match = findCamera(cameras, cameraName);
+    if (!match) setCameraName("");
+    else if (match.name !== cameraName) setCameraName(match.name);
+  }, [catalog.loading, catalog.error, cameras, cameraName]);
+
   const selectedCamera = useMemo(
-    () => CAMERAS.find((camera) => camera.name === cameraName),
-    [cameraName],
+    () => cameras.find((camera) => camera.name === cameraName),
+    [cameras, cameraName],
   );
   const selectedContract = useMemo(
     () => getContractForCamera(cameraName),
@@ -2385,7 +2390,14 @@ export default function PublicBooking() {
       >
         <div className="bk-panel-label">Choose Your Camera</div>
         <div className="bk-chooser__grid">
-          {CAMERAS.map((camera) => (
+          {catalog.loading && <p>Loading cameras…</p>}
+          {!catalog.loading && cameras.length === 0 && (
+            <p>
+              Cameras can't be loaded right now. Please refresh the page, or
+              message us to book.
+            </p>
+          )}
+          {cameras.map((camera) => (
             <CameraChooserCard
               key={camera.name}
               camera={camera}
@@ -2421,7 +2433,7 @@ export default function PublicBooking() {
               type="button"
               className="bk-chooser__more"
               onClick={() => {
-                const detailCopy = getCameraDetailCopy(selectedCamera.name);
+                const detailCopy = getCameraDetailCopy(selectedCamera);
                 setAssetPreview({
                   label: `${selectedCamera.name} details`,
                   title: selectedCamera.name,

@@ -1,10 +1,15 @@
 const { normalizeBookingStatus } = require("./statusRules");
+const { calcRentalFee, findCamera } = require("./catalog");
 
 function firstOrNull(arr) {
   if (!Array.isArray(arr) || arr.length === 0) return null;
   return arr[0] ?? null;
 }
 
+// LEGACY (DATASOURCE=supabase / mongodb only). In firebase mode the caller
+// passes the live Firestore catalogue as `options.catalog` and this static
+// list is not used — see lib/catalog.js and the admin Catalog page.
+//
 // Mirror of frontend/src/data/cameras.js — keep in sync when prices change.
 // Camera matching is case-insensitive (see autoCalcFee), so name casing here
 // only needs to stay in step with the source for readability.
@@ -198,47 +203,12 @@ const CAMERAS = [
   },
 ];
 
-// Mirrors getPricingForDate in frontend/src/data/cameras.js.
-function getPricingForDate(camera, pickUpDateIso) {
-  if (!camera) return null;
-  if (pickUpDateIso && Array.isArray(camera.priceHistory)) {
-    for (const entry of camera.priceHistory) {
-      if (pickUpDateIso < entry.before) return entry.pricing;
-    }
-  }
-  return camera.pricing;
-}
-
-function autoCalcFee(doc, addons) {
-  const cam = CAMERAS.find(
-    (c) =>
-      c.name.toUpperCase() ===
-      (doc.PREFERRED_CAMERA || "").toUpperCase().trim(),
-  );
-  if (!cam) return null;
-
-  const start = new Date(doc.PICK_UP_DATE);
-  const end = new Date(doc.RETURN_DATE);
-  if (isNaN(start) || isNaN(end)) return null;
-  const days = Math.max(Math.round((end - start) / 86400000), 1);
-
+function autoCalcFee(doc, addons, catalog = CAMERAS) {
   // Rate in effect on this booking's own PICK_UP_DATE, not the date it's
   // being saved — matters for backfills/edits of past bookings, not just new
   // submissions (which are always priced at today's rate anyway).
-  const pricing = getPricingForDate(cam, doc.PICK_UP_DATE);
-  const tier = pricing.find(
-    (t) => days >= t.minDays && (t.maxDays === null || days <= t.maxDays),
-  );
-  if (!tier) return null;
-
-  let fee = tier.pricePerDay * days;
-  for (const addonName of addons) {
-    const a = cam.addOns.find(
-      (x) => x.name.toUpperCase() === (addonName || "").toUpperCase().trim(),
-    );
-    if (a) fee += a.pricePerDay * days;
-  }
-  return fee;
+  const cam = findCamera(catalog, doc.PREFERRED_CAMERA);
+  return calcRentalFee(cam, doc.PICK_UP_DATE, doc.RETURN_DATE, addons);
 }
 
 function arrayToBoolean(arr) {
@@ -262,7 +232,7 @@ function coerceAddonList(raw) {
   return items.filter((a) => a && a.toLowerCase() !== "none");
 }
 
-function parseAddons(doc) {
+function parseAddons(doc, catalog = CAMERAS) {
   if (!doc || typeof doc !== "object") return [];
 
   const addonKeys = Object.keys(doc).filter((k) => /add[-_ ]?ons/i.test(k));
@@ -281,7 +251,7 @@ function parseAddons(doc) {
   // simply has no add-ons (e.g. DJI Osmo Nano).
   const looksPerCamera = addonKeys.some((k) => {
     const nk = normalizeForMatch(k);
-    return CAMERAS.some((c) => nk.includes(normalizeForMatch(c.name)));
+    return catalog.some((c) => nk.includes(normalizeForMatch(c.name)));
   });
   if (looksPerCamera) return [];
 
@@ -303,7 +273,14 @@ function parseAddons(doc) {
   return [];
 }
 
-function transformBooking(doc) {
+/**
+ * @param {object} doc  raw submission (Google Form / public site / manual)
+ * @param {{ catalog?: object[] }} [options]  cameras to price against;
+ *   defaults to the legacy static list above
+ */
+function transformBooking(doc, options = {}) {
+  const catalog = Array.isArray(options.catalog) ? options.catalog : CAMERAS;
+  const addons = parseAddons(doc, catalog);
   const booking = {
     response_id: doc.responseId,
     submitted_at: doc.Timestamp ? new Date(doc.Timestamp).toISOString() : null,
@@ -323,7 +300,7 @@ function transformBooking(doc) {
     preferred_mode: doc.PREFERRED_MODE ?? null,
     preferred_camera: doc.PREFERRED_CAMERA,
 
-    rental_fee: doc.RENTAL_FEE ?? autoCalcFee(doc, parseAddons(doc)) ?? null,
+    rental_fee: doc.RENTAL_FEE ?? autoCalcFee(doc, addons, catalog) ?? null,
     security_deposit: doc.SECURITY_DEPOSIT ?? null,
     total_payable_before_release: doc.TOTAL_PAYABLE_BEFORE_RELEASE ?? null,
     status: normalizeBookingStatus(doc.status ?? doc.STATUS) || "pending",
@@ -350,8 +327,6 @@ function transformBooking(doc) {
     source: doc._source ?? "google_form",
     updated_at: new Date().toISOString(),
   };
-
-  const addons = parseAddons(doc);
 
   return { booking, addons };
 }

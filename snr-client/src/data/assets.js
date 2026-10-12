@@ -49,7 +49,13 @@ export const CAMERA_NAME_TO_ASSET_ID = {
   "Canon EOS R50": "canon-eos-r50",
 };
 
+// Images set on the admin Catalog page win; these bundled files are the
+// fallback for the original cameras.
 export function getCameraAssets(camera) {
   const id = camera?.id || CAMERA_NAME_TO_ASSET_ID[camera?.name] || "";
-  return CAMERA_ASSETS[id] || {};
+  const bundled = CAMERA_ASSETS[id] || {};
+  return {
+    image: camera?.image || bundled.image,
+    detailImage: camera?.detailImage || bundled.detailImage,
+  };
 }

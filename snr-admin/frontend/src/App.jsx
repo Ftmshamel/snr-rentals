@@ -11,6 +11,7 @@ import Approvals from "./pages/Approvals.jsx";
 import RentalsTable from "./pages/RentalsTable.jsx";
 import Analytics from "./pages/Analytics.jsx";
 import Expenses from "./pages/Expenses.jsx";
+import Catalog from "./pages/Catalog.jsx";
 
 export default function App() {
   const [authed, setAuthed] = useState(() =>
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="/rentals" element={<RentalsTable />} />
         <Route path="/analytics" element={isOwner ? <Analytics /> : <Navigate to="/" replace />} />
         <Route path="/expenses" element={isOwner ? <Expenses /> : <Navigate to="/" replace />} />
+        <Route path="/catalog" element={isOwner ? <Catalog /> : <Navigate to="/" replace />} />
       </Routes>
     </div>
   );

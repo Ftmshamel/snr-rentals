@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { CAMERAS, getPricingForDate } from "../data/cameras.js";
+import { getPricingForDate } from "../data/cameras.js";
+import { useCameras, findCamera } from "../hooks/useCameras.js";
 import { getContractForCamera } from "../data/contracts.js";
 import { apiPatchJson, apiDeleteJson } from "../utils/api.js";
 import {
@@ -481,12 +482,10 @@ function getAutoRate(pricing, days) {
 }
 
 /** Compute fee from current form state. Returns { fee, halfDayAmount } */
-function computeAutoFee(form) {
+function computeAutoFee(form, cameras) {
   const days = countDays(form.PICK_UP_DATE, form.RETURN_DATE);
   if (!days) return { fee: null, halfDayAmount: null };
-  const cam = CAMERAS.find(
-    (c) => c.name.toLowerCase() === (form.PREFERRED_CAMERA || "").toLowerCase(),
-  );
+  const cam = findCamera(cameras, form.PREFERRED_CAMERA);
   if (!cam) return { fee: null, halfDayAmount: null };
   // Uses the tier set in effect on the rental's own PICK_UP_DATE, so editing
   // an old booking recomputes at the rate it was booked under, not today's.
@@ -549,7 +548,8 @@ export default function BookingModal({
     isPartialBooking(booking),
   );
   const [docsError, setDocsError] = useState(null);
-  const { fee: autoFee, halfDayAmount } = computeAutoFee(form);
+  const { cameras } = useCameras();
+  const { fee: autoFee, halfDayAmount } = computeAutoFee(form, cameras);
 
   // Bookings arriving from a list endpoint have no document columns (see
   // utils/bookingDocuments.js) — pull them for this one booking. Only the
@@ -640,7 +640,7 @@ export default function BookingModal({
   function handleField(e) {
     const { name, value, type, checked } = e.target;
     if (name === "PREFERRED_CAMERA") {
-      const newCam = CAMERAS.find((c) => c.name === value);
+      const newCam = findCamera(cameras, value);
       const validNames = (newCam?.addOns ?? []).map((a) => a.name);
       setForm((f) => ({
         ...f,
@@ -1374,7 +1374,8 @@ function EditForm({
   halfDayAmount,
   legacy,
 }) {
-  const selectedCamera = CAMERAS.find((c) => c.name === form.PREFERRED_CAMERA);
+  const { cameras } = useCameras();
+  const selectedCamera = findCamera(cameras, form.PREFERRED_CAMERA);
   const availableAddOns = selectedCamera?.addOns ?? [];
 
   return (
@@ -1470,11 +1471,21 @@ function EditForm({
           className="ui-input"
         >
           <option value="">— select —</option>
-          {CAMERAS.map((c) => (
+          {cameras.map((c) => (
             <option key={c.name} value={c.name}>
               {c.name.toUpperCase()}
+              {c.active === false ? " (hidden)" : ""}
             </option>
           ))}
+          {/* Keep a booking's camera selectable even if it was since removed
+              from the catalogue, so editing it doesn't silently change it. */}
+          {form.PREFERRED_CAMERA &&
+            !cameras.some((c) => c.name === form.PREFERRED_CAMERA) && (
+            <option value={form.PREFERRED_CAMERA}>
+              {form.PREFERRED_CAMERA.toUpperCase()}
+              {selectedCamera ? "" : " (not in catalogue)"}
+            </option>
+          )}
         </select>
       </div>
 

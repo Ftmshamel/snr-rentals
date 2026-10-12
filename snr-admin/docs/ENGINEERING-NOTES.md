@@ -3,7 +3,12 @@
 Written 2026-09-14. Companion to `SnR_Rentals_App_Status.md` (which describes
 *what the app is*); this file describes *what will bite you*.
 
+> **Since Oct 2026 the app runs on Firebase (Firestore)** — see §0. §1–§4
+> describe the legacy MongoDB/Supabase setup, which still holds the real
+> historical data and must not be touched.
+
 If you are an agent or developer picking this codebase up, read
+**[§0 Firebase](#0-firebase-the-current-database)** and then
 **[§1 The dual-database split](#1-the-dual-database-split--read-this-first)**
 before touching anything that writes data. It is the source of the most
 serious bug this project has had.
@@ -25,6 +30,41 @@ serious bug this project has had.
 6. [Deployment constraints](#6-deployment-constraints)
 7. [Known open issues](#7-known-open-issues)
 8. [Conventions worth not breaking](#8-conventions-worth-not-breaking)
+
+---
+
+## 0. Firebase — the current database
+
+`DATASOURCE=firebase` (default). One store, so there is no mirror to fail and
+the §1 problem cannot happen: `/api/bookings/by?type=unmirrored` returns `[]`.
+
+| Collection | Holds |
+| --- | --- |
+| `bookings/{responseId}` | booking in the frontend's SCREAMING_SNAKE shape (`toMongoFormat`), no images |
+| `bookings/{id}/documents/{field}` | one uploaded image per doc (`{ value }`) — kept out of the booking because Firestore caps a document at 1 MiB and list views must stay small |
+| `expenses/{autoId}`, `date_notes/{YYYY-MM-DD}` | as before |
+| `cameras/{slug}` | the catalogue — `lib/catalog.js` documents the shape |
+
+- **Started empty on purpose.** The owner decided not to migrate; MongoDB and
+  Supabase keep the real history. Nothing in firebase mode loads their clients
+  — verified by a test that fails if `mongodb`/`@supabase/supabase-js` is
+  required.
+- **Re-submission keeps admin fields.** `upsertSubmittedBooking` never
+  overwrites `NOTES`, `DOWNPAYMENT_PAID`, `FULFILLMENT_STATUS`, half-day flags
+  or `_createdAt`; a cancelled booking stays cancelled.
+- **Reads load the whole `bookings` collection** and filter in JS (Firestore has
+  no case-insensitive match). Fine at S&R's volume; revisit (indexes on
+  `status`, stored upper-case names) if bookings reach the thousands.
+- **Catalogue edits keep history.** `applyCameraUpdate` moves the old rates /
+  unit count into `priceHistory` / `unitHistory` with the chosen effective
+  date, refuses a date earlier than the last recorded change, and refuses
+  renames (bookings reference cameras by name). Add-on **prices** have no
+  history yet — changing one reprices old bookings when they are edited.
+- **Owner-only writes are enforced server-side**: the owner login now gets
+  `OWNER_TOKEN`, distinct from the admin token (`lib/auth.js` `requireOwner`).
+- **No default API URL** in either frontend. The old default was the live
+  Mongo/Supabase deployment; a misconfigured build now fails instead of
+  writing real-looking bookings into the old database.
 
 ---
 
@@ -273,7 +313,8 @@ Use PowerShell `System.Drawing` for resizing (see git history for the pattern).
 
 ## 6. Deployment constraints
 
-- **Vercel Hobby: max 12 serverless functions.** Currently **11** (`backend/api/**/*.js`).
+- **Vercel Hobby: max 12 serverless functions.** Currently **12** (`backend/api/**/*.js`) —
+  `api/catalog.js` took the last slot.
   This is why `/api/bookings/by` multiplexes `type=camera|addon|unmirrored`
   rather than having separate routes. Adding a 13th file breaks the build.
 - **Deployments can be "Blocked."** This is an account-level state, not a build
@@ -298,6 +339,8 @@ Use PowerShell `System.Drawing` for resizing (see git history for the pattern).
 | --- | --- |
 | **~25 orphan rows in Mongo** | Deleted from Supabase but retained in Mongo. Harmless while nothing syncs Mongo→Supabase; a sync would resurrect them. Do not bulk-delete without re-checking ages (§1). |
 | **Add-on naming is inconsistent** | The client site submits `"Extra Battery"`; the admin uses `"Extra G7X Battery"` / `"Extra X-T100 Battery"` / `"Extra R50 Battery"`. Both spellings exist in `booking_addons`. The 9 generic `"Extra Battery"` rows match no entry in `frontend/src/data/addons.js`, so they are invisible to add-on availability. |
+| **Credentials are in the source of a public repo** | `lib/authConfig.js` hardcodes the admin/owner passwords and the shared token, and `Ftmshamel/snr-rentals` is public. Anyone can read them and call the API (all bookings, ID photos included). Move them to env vars and rotate. `OWNER_TOKEN` must be set in the environment — its fallback is derivable from the source. |
+| **Contracts are still static** | Damage fees / terms per camera live in `contracts.js` (client + admin). A camera added on the Catalog page gets the standard terms with no scratch fees until it is added there. |
 | **`backend/lib/cameraDefaults.js` is dead** | Nothing imports it. Its header references `lib/cameraPricing.js` and a `camera_prices` table — **neither exists**. Leftover from an editable-pricing feature that was added then reverted. Its values are kept accurate anyway. Not a source of truth. |
 | **`repeat_renter` / `repeat_ref` columns do not exist** | `toMongoFormat` reads them; `select("*")` tolerated it silently. The "Repeat renter" badge in `BookingModal` can therefore never display. |
 | **Canon EOS R50 scratch fees are placeholders** | Copied from the G7X (₱3,000 / ₱5,000 / ₱10,000), marked `TODO — CONFIRM` in both `contracts.js` files. **These appear in the contract renters sign.** |

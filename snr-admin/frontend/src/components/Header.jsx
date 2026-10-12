@@ -11,6 +11,7 @@ const NAV = [
   { to: "/rentals", label: "Rentals", match: (p) => p === "/rentals", ownerOnly: true },
   { to: "/analytics", label: "Analytics", match: (p) => p === "/analytics", ownerOnly: true },
   { to: "/expenses", label: "Expenses", match: (p) => p === "/expenses", ownerOnly: true },
+  { to: "/catalog", label: "Catalog", match: (p) => p === "/catalog", ownerOnly: true },
 ];
 
 export default function Header({
