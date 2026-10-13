@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { findCamera } from "../hooks/useCameras.js";
+import LalamoveBox from "./LalamoveBox.jsx";
 import {
   OUT_STAGES,
   StageBadge,
@@ -70,6 +71,8 @@ export default function LifecyclePanel({ booking, cameras, onPatch }) {
   const [serial, setSerial] = useState(booking.UNIT_SERIAL || "");
   const [condition, setCondition] = useState("good");
   const [notes, setNotes] = useState("");
+  const [deliveryLink, setDeliveryLink] = useState(booking.LALAMOVE_DELIVERY_LINK || "");
+  const [returnLink, setReturnLink] = useState(booking.LALAMOVE_RETURN_LINK || "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -132,6 +135,9 @@ export default function LifecyclePanel({ booking, cameras, onPatch }) {
 
       {["reserved", "release_today", "release_late"].includes(stage.key) && (
         <div className="space-y-2">
+          {delivery && (
+            <LalamoveBox booking={booking} kind="delivery" link={deliveryLink} onLinkChange={setDeliveryLink} busy={busy} />
+          )}
           {serials.length > 0 ? (
             <label className="block">
               <span className="ui-label">Unit being handed over (serial no.)</span>
@@ -153,12 +159,29 @@ export default function LifecyclePanel({ booking, cameras, onPatch }) {
           <button
             type="button"
             disabled={busy || (serials.length > 0 && !serial)}
-            onClick={() => run({ FULFILLMENT_STATUS: delivery ? "out_for_delivery" : "out", UNIT_SERIAL: serial || null })}
+            onClick={() =>
+              run({
+                FULFILLMENT_STATUS: delivery ? "out_for_delivery" : "out",
+                UNIT_SERIAL: serial || null,
+                ...(delivery && deliveryLink.trim() ? { LALAMOVE_DELIVERY_LINK: deliveryLink.trim() } : {}),
+              })
+            }
             className="ui-btn ui-btn--sm ui-btn--solid w-full disabled:opacity-50"
           >
             {releaseLabel}
           </button>
         </div>
+      )}
+
+      {stage.key === "out_for_delivery" && (
+        <LalamoveBox
+          booking={booking}
+          kind="delivery"
+          link={deliveryLink}
+          onLinkChange={setDeliveryLink}
+          onSaveLink={() => run({ LALAMOVE_DELIVERY_LINK: deliveryLink.trim() })}
+          busy={busy}
+        />
       )}
 
       {stage.key === "out_for_delivery" && (
@@ -175,6 +198,17 @@ export default function LifecyclePanel({ booking, cameras, onPatch }) {
             Undo
           </button>
         </div>
+      )}
+
+      {["with_renter", "for_return", "overdue"].includes(stage.key) && delivery && (
+        <LalamoveBox
+          booking={booking}
+          kind="return"
+          link={returnLink}
+          onLinkChange={setReturnLink}
+          onSaveLink={() => run({ LALAMOVE_RETURN_LINK: returnLink.trim() })}
+          busy={busy}
+        />
       )}
 
       {["with_renter", "for_return", "overdue"].includes(stage.key) && (

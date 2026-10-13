@@ -1,4 +1,5 @@
 const { isFirebase } = require("../lib/sourceName");
+const { LifecycleError } = require("../lib/lifecycle");
 const { verifyRepeatRenter } = require("../lib/verifyRepeatRenter");
 const {
   isCancelledStatus,
@@ -195,6 +196,10 @@ module.exports = async (req, res) => {
       const result = await submitToFirestore(payload, normalizeSource(payload._source));
       return res.status(200).json(result);
     } catch (err) {
+      // e.g. a delivery booking without a map pin — the renter can fix it.
+      if (err instanceof LifecycleError) {
+        return res.status(400).json({ ok: false, error: err.message });
+      }
       console.error("[api/submit firebase]", err);
       return res.status(500).json({ ok: false, error: "Server error" });
     }

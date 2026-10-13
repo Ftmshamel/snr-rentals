@@ -29,7 +29,22 @@ function daysBetween(a, b) {
   return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 86400000);
 }
 
-function Row({ booking, detail, onOpen }) {
+// Delivery rentals whose Lalamove still has to be booked by hand.
+function lalamoveTag(booking, kind) {
+  if (!isDelivery(booking)) return null;
+  const booked = kind === "delivery" ? booking.LALAMOVE_DELIVERY_LINK : booking.LALAMOVE_RETURN_LINK;
+  return booked ? (
+    <span className="rounded-full border-2 border-green-600 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-green-700">
+      Lalamove booked
+    </span>
+  ) : (
+    <span className="rounded-full bg-blue-600 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-white">
+      {kind === "delivery" ? "Book Lalamove" : "Book return rider"}
+    </span>
+  );
+}
+
+function Row({ booking, detail, onOpen, tag }) {
   return (
     <button
       type="button"
@@ -42,6 +57,7 @@ function Row({ booking, detail, onOpen }) {
             {booking.FULL_NAME || booking.FACEBOOK_ACCOUNT_NAME || "—"}
           </span>
           <span className="ui-chip">{isDelivery(booking) ? "Delivery" : "Pickup"}</span>
+          {tag}
         </div>
         <div className="truncate text-xs text-[color:var(--color-dark-gray)]">
           {booking.PREFERRED_CAMERA}
@@ -173,7 +189,8 @@ export default function Dashboard() {
                 key={b.responseId}
                 booking={b}
                 onOpen={setActive}
-                detail={`${b.PICK_UP_DATE < today ? `Was due ${shortDate(b.PICK_UP_DATE)}` : toAmPm(b.PICK_UP_TIME)} · ${b.COMPLETE_ADDRESS || ""}`}
+                tag={lalamoveTag(b, "delivery")}
+                detail={`${b.PICK_UP_DATE < today ? `Was due ${shortDate(b.PICK_UP_DATE)}` : toAmPm(b.PICK_UP_TIME)} · ${b.DELIVERY_DETAILS?.address || b.COMPLETE_ADDRESS || ""}`}
               />
             )}
           />
@@ -188,6 +205,7 @@ export default function Dashboard() {
                 key={b.responseId}
                 booking={b}
                 onOpen={setActive}
+                tag={lalamoveTag(b, "return")}
                 detail={
                   b.RETURN_DATE < today
                     ? `${daysBetween(b.RETURN_DATE, today)} day(s) late · due ${shortDate(b.RETURN_DATE)} ${toAmPm(b.RETURN_TIME)} · ${b.CONTACT_NUMBER || ""}`
@@ -202,7 +220,15 @@ export default function Dashboard() {
             hint={<span className="font-mono text-[10px] text-[color:var(--color-dark-gray)]">mark delivered on hand-over</span>}
             items={groups.transit}
             empty="No deliveries on the road."
-            render={(b) => <Row key={b.responseId} booking={b} onOpen={setActive} detail={b.COMPLETE_ADDRESS} />}
+            render={(b) => (
+              <Row
+                key={b.responseId}
+                booking={b}
+                onOpen={setActive}
+                tag={lalamoveTag(b, "delivery")}
+                detail={b.DELIVERY_DETAILS?.address || b.COMPLETE_ADDRESS}
+              />
+            )}
           />
           <Section
             id="pending"

@@ -61,6 +61,25 @@ split describes the legacy mode and the historical data.
   only retired, so "who rented this unit last" always resolves
   (`components/UnitHistory.jsx` on each camera page).
 
+### Lalamove deliveries (Oct 2026)
+
+- S&R delivers by **Lalamove, booked by hand** (no Lalamove API key yet). The
+  renter fills a Lalamove-style form when booking a delivery —
+  `DELIVERY_DETAILS { recipientName, recipientPhone, address, landmark, notes, lat, lng }`
+  with a map pin — and says where to collect it back (`RETURN_DETAILS`, same
+  or a second form). Rules: `backend/lib/delivery.js`.
+- Admin: the booking's `LalamoveBox` shows those details, copies them for the
+  Lalamove app and takes the order's tracking link
+  (`LALAMOVE_DELIVERY_LINK` / `LALAMOVE_RETURN_LINK`). The Today dashboard
+  tags deliveries that still need a rider booked.
+- Renter: **`/track`** on the public site (reference code) shows the stage,
+  timeline and Lalamove links, and lets them change the return pickup until
+  the return rider is booked.
+- Public routes are multiplexed: `api/public.js?action=availability|verify-renter|track|return-details`
+  (handlers in `lib/public/`). That freed a function slot — **11 of 12** used.
+- To automate later: Lalamove's v3 API (quotation, order, webhook status
+  updates, `shareLink`) needs a Partner Portal key; sandbox keys are free.
+
 ## Read before writing data
 
 **`docs/ENGINEERING-NOTES.md`** — traps, past incidents, and why things are the
@@ -98,9 +117,9 @@ writes a backup to `database-backups/`. Keep that pattern for new ones.
 
 ## Constraints
 
-- **Vercel Hobby: 12 serverless functions max.** Currently **12** (`backend/api/**/*.js`,
-  `api/catalog.js` was the last slot). A 13th breaks the build — multiplex on an existing route instead
-  (see `api/bookings/by.js`, which handles `type=camera|addon|unmirrored`).
+- **Vercel Hobby: 12 serverless functions max.** Currently **11** (`backend/api/**/*.js`).
+  A 13th breaks the build — multiplex on an existing route instead
+  (see `api/bookings/by.js` and `api/public.js`).
 - `GET /api/bookings` deliberately omits base64 document columns (it was 12.5 MB).
   Rows carry `_partial: true`; fetch one booking by id when documents are needed.
 - **No image tooling.** `convert` on this Windows machine is the *disk* utility,

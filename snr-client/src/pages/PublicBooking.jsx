@@ -8,6 +8,10 @@ import { apiGetJson, apiPostJson } from "../utils/api.js";
 import Logo from "../components/Logo.jsx";
 import GearGrid, { GearImage } from "../components/GearGrid.jsx";
 import useLockBodyScroll from "../hooks/useLockBodyScroll.js";
+import DeliveryDetailsForm, {
+  EMPTY_DELIVERY,
+  deliveryMissing,
+} from "../components/DeliveryDetailsForm.jsx";
 
 const RUSH_FEE = 300;
 const SECURITY_DEPOSIT = 1000;
@@ -82,6 +86,11 @@ const initialForm = {
   repeatRenter: "no",
   repeatRef: "",
   repeatVerifiedName: "",
+  // Lalamove delivery form (delivery bookings only). S&R books the rider
+  // from these, so they must be exactly what Lalamove needs.
+  delivery: EMPTY_DELIVERY,
+  returnSame: "yes",
+  returnPickup: EMPTY_DELIVERY,
 };
 
 const initialFiles = {
@@ -1250,7 +1259,28 @@ function PaymentQrBlock() {
   );
 }
 
-function BookingTopBar() {
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      className="bk-copy"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          /* clipboard blocked — the code is on screen to copy by hand */
+        }
+      }}
+    >
+      {copied ? "Copied ✓" : "Copy"}
+    </button>
+  );
+}
+
+export function BookingTopBar() {
   return (
     <div className="bk-top">
       <a href="/" className="bk-top__brand" aria-label="Back to S&R Rentals home">
@@ -1358,6 +1388,23 @@ export default function PublicBooking() {
     else if (match.name !== cameraName) setCameraName(match.name);
   }, [catalog.loading, catalog.error, cameras, cameraName]);
 
+  // Entering the renter step for a delivery: start the Lalamove form from the
+  // renter's own name, number and address — most deliveries go to them.
+  useEffect(() => {
+    if (currentStep !== 2 || form.mode !== "Deliver") return;
+    setForm((current) => {
+      const d = current.delivery || EMPTY_DELIVERY;
+      const name = current.fullName.trim() || current.repeatVerifiedName;
+      const next = {
+        ...d,
+        recipientName: d.recipientName || name || "",
+        recipientPhone: d.recipientPhone || current.contactNumber.trim(),
+        address: d.address || current.address.trim(),
+      };
+      return JSON.stringify(next) === JSON.stringify(d) ? current : { ...current, delivery: next };
+    });
+  }, [currentStep, form.mode]);
+
   const selectedCamera = useMemo(
     () => cameras.find((camera) => camera.name === cameraName),
     [cameras, cameraName],
@@ -1459,7 +1506,7 @@ export default function PublicBooking() {
     });
 
     setAvailability({ state: "loading", data: null, error: null });
-    apiGetJson(`/api/public-availability?${params.toString()}`)
+    apiGetJson(`/api/public?action=availability&${params.toString()}`)
       .then((data) => {
         if (active) {
           setAvailability({ state: "ready", data, error: null });
@@ -1527,7 +1574,7 @@ export default function PublicBooking() {
     setRepeatCheck({ loading: true, error: null });
     try {
       const params = new URLSearchParams({ ref });
-      const data = await apiGetJson(`/api/verify-renter?${params.toString()}`);
+      const data = await apiGetJson(`/api/public?action=verify-renter&${params.toString()}`);
       if (data.verified) {
         // Prefill the renter details from their record so they don't have
         // to retype anything.
@@ -1635,6 +1682,15 @@ export default function PublicBooking() {
       RETURN_TIME: form.returnTime,
       PREFERRED_MODE: form.mode,
       PREFERRED_CAMERA: cameraName,
+      ...(form.mode === "Deliver"
+        ? {
+            DELIVERY_DETAILS: form.delivery,
+            RETURN_DETAILS:
+              form.returnSame === "no"
+                ? { sameAsDelivery: false, ...form.returnPickup }
+                : { sameAsDelivery: true },
+          }
+        : {}),
       RENTAL_FEE: quote.total || null,
       RUSH_FEE: quote.rushFee,
       SECURITY_DEPOSIT,
@@ -1779,7 +1835,13 @@ export default function PublicBooking() {
       setSubmitState({
         loading: false,
         error: null,
-        success: { responseId, total: quote.total },
+        success: {
+          responseId,
+          total: quote.total,
+          delivery: form.mode === "Deliver",
+          camera: cameraName,
+          pickupDate: form.pickupDate,
+        },
       });
       setForm(initialForm);
       setFiles(initialFiles);
@@ -1852,6 +1914,13 @@ export default function PublicBooking() {
           form.destination,
         ]
   ).every((value) => String(value || "").trim());
+  const isDelivery = form.mode === "Deliver";
+  // First missing piece of the Lalamove delivery form, if any.
+  const deliveryProblem = !isDelivery
+    ? null
+    : deliveryMissing(form.delivery) ||
+      (form.returnSame === "no" ? deliveryMissing(form.returnPickup, "Return pickup") : null);
+  const renterAndDeliveryComplete = renterStepComplete && !deliveryProblem;
   const activeRequirementFiles =
     form.repeatRenter === "yes"
       ? REQUIREMENT_FILES.filter(
@@ -1868,7 +1937,7 @@ export default function PublicBooking() {
   const stepComplete = [
     availabilityStepComplete,
     privacyStepComplete,
-    renterStepComplete,
+    renterAndDeliveryComplete,
     requirementsStepComplete,
     reviewStepComplete,
   ];
@@ -1907,6 +1976,7 @@ export default function PublicBooking() {
         return "Please verify your previous booking first, or switch to first-time renter.";
       }
       if (!renterStepComplete) return "All renter details are required.";
+      if (deliveryProblem) return deliveryProblem;
     }
     if (step === 3) {
       if (form.repeatRenter === "yes" && !isRepeatVerified) {
@@ -2716,10 +2786,10 @@ export default function PublicBooking() {
           </Field>
           {form.mode === "Deliver" && (
             <p className="bk-delivery-reminder">
-              Delivery fee follows the actual Lalamove fare. We prefer that you
-              book the Lalamove yourself so the pin lands on your exact address —
-              mismatched pinned locations are the most common cause of delayed
-              deliveries.
+              We deliver by Lalamove and book the rider for you. In step 3
+              you'll pin your exact location on the map so the rider goes
+              straight to your door. The delivery fee follows the actual
+              Lalamove fare.
             </p>
           )}
           <DateRangePicker
@@ -2910,6 +2980,67 @@ export default function PublicBooking() {
           </Field>
         </div>
           )}
+          {isDelivery && (form.repeatRenter !== "yes" || isRepeatVerified) && (
+            <section className="bk-repeat bk-deliv-section">
+              <div className="bk-panel-label">Lalamove delivery details</div>
+              <p className="bk-repeat__hint">
+                We'll book the Lalamove for you using exactly these details, so
+                please make sure the pin is on your door or gate.
+              </p>
+              {!isRepeatVerified && (
+                <button
+                  type="button"
+                  className="bk-repeat__verify"
+                  onClick={() =>
+                    updateField("delivery", {
+                      ...form.delivery,
+                      recipientName: form.fullName.trim(),
+                      recipientPhone: form.contactNumber.trim(),
+                      address: form.address.trim(),
+                    })
+                  }
+                >
+                  Deliver to me — use my name, number &amp; address above
+                </button>
+              )}
+              <DeliveryDetailsForm
+                value={form.delivery}
+                onChange={(next) => updateField("delivery", next)}
+                showErrors={showCurrentStepErrors}
+              />
+              <div className="bk-panel-label bk-deliv__return-label">
+                Return pickup — where do we collect the camera?
+              </div>
+              <div className="bk-repeat__toggle">
+                <button
+                  type="button"
+                  className={`bk-repeat__option ${form.returnSame !== "no" ? "is-active" : ""}`}
+                  onClick={() => updateField("returnSame", "yes")}
+                >
+                  Same as delivery
+                </button>
+                <button
+                  type="button"
+                  className={`bk-repeat__option ${form.returnSame === "no" ? "is-active" : ""}`}
+                  onClick={() => updateField("returnSame", "no")}
+                >
+                  Different place / person
+                </button>
+              </div>
+              {form.returnSame === "no" && (
+                <DeliveryDetailsForm
+                  idPrefix="return"
+                  value={form.returnPickup}
+                  onChange={(next) => updateField("returnPickup", next)}
+                  showErrors={showCurrentStepErrors}
+                />
+              )}
+              <p className="bk-repeat__hint">
+                You can still change the return pickup later on the Track my
+                booking page, until we book the return rider.
+              </p>
+            </section>
+          )}
         </div>
       );
     }
@@ -2993,20 +3124,54 @@ export default function PublicBooking() {
             </span>
           </h1>
           <p className="bk-success__note float-in" style={{ "--d": "420ms" }}>
-            Keep your reference code — we'll review your submission and message
-            you on Facebook for the official confirmation. Please send your
-            downloaded or screenshot contract to S&R Rentals via PM too. The
-            remaining rental balance and ₱1,000 refundable security deposit
-            must be settled before the unit is released.
+            Your request for the <strong>{submitState.success.camera}</strong> is in.
+            Save your reference code — you'll use it to track this booking and
+            to skip the ID uploads next time.
           </p>
-          <div className="bk-success__ref float-in" style={{ "--d": "540ms" }}>
-            {submitState.success.responseId}
+          <div className="bk-success__ref-row float-in" style={{ "--d": "540ms" }}>
+            <div className="bk-success__ref">{submitState.success.responseId}</div>
+            <CopyButton text={submitState.success.responseId} />
           </div>
-          <div className="bk-success__actions float-in" style={{ "--d": "660ms" }}>
+          <ol className="bk-next float-in" style={{ "--d": "620ms" }}>
+            <li>
+              <strong>We review your requirements</strong>
+              <span>and message you on Facebook once your booking is approved.</span>
+            </li>
+            <li>
+              <strong>Settle the balance + ₱1,000 deposit</strong>
+              <span>before the camera is released. The deposit is refunded when it comes back in good condition.</span>
+            </li>
+            {submitState.success.delivery ? (
+              <li>
+                <strong>We book your Lalamove</strong>
+                <span>on the day — the rider's live tracking link shows up on your Track page.</span>
+              </li>
+            ) : (
+              <li>
+                <strong>Pick it up on your schedule</strong>
+                <span>— bring a valid ID that matches your booking.</span>
+              </li>
+            )}
+            <li>
+              <strong>Return on time</strong>
+              <span>
+                {submitState.success.delivery
+                  ? "— we'll book the return rider too. Need it collected somewhere else? Change it on your Track page."
+                  : "— late returns are charged per the rental terms."}
+              </span>
+            </li>
+          </ol>
+          <div className="bk-success__actions float-in" style={{ "--d": "700ms" }}>
+            <a
+              href={`/track?ref=${encodeURIComponent(submitState.success.responseId)}`}
+              className="btn btn--solid"
+            >
+              Track my booking
+            </a>
             <button type="button" onClick={resetSuccess} className="btn btn--outline">
-              Submit Another
+              Book another
             </button>
-            <a href="/" className="btn btn--solid">
+            <a href="/" className="btn btn--outline">
               Back to Home
             </a>
           </div>
@@ -3038,11 +3203,14 @@ export default function PublicBooking() {
             Camera
           </span>
         </h1>
-        <p className="bk-sub float-in" style={{ "--d": "480ms" }}>
-          Your slot is confirmed once all requirements are submitted,
-          verification is approved, and the 20% rental downpayment is settled.
-          A ₱1,000 refundable security deposit is required before release. The
-          ₱300 rush fee applies only to bookings for pickup or delivery today.
+        <ul className="bk-facts float-in" style={{ "--d": "480ms" }}>
+          <li>20% downpayment reserves your slot</li>
+          <li>₱1,000 refundable deposit on release</li>
+          <li>Delivery by Lalamove or self pick-up</li>
+          <li>₱300 rush fee for same-day only</li>
+        </ul>
+        <p className="bk-sub bk-sub--small float-in" style={{ "--d": "540ms" }}>
+          Already booked? <a href="/track">Track your booking →</a>
         </p>
       </header>
 

@@ -23,6 +23,12 @@ const {
   isReleased,
   timelineEvents,
 } = require("./lifecycle");
+const {
+  sanitizeDetails,
+  sanitizeReturnDetails,
+  sanitizeLink,
+  isDeliveryMode,
+} = require("./delivery");
 
 // ── Firestore layout ─────────────────────────────────────────────────────────
 //
@@ -250,6 +256,16 @@ async function upsertSubmittedBooking(payload, { source, catalog }) {
     record._createdAt = now;
   }
 
+  // Lalamove delivery form (public site). Required for a new public delivery
+  // booking; a resubmission without it leaves the stored details alone.
+  if (isDeliveryMode(payload.PREFERRED_MODE)) {
+    const required = Boolean(payload.PUBLIC_BOOKING) && !existing;
+    const delivery = sanitizeDetails(payload.DELIVERY_DETAILS, { required });
+    const ret = sanitizeReturnDetails(payload.RETURN_DETAILS, { required });
+    if (delivery) record.DELIVERY_DETAILS = delivery;
+    if (ret) record.RETURN_DETAILS = ret;
+  }
+
   const documents = {};
   for (const key of DOCUMENT_FIELDS) {
     const value = record[key]?.[0];
@@ -268,7 +284,15 @@ async function upsertSubmittedBooking(payload, { source, catalog }) {
 
 // Firestore-only booking fields (no Supabase column), editable through PATCH.
 // TIMELINE is deliberately absent: only the server appends to it.
-const LIFECYCLE_FIELDS = ["UNIT_SERIAL", "RETURN_CONDITION", "RETURN_NOTES"];
+const LIFECYCLE_FIELDS = [
+  "UNIT_SERIAL",
+  "RETURN_CONDITION",
+  "RETURN_NOTES",
+  "DELIVERY_DETAILS",
+  "RETURN_DETAILS",
+  "LALAMOVE_DELIVERY_LINK",
+  "LALAMOVE_RETURN_LINK",
+];
 
 /**
  * A release (out for delivery / handed to the renter) must be for an
@@ -324,6 +348,12 @@ async function applyLifecycle(id, before, updates) {
     }
   }
 
+  if ("DELIVERY_DETAILS" in updates) updates.DELIVERY_DETAILS = sanitizeDetails(updates.DELIVERY_DETAILS);
+  if ("RETURN_DETAILS" in updates) updates.RETURN_DETAILS = sanitizeReturnDetails(updates.RETURN_DETAILS);
+  for (const key of ["LALAMOVE_DELIVERY_LINK", "LALAMOVE_RETURN_LINK"]) {
+    if (key in updates) updates[key] = sanitizeLink(updates[key]);
+  }
+
   const after = { ...before, ...updates };
   const from = before.FULFILLMENT_STATUS ?? null;
   const to = after.FULFILLMENT_STATUS ?? null;
@@ -351,6 +381,18 @@ async function applyLifecycle(id, before, updates) {
     { ...after, FULFILLMENT_STATUS: to },
     new Date().toISOString(),
   );
+  const at = new Date().toISOString();
+  // Booking the rider comes before it heads out, so list it first.
+  if (updates.LALAMOVE_DELIVERY_LINK && updates.LALAMOVE_DELIVERY_LINK !== before.LALAMOVE_DELIVERY_LINK) {
+    events.unshift({ at, event: "lalamove_booked", note: "Lalamove delivery booked" });
+  }
+  if (updates.LALAMOVE_RETURN_LINK && updates.LALAMOVE_RETURN_LINK !== before.LALAMOVE_RETURN_LINK) {
+    events.push({ at, event: "return_booked", note: "Lalamove return pickup booked" });
+  }
+  if (updates.RETURN_DETAILS && updates._byRenter) {
+    events.push({ at, event: "return_details", note: "Renter updated the return pickup details" });
+  }
+  delete updates._byRenter;
   if (events.length) updates.TIMELINE = [...(before.TIMELINE || []), ...events];
 }
 
@@ -361,7 +403,7 @@ async function updateBookingByResponseId(responseId, fields) {
   const snap = await ref.get();
   if (!snap.exists) return null;
 
-  const { "Please_choose_your_add-ons": addons, ...rest } = fields || {};
+  const { "Please_choose_your_add-ons": addons, _byRenter, ...rest } = fields || {};
   const clean = sanitizeBookingUpdateFields(snap.get("status"), rest);
 
   // Same whitelist the Supabase layer used, plus the lifecycle fields:
@@ -374,6 +416,7 @@ async function updateBookingByResponseId(responseId, fields) {
   if (Array.isArray(addons)) {
     updates["Please_choose_your_add-ons"] = addons.map((a) => String(a).trim()).filter(Boolean);
   }
+  if (_byRenter) updates._byRenter = true;
   await applyLifecycle(id, snap.data(), updates);
   updates._lastUpdatedAt = new Date().toISOString();
 

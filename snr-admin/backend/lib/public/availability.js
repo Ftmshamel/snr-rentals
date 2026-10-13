@@ -1,13 +1,13 @@
-const { findAvailabilityBookings } = require("../lib/dataSource");
-const { isFirebase } = require("../lib/sourceName");
-const { findCamera, getUnitsForDate } = require("../lib/catalog");
+const { findAvailabilityBookings } = require("../dataSource");
+const { isFirebase } = require("../sourceName");
+const { findCamera, getUnitsForDate } = require("../catalog");
 
 // In firebase mode the unit count comes from the live catalogue (Firestore
 // `cameras`), as of the requested pick-up date. CAMERA_UNITS below is the
 // legacy (supabase / mongodb) source only.
 async function unitsFor(cameraName, pickUpDate) {
   if (!isFirebase()) return CAMERA_UNITS[normalize(cameraName)];
-  const { listCameras } = require("../lib/firestoreQueries");
+  const { listCameras } = require("../firestoreQueries");
   const camera = findCamera(await listCameras(), cameraName);
   // A hidden camera can't be booked from the public site.
   if (!camera || camera.active === false) return undefined;

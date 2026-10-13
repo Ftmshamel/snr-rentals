@@ -71,6 +71,14 @@ the §1 problem cannot happen: `/api/bookings/by?type=unmirrored` returns `[]`.
 - **Serials identify physical units across the whole catalogue** (unique
   across cameras). Bookings released before a camera had serials have no
   `UNIT_SERIAL`; that is expected, not an error.
+- **Delivery details are validated server-side** (`lib/delivery.js`): a new
+  public delivery booking needs receiver, number, address and a pin inside
+  the Philippines; anything else is a 400 the renter sees. Lalamove links
+  must be full http(s) URLs. The renter can change `RETURN_DETAILS` through
+  `/api/public?action=return-details` only until `LALAMOVE_RETURN_LINK` is set.
+- **The public track view is a whitelist** (`lib/public/track.js` `publicView`):
+  no documents, phone numbers or other renters' data. Add fields there
+  deliberately.
 - **No default API URL** in either frontend. The old default was the live
   Mongo/Supabase deployment; a misconfigured build now fails instead of
   writing real-looking bookings into the old database.
@@ -322,8 +330,9 @@ Use PowerShell `System.Drawing` for resizing (see git history for the pattern).
 
 ## 6. Deployment constraints
 
-- **Vercel Hobby: max 12 serverless functions.** Currently **12** (`backend/api/**/*.js`) —
-  `api/catalog.js` took the last slot.
+- **Vercel Hobby: max 12 serverless functions.** Currently **11** (`backend/api/**/*.js`).
+  `public-availability` and `verify-renter` were folded into `api/public.js`
+  (`?action=`), which also serves `track` and `return-details`.
   This is why `/api/bookings/by` multiplexes `type=camera|addon|unmirrored`
   rather than having separate routes. Adding a 13th file breaks the build.
 - **Deployments can be "Blocked."** This is an account-level state, not a build

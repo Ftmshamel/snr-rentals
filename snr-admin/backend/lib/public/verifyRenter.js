@@ -1,4 +1,4 @@
-const { verifyRepeatRenter } = require("../lib/verifyRepeatRenter");
+const { verifyRepeatRenter } = require("../verifyRepeatRenter");
 
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 60_000;

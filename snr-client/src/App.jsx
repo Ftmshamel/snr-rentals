@@ -9,9 +9,19 @@ import Contact from "./components/Contact.jsx";
 import Footer from "./components/Footer.jsx";
 import BackToTop from "./components/BackToTop.jsx";
 import PublicBooking from "./pages/PublicBooking.jsx";
+import TrackBooking from "./pages/TrackBooking.jsx";
 import "./booking.css";
 
 export default function App() {
+  if (window.location.pathname.startsWith("/track")) {
+    return (
+      <div className="booking-app">
+        <div className="grain" aria-hidden="true" />
+        <TrackBooking />
+      </div>
+    );
+  }
+
   if (window.location.pathname.startsWith("/book")) {
     return (
       <div className="booking-app">
