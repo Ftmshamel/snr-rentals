@@ -138,7 +138,18 @@ async function getOrder(orderId) {
 
 async function getDriver(orderId, driverId) {
   const d = await call("GET", `/v3/orders/${encodeURIComponent(orderId)}/drivers/${encodeURIComponent(driverId)}`);
-  return { name: d.name || "", phone: d.phone || "", plateNumber: d.plateNumber || "" };
+  const lat = Number(d.coordinates?.lat);
+  const lng = Number(d.coordinates?.lng);
+  return {
+    name: d.name || "",
+    phone: d.phone || "",
+    plateNumber: d.plateNumber || "",
+    // The rider's last reported position, when Lalamove shares it.
+    location:
+      Number.isFinite(lat) && Number.isFinite(lng)
+        ? { lat, lng, updatedAt: d.coordinates?.updatedAt || new Date().toISOString() }
+        : null,
+  };
 }
 
 async function cancelOrder(orderId) {

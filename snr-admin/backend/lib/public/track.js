@@ -58,6 +58,16 @@ function riderView(order) {
     status: order.statusLabel || order.status,
     rider: order.driver?.name || null,
     plate: order.driver?.plateNumber || null,
+    // For the map: the rider's position and the trip's two ends.
+    location: order.driver?.location ? { lat: order.driver.location.lat, lng: order.driver.location.lng } : null,
+    // Coordinates only — the stop labels carry contact names.
+    route: order.route
+      ? {
+          from: { lat: order.route.from.lat, lng: order.route.from.lng },
+          to: { lat: order.route.to.lat, lng: order.route.to.lng },
+        }
+      : null,
+    active: ["ASSIGNING_DRIVER", "ON_GOING", "PICKED_UP"].includes(order.status),
   };
 }
 

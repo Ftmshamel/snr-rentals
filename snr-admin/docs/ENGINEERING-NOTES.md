@@ -71,6 +71,19 @@ the §1 problem cannot happen: `/api/bookings/by?type=unmirrored` returns `[]`.
 - **Serials identify physical units across the whole catalogue** (unique
   across cameras). Bookings released before a camera had serials have no
   `UNIT_SERIAL`; that is expected, not an error.
+- **The server assigns the unit** (`lib/unitAssignment.js`, called from
+  `assignUnit` in `firestoreQueries.js`). Approving a booking — or creating
+  one already approved — gives it a unit free for its dates: its current
+  one if it still fits, else the unit idle longest. Changing dates or camera
+  re-checks it; cancel / reject / back to pending frees it. Staff can swap
+  it until release (PATCH `UNIT_SERIAL`; `"auto"` hands it back), and a
+  swap or release onto a unit another rental holds for overlapping dates is
+  refused. A unit that is out and **overdue** counts as busy for every date
+  until it is marked returned. "Busy" uses the same window as availability
+  (back-to-back at the same hour is not an overlap). Every change is a
+  `unit_assigned` timeline entry; the renter's Track page never shows it.
+  If no unit is free the booking stays unassigned with a note — availability
+  normally prevents that, but a manual booking or a retired serial can cause it.
 - **Delivery details are validated server-side** (`lib/delivery.js`): a new
   public delivery booking needs receiver, number, address and a pin inside
   the Philippines; anything else is a 400 the renter sees. Lalamove links
@@ -82,6 +95,15 @@ the §1 problem cannot happen: `/api/bookings/by?type=unmirrored` returns `[]`.
   (throttled to 30 s per order), not pushed — a webhook would need its own
   route, and every function slot is used. Phones are sent to Lalamove as
   E.164 (`+63…`).
+- **Rider map**: each order stores `route { from, to }` (the trip's two pins)
+  when booked, and `driver.location` from Lalamove's driver endpoint (re-read
+  on every sync while the order is active). The Track page draws them with
+  Leaflet (`snr-client/src/components/RiderMap.jsx`); the public view sends
+  coordinates only, never the stop labels. A **simulated** sandbox order
+  places the rider itself: near the pickup pin while "on the way", on the
+  sender's pin once picked up, on the recipient's pin once dropped off. The
+  delivery map stays on the Track page after drop-off until a return rider
+  is booked. Lalamove's own share-link page can't show a simulated rider.
 - **The public track view is a whitelist** (`lib/public/track.js` `publicView`):
   no documents, phone numbers or other renters' data. Add fields there
   deliberately.

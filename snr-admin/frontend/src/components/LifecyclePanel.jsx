@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { findCamera } from "../hooks/useCameras.js";
 import LalamoveBox from "./LalamoveBox.jsx";
 import LalamoveApiPanel from "./LalamoveApiPanel.jsx";
@@ -71,6 +71,8 @@ export default function LifecyclePanel({ booking, cameras, onPatch, onReplace })
   const camera = findCamera(cameras, booking.PREFERRED_CAMERA);
   const serials = (camera?.serials || []).filter((u) => u.active !== false);
   const [serial, setSerial] = useState(booking.UNIT_SERIAL || "");
+  // The server assigns a unit on approval (and may move it when dates change).
+  useEffect(() => setSerial(booking.UNIT_SERIAL || ""), [booking.UNIT_SERIAL]);
   const [condition, setCondition] = useState("good");
   const [notes, setNotes] = useState("");
   const [deliveryLink, setDeliveryLink] = useState(booking.LALAMOVE_DELIVERY_LINK || "");
@@ -119,7 +121,8 @@ export default function LifecyclePanel({ booking, cameras, onPatch, onReplace })
 
       <Stepper booking={booking} stage={stage} />
 
-      {booking.UNIT_SERIAL && (
+      {/* Before release the unit is in the picker below. */}
+      {booking.UNIT_SERIAL && !["reserved", "release_today", "release_late"].includes(stage.key) && (
         <p className="font-mono text-[11px] text-[color:var(--color-ink)]">
           Unit: <strong>{booking.UNIT_SERIAL}</strong>
           {booking.RETURN_CONDITION && (
@@ -134,6 +137,11 @@ export default function LifecyclePanel({ booking, cameras, onPatch, onReplace })
       )}
 
       {/* The next step */}
+      {stage.key === "pending" && serials.length > 0 && (
+        <p className="font-mono text-[10px] text-[color:var(--color-dark-gray)]">
+          Approving assigns a free {booking.PREFERRED_CAMERA} unit automatically.
+        </p>
+      )}
       {stage.key === "pending" && (
         <div className="flex gap-2">
           <button type="button" disabled={busy} onClick={() => run({ status: "approved" })} className="ui-btn ui-btn--sm ui-btn--solid flex-1">
@@ -154,9 +162,18 @@ export default function LifecyclePanel({ booking, cameras, onPatch, onReplace })
         <div className="space-y-2">
           {serials.length > 0 ? (
             <label className="block">
-              <span className="ui-label">Unit being handed over (serial no.)</span>
-              <select value={serial} onChange={(e) => setSerial(e.target.value)} className="ui-input ui-input--sm">
-                <option value="">— pick a unit —</option>
+              <span className="ui-label">Unit to prepare (serial no.)</span>
+              <select
+                value={serial}
+                disabled={busy}
+                onChange={(e) => {
+                  setSerial(e.target.value);
+                  // Saved straight away so the Today page shows the right unit.
+                  run({ UNIT_SERIAL: e.target.value || "auto" });
+                }}
+                className="ui-input ui-input--sm"
+              >
+                <option value="">{serial ? "— let the system pick again —" : "— pick a unit —"}</option>
                 {serials.map((u) => (
                   <option key={u.serial} value={u.serial}>
                     {u.serial}
@@ -164,8 +181,19 @@ export default function LifecyclePanel({ booking, cameras, onPatch, onReplace })
                   </option>
                 ))}
               </select>
+              <span className="mt-1 block font-mono text-[10px] text-[color:var(--color-dark-gray)]">
+                {booking.UNIT_SERIAL
+                  ? "Picked by the system when the booking was approved — change it if you're sending a different unit."
+                  : "No unit assigned yet."}
+              </span>
             </label>
-          ) : (
+          ) : null}
+          {serials.length > 0 && !booking.UNIT_SERIAL && (
+            <button type="button" disabled={busy} onClick={() => run({ UNIT_SERIAL: "auto" })} className="ui-btn ui-btn--sm w-full">
+              Assign a unit automatically
+            </button>
+          )}
+          {serials.length === 0 && (
             <p className="font-mono text-[10px] text-[color:var(--color-dark-gray)]">
               No serial numbers listed for this camera yet — add them on the Catalog page to track each unit.
             </p>

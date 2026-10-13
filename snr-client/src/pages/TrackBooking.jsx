@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiGetJson, apiPostJson } from "../utils/api.js";
 import { BookingTopBar } from "./PublicBooking.jsx";
+import RiderMap from "../components/RiderMap.jsx";
 import DeliveryDetailsForm, { EMPTY_DELIVERY, deliveryMissing } from "../components/DeliveryDetailsForm.jsx";
 
 // /track — a renter looks up their booking by reference code: where it is in
@@ -154,6 +155,12 @@ function Result({ booking, onUpdated }) {
   const at = stepIndex(booking.stage.key, booking.mode);
   const ended = ["cancelled", "rejected"].includes(booking.stage.key);
   const showDeliveryLink = booking.lalamove.deliveryLink && ["out_for_delivery", "reserved"].includes(booking.stage.key);
+  // The delivery rider stays on screen after drop-off (pinned at the renter's
+  // address) until a return rider takes over.
+  const showDeliveryRider =
+    booking.lalamove.delivery &&
+    (["out_for_delivery", "reserved"].includes(booking.stage.key) ||
+      (["with_renter", "for_return", "overdue"].includes(booking.stage.key) && !booking.lalamove.return));
 
   return (
     <div className="bk-panel bk-track">
@@ -201,9 +208,21 @@ function Result({ booking, onUpdated }) {
       )}
 
       {/* Live rider info when S&R booked through the Lalamove API. */}
-      {showDeliveryLink && booking.lalamove.delivery && <RiderLine label="Delivery" info={booking.lalamove.delivery} />}
+      {showDeliveryRider && (
+        <>
+          <RiderLine label="Delivery" info={booking.lalamove.delivery} />
+          {booking.lalamove.delivery.route && (
+            <RiderMap kind="delivery" route={booking.lalamove.delivery.route} location={booking.lalamove.delivery.location} />
+          )}
+        </>
+      )}
       {booking.lalamove.return && !["returned", "completed"].includes(booking.stage.key) && (
-        <RiderLine label="Return pickup" info={booking.lalamove.return} />
+        <>
+          <RiderLine label="Return pickup" info={booking.lalamove.return} />
+          {booking.lalamove.return.route && (
+            <RiderMap kind="return" route={booking.lalamove.return.route} location={booking.lalamove.return.location} />
+          )}
+        </>
       )}
 
       {booking.mode === "delivery" && !ended && booking.stage.key !== "completed" && (

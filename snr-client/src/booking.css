@@ -3106,3 +3106,27 @@ select.bk-input {
   .bk-track__steps li span:last-child { font-size: 0.56rem; }
   .bk-map__canvas { height: 240px; }
 }
+
+/* ── Rider map on the Track page ─────────────────────────────────────── */
+.bk-ridermap {
+  height: 260px;
+  width: 100%;
+  border: 3px solid var(--color-border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #e6e8e3;
+  z-index: 0;
+}
+.bk-mapicon { background: none; border: 0; }
+.bk-mapicon__dot {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--color-ink);
+  font-size: 17px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.bk-mapicon__dot.is-rider { background: #fbbf24; }
