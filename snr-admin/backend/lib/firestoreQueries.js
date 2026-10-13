@@ -383,10 +383,19 @@ async function applyLifecycle(id, before, updates) {
   );
   const at = new Date().toISOString();
   // Booking the rider comes before it heads out, so list it first.
-  if (updates.LALAMOVE_DELIVERY_LINK && updates.LALAMOVE_DELIVERY_LINK !== before.LALAMOVE_DELIVERY_LINK) {
+  // API bookings (LALAMOVE_*_ORDER present) log their own, more detailed event.
+  if (
+    updates.LALAMOVE_DELIVERY_LINK &&
+    updates.LALAMOVE_DELIVERY_LINK !== before.LALAMOVE_DELIVERY_LINK &&
+    !("LALAMOVE_DELIVERY_ORDER" in updates)
+  ) {
     events.unshift({ at, event: "lalamove_booked", note: "Lalamove delivery booked" });
   }
-  if (updates.LALAMOVE_RETURN_LINK && updates.LALAMOVE_RETURN_LINK !== before.LALAMOVE_RETURN_LINK) {
+  if (
+    updates.LALAMOVE_RETURN_LINK &&
+    updates.LALAMOVE_RETURN_LINK !== before.LALAMOVE_RETURN_LINK &&
+    !("LALAMOVE_RETURN_ORDER" in updates)
+  ) {
     events.push({ at, event: "return_booked", note: "Lalamove return pickup booked" });
   }
   if (updates.RETURN_DETAILS && updates._byRenter) {
@@ -396,7 +405,15 @@ async function applyLifecycle(id, before, updates) {
   if (events.length) updates.TIMELINE = [...(before.TIMELINE || []), ...events];
 }
 
-async function updateBookingByResponseId(responseId, fields) {
+// Written only by the server (Lalamove API orders), never accepted from PATCH.
+const INTERNAL_FIELDS = ["LALAMOVE_DELIVERY_ORDER", "LALAMOVE_RETURN_ORDER"];
+
+/**
+ * @param {object} [opts]
+ * @param {boolean} [opts.internal]  allow INTERNAL_FIELDS (server code only)
+ * @param {object[]} [opts.events]   extra timeline entries to append
+ */
+async function updateBookingByResponseId(responseId, fields, opts = {}) {
   const id = bookingDocId(decodeId(responseId));
   if (!id) return null;
   const ref = bookingsCol().doc(id);
@@ -410,7 +427,10 @@ async function updateBookingByResponseId(responseId, fields) {
   // documents, identifiers and the timeline are never editable through PATCH.
   const updates = {};
   for (const [key, value] of Object.entries(clean)) {
-    const allowed = (FIELD_MAP[key] !== undefined && key !== "STATUS") || LIFECYCLE_FIELDS.includes(key);
+    const allowed =
+      (FIELD_MAP[key] !== undefined && key !== "STATUS") ||
+      LIFECYCLE_FIELDS.includes(key) ||
+      (opts.internal && INTERNAL_FIELDS.includes(key));
     if (allowed) updates[key] = value;
   }
   if (Array.isArray(addons)) {
@@ -418,6 +438,9 @@ async function updateBookingByResponseId(responseId, fields) {
   }
   if (_byRenter) updates._byRenter = true;
   await applyLifecycle(id, snap.data(), updates);
+  if (opts.events?.length) {
+    updates.TIMELINE = [...(updates.TIMELINE || snap.get("TIMELINE") || []), ...opts.events];
+  }
   updates._lastUpdatedAt = new Date().toISOString();
 
   await ref.set(updates, { merge: true });

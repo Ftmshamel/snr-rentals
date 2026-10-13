@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { findCamera } from "../hooks/useCameras.js";
 import LalamoveBox from "./LalamoveBox.jsx";
+import LalamoveApiPanel from "./LalamoveApiPanel.jsx";
+import { useLalamoveStatus } from "../hooks/useLalamove.js";
 import {
   OUT_STAGES,
   StageBadge,
@@ -63,7 +65,7 @@ function Timeline({ entries }) {
   );
 }
 
-export default function LifecyclePanel({ booking, cameras, onPatch }) {
+export default function LifecyclePanel({ booking, cameras, onPatch, onReplace }) {
   const stage = getStage(booking);
   const delivery = isDelivery(booking);
   const camera = findCamera(cameras, booking.PREFERRED_CAMERA);
@@ -75,6 +77,21 @@ export default function LifecyclePanel({ booking, cameras, onPatch }) {
   const [returnLink, setReturnLink] = useState(booking.LALAMOVE_RETURN_LINK || "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  // Lalamove API when the backend has a key + shop location, unless staff
+  // choose to book by hand this time.
+  const llm = useLalamoveStatus();
+  const [manual, setManual] = useState(false);
+  const apiMode = delivery && llm.ready && !manual;
+  const deliveryOrderActive = ["ASSIGNING_DRIVER", "ON_GOING", "PICKED_UP"].includes(booking.LALAMOVE_DELIVERY_ORDER?.status);
+  const manualToggle = llm.ready && delivery && (
+    <button
+      type="button"
+      onClick={() => setManual((m) => !m)}
+      className="font-mono text-[10px] font-bold underline text-[color:var(--color-dark-gray)]"
+    >
+      {manual ? "Use the Lalamove API instead" : "Book manually instead"}
+    </button>
+  );
 
   async function run(patch, confirmText) {
     if (confirmText && !window.confirm(confirmText)) return;
@@ -135,9 +152,6 @@ export default function LifecyclePanel({ booking, cameras, onPatch }) {
 
       {["reserved", "release_today", "release_late"].includes(stage.key) && (
         <div className="space-y-2">
-          {delivery && (
-            <LalamoveBox booking={booking} kind="delivery" link={deliveryLink} onLinkChange={setDeliveryLink} busy={busy} />
-          )}
           {serials.length > 0 ? (
             <label className="block">
               <span className="ui-label">Unit being handed over (serial no.)</span>
@@ -156,51 +170,79 @@ export default function LifecyclePanel({ booking, cameras, onPatch }) {
               No serial numbers listed for this camera yet — add them on the Catalog page to track each unit.
             </p>
           )}
-          <button
-            type="button"
-            disabled={busy || (serials.length > 0 && !serial)}
-            onClick={() =>
-              run({
-                FULFILLMENT_STATUS: delivery ? "out_for_delivery" : "out",
-                UNIT_SERIAL: serial || null,
-                ...(delivery && deliveryLink.trim() ? { LALAMOVE_DELIVERY_LINK: deliveryLink.trim() } : {}),
-              })
-            }
-            className="ui-btn ui-btn--sm ui-btn--solid w-full disabled:opacity-50"
-          >
-            {releaseLabel}
-          </button>
+          {apiMode ? (
+            <LalamoveApiPanel
+              booking={booking}
+              kind="delivery"
+              serial={serial || null}
+              needsSerial={serials.length > 0 && !serial}
+              env={llm.env}
+              onBooking={onReplace}
+            />
+          ) : (
+            delivery && <LalamoveBox booking={booking} kind="delivery" link={deliveryLink} onLinkChange={setDeliveryLink} busy={busy} />
+          )}
+          {manualToggle}
+          {!apiMode && (
+            <button
+              type="button"
+              disabled={busy || (serials.length > 0 && !serial)}
+              onClick={() =>
+                run({
+                  FULFILLMENT_STATUS: delivery ? "out_for_delivery" : "out",
+                  UNIT_SERIAL: serial || null,
+                  ...(delivery && deliveryLink.trim() ? { LALAMOVE_DELIVERY_LINK: deliveryLink.trim() } : {}),
+                })
+              }
+              className="ui-btn ui-btn--sm ui-btn--solid w-full disabled:opacity-50"
+            >
+              {releaseLabel}
+            </button>
+          )}
         </div>
       )}
 
-      {stage.key === "out_for_delivery" && (
-        <LalamoveBox
-          booking={booking}
-          kind="delivery"
-          link={deliveryLink}
-          onLinkChange={setDeliveryLink}
-          onSaveLink={() => run({ LALAMOVE_DELIVERY_LINK: deliveryLink.trim() })}
-          busy={busy}
-        />
-      )}
+      {stage.key === "out_for_delivery" &&
+        (booking.LALAMOVE_DELIVERY_ORDER?.orderId ? (
+          <LalamoveApiPanel booking={booking} kind="delivery" env={llm.env} onBooking={onReplace} />
+        ) : (
+          <LalamoveBox
+            booking={booking}
+            kind="delivery"
+            link={deliveryLink}
+            onLinkChange={setDeliveryLink}
+            onSaveLink={() => run({ LALAMOVE_DELIVERY_LINK: deliveryLink.trim() })}
+            busy={busy}
+          />
+        ))}
 
       {stage.key === "out_for_delivery" && (
         <div className="flex gap-2">
           <button type="button" disabled={busy} onClick={() => run({ FULFILLMENT_STATUS: "out" })} className="ui-btn ui-btn--sm ui-btn--solid flex-1">
             Mark delivered
           </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => run({ FULFILLMENT_STATUS: null }, "Undo the release? The unit goes back to the shop.")}
-            className="ui-btn ui-btn--sm"
-          >
-            Undo
-          </button>
+          {/* With a live Lalamove order, cancel the order instead (it undoes the release). */}
+          {!deliveryOrderActive && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => run({ FULFILLMENT_STATUS: null }, "Undo the release? The unit goes back to the shop.")}
+              className="ui-btn ui-btn--sm"
+            >
+              Undo
+            </button>
+          )}
         </div>
       )}
 
+      {["with_renter", "for_return", "overdue"].includes(stage.key) && delivery && (apiMode || booking.LALAMOVE_RETURN_ORDER?.orderId) && !manual && (
+        <LalamoveApiPanel booking={booking} kind="return" env={llm.env} onBooking={onReplace} />
+      )}
       {["with_renter", "for_return", "overdue"].includes(stage.key) && delivery && (
+        <div>{manualToggle}</div>
+      )}
+
+      {["with_renter", "for_return", "overdue"].includes(stage.key) && delivery && !(apiMode || booking.LALAMOVE_RETURN_ORDER?.orderId) && (
         <LalamoveBox
           booking={booking}
           kind="return"

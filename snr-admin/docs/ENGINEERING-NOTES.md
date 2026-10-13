@@ -76,6 +76,12 @@ the §1 problem cannot happen: `/api/bookings/by?type=unmirrored` returns `[]`.
   the Philippines; anything else is a 400 the renter sees. Lalamove links
   must be full http(s) URLs. The renter can change `RETURN_DETAILS` through
   `/api/public?action=return-details` only until `LALAMOVE_RETURN_LINK` is set.
+- **Lalamove API orders**: booking a delivery releases the unit first (all
+  lifecycle checks run) and rolls the release back if Lalamove refuses, so a
+  failed order never leaves a unit marked out. Status is polled on demand
+  (throttled to 30 s per order), not pushed — a webhook would need its own
+  route, and every function slot is used. Phones are sent to Lalamove as
+  E.164 (`+63…`).
 - **The public track view is a whitelist** (`lib/public/track.js` `publicView`):
   no documents, phone numbers or other renters' data. Add fields there
   deliberately.
@@ -330,7 +336,8 @@ Use PowerShell `System.Drawing` for resizing (see git history for the pattern).
 
 ## 6. Deployment constraints
 
-- **Vercel Hobby: max 12 serverless functions.** Currently **11** (`backend/api/**/*.js`).
+- **Vercel Hobby: max 12 serverless functions.** Currently **12** (`backend/api/**/*.js`) —
+  `api/lalamove.js` is the last slot.
   `public-availability` and `verify-renter` were folded into `api/public.js`
   (`?action=`), which also serves `track` and `return-details`.
   This is why `/api/bookings/by` multiplexes `type=camera|addon|unmirrored`

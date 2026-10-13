@@ -17,6 +17,9 @@ const PUBLIC_EVENTS = {
   rejected: "Booking request declined",
   cancelled: "Booking cancelled",
   lalamove_booked: "Lalamove rider booked",
+  lalamove_api_booked: "Lalamove rider booked",
+  lalamove_api_return_booked: "Lalamove return pickup booked",
+  lalamove_status: null, // shown with its own note (rider name, plate)
   out_for_delivery: "Out for delivery",
   delivered: "Delivered to you",
   released: "Picked up",
@@ -49,6 +52,15 @@ function publicStage(b, today = manilaToday()) {
   return { key: "reserved", label: "Approved — slot reserved" };
 }
 
+function riderView(order) {
+  if (!order?.orderId) return null;
+  return {
+    status: order.statusLabel || order.status,
+    rider: order.driver?.name || null,
+    plate: order.driver?.plateNumber || null,
+  };
+}
+
 function firstName(name) {
   return String(name || "").trim().split(/\s+/)[0] || "";
 }
@@ -68,11 +80,14 @@ function publicView(b) {
     returnTime: b.RETURN_TIME,
     stage,
     timeline: (b.TIMELINE || [])
-      .filter((e) => PUBLIC_EVENTS[e.event])
-      .map((e) => ({ at: e.at, label: PUBLIC_EVENTS[e.event] })),
+      .filter((e) => e.event in PUBLIC_EVENTS)
+      .map((e) => ({ at: e.at, label: PUBLIC_EVENTS[e.event] || e.note || e.event })),
     lalamove: {
       deliveryLink: b.LALAMOVE_DELIVERY_LINK || null,
       returnLink: b.LALAMOVE_RETURN_LINK || null,
+      // API orders: live status and the rider (name + plate only).
+      delivery: riderView(b.LALAMOVE_DELIVERY_ORDER),
+      return: riderView(b.LALAMOVE_RETURN_ORDER),
     },
     // The renter may still change where the camera is collected from until
     // the return Lalamove is booked.
@@ -98,10 +113,13 @@ module.exports = async function track(req, res, query) {
   if (isRateLimited(req, "track")) {
     return res.status(429).json({ ok: false, error: "Too many attempts. Please try again in a minute." });
   }
-  const booking = await findBooking(query.ref);
+  let booking = await findBooking(query.ref);
   if (!booking) {
     return res.status(404).json({ ok: false, error: "No booking found for that reference code." });
   }
+  // Refresh any active Lalamove order so the renter sees the rider's status.
+  const { syncActive } = require("../lalamoveBookings");
+  booking = (await syncActive(booking.responseId).catch(() => null)) || booking;
   return res.status(200).json({ ok: true, booking: publicView(booking) });
 };
 
