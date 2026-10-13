@@ -64,8 +64,9 @@ split describes the legacy mode and the historical data.
 ### Lalamove deliveries (Oct 2026)
 
 - S&R delivers by **Lalamove** — through the **Lalamove v3 API** when the
-  backend has `LALAMOVE_API_KEY` / `LALAMOVE_API_SECRET` and the shop's
-  coordinates (`SHOP_LAT`, `SHOP_LNG`, `SHOP_ADDRESS`), otherwise by hand. The
+  backend has `LALAMOVE_API_KEY` / `LALAMOVE_API_SECRET`, otherwise by hand.
+  The shop's address and pin are in `backend/lib/shop.js` (and
+  `frontend/src/data/shop.js` for the manual box) — change both together. The
   renter fills a Lalamove-style form when booking a delivery —
   `DELIVERY_DETAILS { recipientName, recipientPhone, address, landmark, notes, lat, lng }`
   with a map pin — and says where to collect it back (`RETURN_DETAILS`, same

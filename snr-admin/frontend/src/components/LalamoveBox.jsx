@@ -103,7 +103,9 @@ export default function LalamoveBox({ booking, kind, link, onLinkChange, onSaveL
   const shop = {
     title: "🏠 S&R Rentals (shop)",
     rows: [
-      { label: "Shop location", value: SHOP.mapsLink, href: SHOP.mapsLink },
+      { label: "Address", value: SHOP.address },
+      { label: "Pin (lat, lng)", value: `${SHOP.lat}, ${SHOP.lng}` },
+      { label: "Shop on Google Maps", value: SHOP.mapsLink, href: SHOP.mapsLink },
       { label: "Contact", value: SHOP.name },
       { label: "Mobile", value: SHOP.phone },
     ],
