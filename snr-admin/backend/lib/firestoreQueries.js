@@ -11,9 +11,18 @@ const {
   CatalogValidationError,
   slugify,
   sameName,
+  findCamera,
+  activeSerials,
   sanitizeCamera,
   applyCameraUpdate,
 } = require("./catalog");
+const {
+  RETURN_CONDITIONS,
+  LifecycleError,
+  normalizeFulfillment,
+  isReleased,
+  timelineEvents,
+} = require("./lifecycle");
 
 // ── Firestore layout ─────────────────────────────────────────────────────────
 //
@@ -227,6 +236,10 @@ async function upsertSubmittedBooking(payload, { source, catalog }) {
   );
   const record = toMongoFormat(row, addons);
   const now = new Date().toISOString();
+  if (!existing) {
+    record.TIMELINE = [{ at: now, event: "submitted" }];
+    if (status !== "pending") record.TIMELINE.push({ at: now, event: status });
+  }
   record.responseId = String(payload.responseId).trim();
   record.REPEAT_RENTER = isRepeatRenter(payload);
   record.REPEAT_REF = record.REPEAT_RENTER ? payload.REPEAT_REF ?? null : null;
@@ -253,6 +266,94 @@ async function upsertSubmittedBooking(payload, { source, catalog }) {
   return { action: existing ? "updated" : "inserted", status };
 }
 
+// Firestore-only booking fields (no Supabase column), editable through PATCH.
+// TIMELINE is deliberately absent: only the server appends to it.
+const LIFECYCLE_FIELDS = ["UNIT_SERIAL", "RETURN_CONDITION", "RETURN_NOTES"];
+
+/**
+ * A release (out for delivery / handed to the renter) must be for an
+ * approved booking and name a physical unit that isn't already out — that
+ * is what lets a damaged unit be traced to whoever had it last.
+ */
+async function validateRelease(id, after) {
+  const status = String(after.status || "").toLowerCase();
+  if (status !== "approved") {
+    throw new LifecycleError("Approve the booking before releasing the unit.");
+  }
+  const camera = findCamera(await listCameras(), after.PREFERRED_CAMERA);
+  const serials = activeSerials(camera);
+  if (serials.length === 0) return after.UNIT_SERIAL || null;
+
+  const wanted = String(after.UNIT_SERIAL || "").trim().toUpperCase();
+  const serial = serials.find((s) => s.toUpperCase() === wanted);
+  if (!serial) {
+    throw new LifecycleError(
+      `Pick which ${after.PREFERRED_CAMERA} unit is being released (serial number).`,
+    );
+  }
+  const holder = (await allBookings()).find(
+    ({ ref, data }) =>
+      ref.id !== id &&
+      isReleased(data.FULFILLMENT_STATUS ?? null) &&
+      String(data.UNIT_SERIAL || "").toUpperCase() === wanted,
+  );
+  if (holder) {
+    throw new LifecycleError(
+      `Unit ${serial} is still out with ${holder.data.FULL_NAME || "another renter"} ` +
+        `(${holder.data.responseId}). Mark that rental returned first.`,
+    );
+  }
+  return serial;
+}
+
+/** Checks that a status / unit-status change is a step the rental can take. */
+async function applyLifecycle(id, before, updates) {
+  if ("FULFILLMENT_STATUS" in updates) {
+    updates.FULFILLMENT_STATUS = normalizeFulfillment(updates.FULFILLMENT_STATUS);
+  }
+  if ("UNIT_SERIAL" in updates) {
+    updates.UNIT_SERIAL = String(updates.UNIT_SERIAL ?? "").trim() || null;
+  }
+  if ("RETURN_NOTES" in updates) {
+    updates.RETURN_NOTES = String(updates.RETURN_NOTES ?? "").trim().slice(0, 500);
+  }
+  if ("RETURN_CONDITION" in updates && updates.RETURN_CONDITION != null) {
+    updates.RETURN_CONDITION = String(updates.RETURN_CONDITION).toLowerCase();
+    if (!RETURN_CONDITIONS.includes(updates.RETURN_CONDITION)) {
+      throw new LifecycleError("Return condition must be good or damaged.");
+    }
+  }
+
+  const after = { ...before, ...updates };
+  const from = before.FULFILLMENT_STATUS ?? null;
+  const to = after.FULFILLMENT_STATUS ?? null;
+  const status = String(after.status || "").toLowerCase();
+
+  const serialChanged =
+    "UNIT_SERIAL" in updates && updates.UNIT_SERIAL !== (before.UNIT_SERIAL ?? null);
+  if (isReleased(to) && (!isReleased(from) || serialChanged)) {
+    updates.UNIT_SERIAL = await validateRelease(id, after);
+    after.UNIT_SERIAL = updates.UNIT_SERIAL;
+  }
+  if (to === "returned" && from !== "returned") {
+    if (!isReleased(from)) throw new LifecycleError("Release the unit before marking it returned.");
+    if (!after.RETURN_CONDITION) updates.RETURN_CONDITION = after.RETURN_CONDITION = "good";
+  }
+  if (isReleased(to) && ["cancelled", "rejected", "pending"].includes(status)) {
+    throw new LifecycleError("This unit is still out — mark it returned before changing the booking status.");
+  }
+  if (status === "completed" && String(before.status || "").toLowerCase() !== "completed" && to !== "returned") {
+    throw new LifecycleError("Mark the unit returned before completing the rental.");
+  }
+
+  const events = timelineEvents(
+    { status: before.status, FULFILLMENT_STATUS: from },
+    { ...after, FULFILLMENT_STATUS: to },
+    new Date().toISOString(),
+  );
+  if (events.length) updates.TIMELINE = [...(before.TIMELINE || []), ...events];
+}
+
 async function updateBookingByResponseId(responseId, fields) {
   const id = bookingDocId(decodeId(responseId));
   if (!id) return null;
@@ -263,16 +364,17 @@ async function updateBookingByResponseId(responseId, fields) {
   const { "Please_choose_your_add-ons": addons, ...rest } = fields || {};
   const clean = sanitizeBookingUpdateFields(snap.get("status"), rest);
 
-  // Same whitelist the Supabase layer used: documents and identifiers are
-  // never editable through PATCH.
+  // Same whitelist the Supabase layer used, plus the lifecycle fields:
+  // documents, identifiers and the timeline are never editable through PATCH.
   const updates = {};
   for (const [key, value] of Object.entries(clean)) {
-    if (FIELD_MAP[key] === undefined || key === "STATUS") continue;
-    updates[key] = value;
+    const allowed = (FIELD_MAP[key] !== undefined && key !== "STATUS") || LIFECYCLE_FIELDS.includes(key);
+    if (allowed) updates[key] = value;
   }
   if (Array.isArray(addons)) {
     updates["Please_choose_your_add-ons"] = addons.map((a) => String(a).trim()).filter(Boolean);
   }
+  await applyLifecycle(id, snap.data(), updates);
   updates._lastUpdatedAt = new Date().toISOString();
 
   await ref.set(updates, { merge: true });
@@ -362,9 +464,20 @@ async function listCameras() {
   return snap.docs.map(cameraOut).sort(bySortOrder);
 }
 
+/** A serial number identifies one physical unit across the whole catalogue. */
+function assertSerialsUnique(camera, others) {
+  for (const { serial } of camera.serials || []) {
+    const owner = others.find((c) =>
+      (c.serials || []).some((u) => u.serial.toUpperCase() === serial.toUpperCase()),
+    );
+    if (owner) throw new CatalogValidationError(`Serial "${serial}" is already used by ${owner.name}.`);
+  }
+}
+
 async function createCamera(input) {
   const camera = sanitizeCamera(input);
   const existing = await listCameras();
+  assertSerialsUnique(camera, existing);
   if (existing.some((c) => sameName(c.name, camera.name))) {
     throw new CatalogValidationError(`There is already a camera named "${camera.name}".`);
   }
@@ -395,6 +508,22 @@ async function updateCamera(id, input, effectiveDate) {
     const snap = await tx.get(ref);
     if (!snap.exists) return null;
     const next = applyCameraUpdate(snap.data(), input, effectiveDate);
+    const others = (await tx.get(camerasCol())).docs.filter((d) => d.id !== snap.id).map((d) => d.data());
+    assertSerialsUnique(next, others);
+    // A serial that was handed out must stay listed (retire it instead), or
+    // its rental history would point at a unit that no longer exists.
+    const kept = new Set(next.serials.map((u) => u.serial.toUpperCase()));
+    const dropped = (snap.get("serials") || []).filter((u) => !kept.has(u.serial.toUpperCase()));
+    if (dropped.length) {
+      const used = (await tx.get(bookingsCol())).docs.find((d) =>
+        dropped.some((u) => String(d.get("UNIT_SERIAL") || "").toUpperCase() === u.serial.toUpperCase()),
+      );
+      if (used) {
+        throw new CatalogValidationError(
+          `Serial "${used.get("UNIT_SERIAL")}" has rental history — untick "In service" to retire it instead of deleting it.`,
+        );
+      }
+    }
     next.updated_at = new Date().toISOString();
     tx.set(ref, next);
     return { id: snap.id, ...next };

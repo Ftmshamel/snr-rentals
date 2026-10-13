@@ -8,6 +8,7 @@
 //     pricing,             [{ minDays, maxDays|null, pricePerDay }]
 //     priceHistory:        [{ before: "YYYY-MM-DD", pricing }],
 //     addOns:              [{ name, pricePerDay }],
+//     serials:             [{ serial, active, note }]   one per physical unit
 //     inclusions:          [string],
 //     image, detailImage, goodFor, perfectFor   (public-site display)
 //   }
@@ -18,6 +19,12 @@
 // (applyCameraUpdate) — an edit never overwrites the past, it moves the old
 // value into history with the date the change took effect. See
 // docs/ENGINEERING-NOTES.md §2 for why flattening history restates revenue.
+//
+// Serial numbers: when a camera lists its physical units, `units` is the
+// number of ACTIVE serials (a retired unit stays listed so its rental history
+// still resolves). Every release must name the serial handed over, so a
+// damaged unit can be traced to its last renter. A camera with no serials
+// keeps a plain `units` count (the original seven were seeded that way).
 
 class CatalogValidationError extends Error {}
 
@@ -156,6 +163,21 @@ function sanitizeAddOns(raw) {
     });
 }
 
+function sanitizeSerials(raw) {
+  if (raw == null) return [];
+  if (!Array.isArray(raw)) fail("Serial numbers must be a list.");
+  const seen = new Set();
+  return raw
+    .filter((u) => cleanText(u?.serial))
+    .map((u) => {
+      const serial = cleanText(u.serial, 60);
+      const key = serial.toUpperCase();
+      if (seen.has(key)) fail(`Serial "${serial}" is listed twice.`);
+      seen.add(key);
+      return { serial, active: u.active === undefined ? true : Boolean(u.active), note: cleanText(u.note, 200) };
+    });
+}
+
 function sanitizeInclusions(raw) {
   if (raw == null) return [];
   if (!Array.isArray(raw)) fail("Inclusions must be a list.");
@@ -179,6 +201,19 @@ function sanitizeHistory(raw, kind) {
  * `allowHistory` (seeding); edits from the admin page never send it — the
  * server derives it in applyCameraUpdate.
  */
+function hasSerials(input) {
+  return Array.isArray(input?.serials) && input.serials.some((u) => cleanText(u?.serial));
+}
+
+function activeSerialCount(input) {
+  return input.serials.filter((u) => cleanText(u?.serial) && u.active !== false).length;
+}
+
+/** Serials of a camera that can be handed out. */
+function activeSerials(camera) {
+  return (camera?.serials || []).filter((u) => u.active !== false).map((u) => u.serial);
+}
+
 function sanitizeCamera(input, { allowHistory = false } = {}) {
   if (!input || typeof input !== "object") fail("Camera details are missing.");
   const name = cleanText(input.name, 80);
@@ -189,9 +224,10 @@ function sanitizeCamera(input, { allowHistory = false } = {}) {
     tag: cleanText(input.tag, 80),
     active: input.active === undefined ? true : Boolean(input.active),
     sortOrder: Number.isFinite(Number(input.sortOrder)) ? Number(input.sortOrder) : 0,
-    units: toInt(input.units, "Units"),
+    units: hasSerials(input) ? activeSerialCount(input) : toInt(input.units, "Units"),
     pricing: sanitizePricing(input.pricing),
     addOns: sanitizeAddOns(input.addOns),
+    serials: sanitizeSerials(input.serials),
     inclusions: sanitizeInclusions(input.inclusions),
     image: cleanText(input.image, 1000),
     detailImage: cleanText(input.detailImage, 1000),
@@ -273,6 +309,7 @@ module.exports = {
   calcRentalFee,
   sanitizeCamera,
   sanitizePricing,
+  activeSerials,
   applyCameraUpdate,
   todayManila,
 };

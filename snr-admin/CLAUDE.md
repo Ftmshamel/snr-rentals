@@ -41,6 +41,26 @@ split describes the legacy mode and the historical data.
 - Catalogue API: `backend/api/catalog.js`; admin editor: `/catalog` (owner only)
 - First-run defaults: `backend/lib/defaultCatalog.js` ("Load default cameras")
 
+### Rental lifecycle and serial numbers (Oct 2026, from the defense panel)
+
+- A rental moves **Pending → Reserved → (Out for delivery →) With renter →
+  Returned → Completed**. `utils/lifecycle.jsx` `getStage()` derives that one
+  stage from `status` + `FULFILLMENT_STATUS`; every badge, the Today
+  dashboard (`/`) and the booking modal's `LifecyclePanel` use it. The
+  calendar moved to `/schedule`.
+- `FULFILLMENT_STATUS` is `null | out_for_delivery | out | returned`. The
+  server (`applyLifecycle` in `firestoreQueries.js`) only allows real steps:
+  release needs an approved booking **and a serial number** when the camera
+  lists serials, a unit can't be released while another rental still has it,
+  "returned" records `RETURN_CONDITION` (good/damaged) + `RETURN_NOTES`, and
+  completing needs the unit returned.
+- **`TIMELINE` is written only by the server** — every status change appends
+  `{ at, event, note }`. Never PATCH it from the client.
+- Cameras list physical units in `serials` (Catalog page). With serials,
+  `units` = units in service. A serial with rental history can't be deleted,
+  only retired, so "who rented this unit last" always resolves
+  (`components/UnitHistory.jsx` on each camera page).
+
 ## Read before writing data
 
 **`docs/ENGINEERING-NOTES.md`** — traps, past incidents, and why things are the

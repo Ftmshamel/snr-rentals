@@ -4,6 +4,8 @@ import Header from "../components/Header.jsx";
 import MonthCalendar from "../components/MonthCalendar.jsx";
 import BookingDetail from "../components/BookingDetail.jsx";
 import AddOnSection from "../components/AddOnSection.jsx";
+import UnitHistory from "../components/UnitHistory.jsx";
+import BookingModal from "../components/BookingModal.jsx";
 import { useBookings } from "../hooks/useBookings.js";
 import { useCameras } from "../hooks/useCameras.js";
 import { ADDONS } from "../data/addons.js";
@@ -15,7 +17,8 @@ export default function CameraCalendar() {
   const path = decoded
     ? `/api/bookings/by?type=camera&name=${encodeURIComponent(decoded)}`
     : null;
-  const { bookings, loading, error } = useBookings(path);
+  const { bookings, loading, error, silentRefetch } = useBookings(path);
+  const [openBooking, setOpenBooking] = useState(null);
   const { cameras } = useCameras();
 
   const cameraData = cameras.find(
@@ -45,6 +48,21 @@ export default function CameraCalendar() {
   return (
     <div>
       <Header backTo="/cameras" />
+      {openBooking && (
+        <BookingModal
+          booking={openBooking}
+          onClose={() => setOpenBooking(null)}
+          onSaved={() => {
+            setOpenBooking(null);
+            silentRefetch();
+          }}
+          onChanged={silentRefetch}
+          onDeleted={() => {
+            setOpenBooking(null);
+            silentRefetch();
+          }}
+        />
+      )}
       <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
         {error ? (
           <p className="mb-4 font-mono text-sm text-[color:var(--color-dark-gray)]">
@@ -58,6 +76,7 @@ export default function CameraCalendar() {
             <div className="mb-4 truncate text-lg font-bold text-[color:var(--color-black)]">
               {decoded || "Camera"}
             </div>
+            <UnitHistory camera={cameraData} bookings={bookings} onOpen={setOpenBooking} />
             {units > 1 && (
               <div className="mb-4 flex items-center gap-2">
                 {unitSlots.map((_, i) => (

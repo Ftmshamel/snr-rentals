@@ -1,17 +1,20 @@
-import { useState, useEffect } from "react";
+import { Fragment, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { apiGetJson } from "../utils/api.js";
 
+// Ordered the way a day's work flows: what's on today, the calendar, new
+// requests, all rentals — then stock — then money.
 const NAV = [
-  { to: "/", label: "Schedule", match: (p) => p === "/" },
-  { to: "/cameras", label: "Cameras", match: (p) => p.startsWith("/camera") },
-  { to: "/addons", label: "Add-ons", match: (p) => p.startsWith("/addon") },
-  { to: "/quotation", label: "Quote", match: (p) => p === "/quotation" },
+  { to: "/", label: "Today", match: (p) => p === "/" },
+  { to: "/schedule", label: "Schedule", match: (p) => p === "/schedule" },
   { to: "/approvals", label: "Approvals", match: (p) => p === "/approvals", badge: true },
   { to: "/rentals", label: "Rentals", match: (p) => p === "/rentals", ownerOnly: true },
+  { to: "/cameras", label: "Cameras", match: (p) => p.startsWith("/camera"), group: true },
+  { to: "/addons", label: "Add-ons", match: (p) => p.startsWith("/addon") },
+  { to: "/catalog", label: "Catalog", match: (p) => p === "/catalog", ownerOnly: true },
+  { to: "/quotation", label: "Quote", match: (p) => p === "/quotation", group: true },
   { to: "/analytics", label: "Analytics", match: (p) => p === "/analytics", ownerOnly: true },
   { to: "/expenses", label: "Expenses", match: (p) => p === "/expenses", ownerOnly: true },
-  { to: "/catalog", label: "Catalog", match: (p) => p === "/catalog", ownerOnly: true },
 ];
 
 export default function Header({
@@ -109,8 +112,12 @@ export default function Header({
             {links.map((n) => {
               const active = n.match(location.pathname);
               return (
+                <Fragment key={n.to}>
+                {/* Thin rule between the Operations / Inventory / Money groups */}
+                {n.group && (
+                  <span aria-hidden="true" className="mx-1 w-0.5 self-stretch rounded-full bg-[rgba(58,58,58,0.25)]" />
+                )}
                 <Link
-                  key={n.to}
                   to={n.to}
                   aria-current={active ? "page" : undefined}
                   className={`ui-btn ui-btn--sm flex-1 justify-center ${
@@ -130,6 +137,7 @@ export default function Header({
                     </span>
                   )}
                 </Link>
+                </Fragment>
               );
             })}
           </div>

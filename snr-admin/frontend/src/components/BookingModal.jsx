@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getPricingForDate } from "../data/cameras.js";
 import { useCameras, findCamera } from "../hooks/useCameras.js";
+import LifecyclePanel from "./LifecyclePanel.jsx";
 import { getContractForCamera } from "../data/contracts.js";
 import { apiPatchJson, apiDeleteJson } from "../utils/api.js";
 import {
@@ -8,7 +9,6 @@ import {
   isPartialBooking,
   primeBookingDocuments,
 } from "../utils/bookingDocuments.js";
-import { todayISOLocal } from "../utils/dateHelpers.js";
 import {
   documentOpenLabel,
   documentThumb,
@@ -542,8 +542,6 @@ export default function BookingModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
-  const [fulfillmentSaving, setFulfillmentSaving] = useState(false);
-  const [cancelSaving, setCancelSaving] = useState(false);
   const [docsLoading, setDocsLoading] = useState(() =>
     isPartialBooking(booking),
   );
@@ -584,57 +582,21 @@ export default function BookingModal({
     else onClose();
   }
 
-  async function handleSetFulfillment(value) {
-    setFulfillmentSaving(true);
-    setError(null);
-    // Optimistic update so the toggle reflects the choice immediately
-    setSavedBooking((prev) => ({ ...prev, FULFILLMENT_STATUS: value }));
-    try {
-      const result = await apiPatchJson(
-        `/api/bookings/${encodeURIComponent(booking.responseId)}`,
-        { FULFILLMENT_STATUS: value },
-      );
-      if (result.booking) {
-        setSavedBooking(result.booking);
-        const saved = result.booking.FULFILLMENT_STATUS ?? null;
-        if (saved !== (value ?? null)) {
-          setError(
-            "Status did not save on the server. Run the DB migration (add fulfillment_status column) and make sure the backend is deployed.",
-          );
-        }
-      }
-      setHasSaved(true);
-      onChanged?.();
-    } catch (e) {
-      // revert optimistic update
-      setSavedBooking((prev) => ({
-        ...prev,
-        FULFILLMENT_STATUS: booking.FULFILLMENT_STATUS ?? null,
-      }));
-      setError(e.message);
-    } finally {
-      setFulfillmentSaving(false);
+  // Status changes (approve, release, return, complete, cancel). The server
+  // validates the step and appends it to the booking's timeline; errors are
+  // shown inside the panel, so this just rethrows.
+  async function handleLifecycle(patch) {
+    const result = await apiPatchJson(
+      `/api/bookings/${encodeURIComponent(booking.responseId)}`,
+      patch,
+    );
+    if (result.booking) {
+      // Keep documents already loaded for this booking.
+      setSavedBooking((prev) => ({ ...prev, ...result.booking }));
+      setForm(initForm(result.booking));
     }
-  }
-
-  async function handleCancelBooking() {
-    setCancelSaving(true);
-    setError(null);
-    setSavedBooking((prev) => ({ ...prev, status: "cancelled" }));
-    try {
-      const result = await apiPatchJson(
-        `/api/bookings/${encodeURIComponent(booking.responseId)}`,
-        { status: "cancelled" },
-      );
-      if (result.booking) setSavedBooking(result.booking);
-      setHasSaved(true);
-      onChanged?.();
-    } catch (e) {
-      setSavedBooking((prev) => ({ ...prev, status: booking.status ?? null }));
-      setError(e.message);
-    } finally {
-      setCancelSaving(false);
-    }
+    setHasSaved(true);
+    onChanged?.();
   }
 
   function handleField(e) {
@@ -746,10 +708,8 @@ export default function BookingModal({
           {mode === "view" && (
             <ViewBody
               booking={savedBooking}
-              onSetFulfillment={handleSetFulfillment}
-              fulfillmentSaving={fulfillmentSaving}
-              onCancelBooking={handleCancelBooking}
-              cancelSaving={cancelSaving}
+              onLifecycle={handleLifecycle}
+              cameras={cameras}
               docsLoading={docsLoading}
               docsError={docsError}
             />
@@ -865,10 +825,8 @@ export default function BookingModal({
 
 function ViewBody({
   booking,
-  onSetFulfillment,
-  fulfillmentSaving,
-  onCancelBooking,
-  cancelSaving,
+  onLifecycle,
+  cameras,
   docsLoading,
   docsError,
 }) {
@@ -896,13 +854,6 @@ function ViewBody({
       /* clipboard unavailable — the code is still visible to copy manually */
     }
   }
-  const fs = booking.FULFILLMENT_STATUS || null;
-  const status = (booking.status || "").toLowerCase() || null;
-  const bookingCancelled = status === "cancelled";
-  const overdue =
-    fs === "out" &&
-    booking.RETURN_DATE &&
-    booking.RETURN_DATE < todayISOLocal();
 
   return (
     <>
@@ -988,73 +939,7 @@ function ViewBody({
           </div>
         </section>
 
-        <section>
-          <div className="mb-2 flex items-center gap-2">
-            <span className="ui-kicker">
-              Unit Status
-            </span>
-            {fulfillmentSaving && (
-              <span className="font-mono text-[10px] text-[color:var(--color-dark-gray)]">
-                saving…
-              </span>
-            )}
-            {cancelSaving && (
-              <span className="font-mono text-[10px] text-[color:var(--color-dark-gray)]">
-                cancelling...
-              </span>
-            )}
-          </div>
-          <div className="ui-surface flex w-full overflow-hidden">
-            {[
-              { value: "out", label: "Out" },
-              { value: "returned", label: "Returned" },
-            ].map((opt, i) => {
-              const active = (fs || null) === opt.value;
-              const activeColor =
-                opt.value === "returned"
-                  ? "bg-green-600 text-white"
-                  : opt.value === "out"
-                    ? overdue
-                      ? "bg-rose-600 text-white"
-                      : "bg-amber-500 text-white"
-                    : "bg-[color:var(--color-ink)] text-white";
-              return (
-                <button
-                  key={opt.label}
-                  type="button"
-                  onClick={() => onSetFulfillment(opt.value)}
-                  disabled={fulfillmentSaving || active || bookingCancelled}
-                  className={`flex-1 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                    i > 0 ? "border-l border-[color:var(--color-border)]" : ""
-                  } ${
-                    active
-                      ? activeColor
-                      : "text-[color:var(--color-dark-gray)] hover:bg-[rgba(255,255,255,0.6)] disabled:opacity-50"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
-            <button
-              type="button"
-              onClick={onCancelBooking}
-              disabled={cancelSaving || bookingCancelled}
-              className={`flex-1 border-l border-[color:var(--color-border)] px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                bookingCancelled
-                  ? "bg-rose-600 text-white"
-                  : "text-rose-600 hover:bg-rose-50 disabled:opacity-50"
-              }`}
-            >
-              {bookingCancelled ? "Cancelled" : "Cancel"}
-            </button>
-          </div>
-          {overdue && (
-            <p className="mt-1 font-mono text-[10px] font-bold text-rose-600">
-              ⚠ Overdue — past return date
-            </p>
-          )}
-        </section>
+        <LifecyclePanel booking={booking} cameras={cameras} onPatch={onLifecycle} />
 
         <section>
           <div className="ui-kicker mb-2">

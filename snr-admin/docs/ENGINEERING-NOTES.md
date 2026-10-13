@@ -62,6 +62,15 @@ the §1 problem cannot happen: `/api/bookings/by?type=unmirrored` returns `[]`.
   history yet — changing one reprices old bookings when they are edited.
 - **Owner-only writes are enforced server-side**: the owner login now gets
   `OWNER_TOKEN`, distinct from the admin token (`lib/auth.js` `requireOwner`).
+- **Rental lifecycle is enforced server-side.** `applyLifecycle` validates
+  every `status` / `FULFILLMENT_STATUS` change (see `CLAUDE.md` → "Rental
+  lifecycle and serial numbers") and appends to `TIMELINE`. A PATCH that jumps
+  steps — e.g. `{status:"completed", FULFILLMENT_STATUS:"returned"}` on a
+  booking never released — is refused with a 400 and a readable reason
+  (`LifecycleError`). Scripts that change statuses must walk the steps.
+- **Serials identify physical units across the whole catalogue** (unique
+  across cameras). Bookings released before a camera had serials have no
+  `UNIT_SERIAL`; that is expected, not an error.
 - **No default API URL** in either frontend. The old default was the live
   Mongo/Supabase deployment; a misconfigured build now fails instead of
   writing real-looking bookings into the old database.

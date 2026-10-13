@@ -46,6 +46,7 @@ const EMPTY_CAMERA = {
     { minDays: 5, maxDays: null, pricePerDay: "" },
   ],
   addOns: [],
+  serials: [],
   inclusions: [],
   image: "",
   detailImage: "",
@@ -67,6 +68,7 @@ function toForm(camera) {
       price: String(t.pricePerDay ?? ""),
     })),
     addOns: (c.addOns || []).map((a) => ({ name: a.name, price: String(a.pricePerDay) })),
+    serials: (c.serials || []).map((u) => ({ serial: u.serial, active: u.active !== false, note: u.note || "" })),
     inclusionsText: (c.inclusions || []).join("\n"),
     image: c.image || "",
     detailImage: c.detailImage || "",
@@ -89,16 +91,21 @@ function formTiersToPricing(tiers) {
 
 /** Form state → API body. Validation happens on the server. */
 function toCamera(form) {
+  const serials = form.serials
+    .filter((u) => u.serial.trim())
+    .map((u) => ({ serial: u.serial.trim(), active: u.active, note: u.note.trim() }));
   return {
     name: form.name.trim(),
     tag: form.tag.trim(),
     active: form.active,
     ...(form.sortOrder === "" ? {} : { sortOrder: Number(form.sortOrder) }),
-    units: form.units === "" ? "" : Number(form.units),
+    // With serials listed, units = units in service (the server derives it too).
+    units: serials.length ? serials.filter((u) => u.active).length : form.units === "" ? "" : Number(form.units),
     pricing: formTiersToPricing(form.tiers),
     addOns: form.addOns
       .filter((a) => a.name.trim())
       .map((a) => ({ name: a.name.trim(), pricePerDay: a.price === "" ? "" : Number(a.price) })),
+    serials,
     inclusions: form.inclusionsText.split("\n").map((s) => s.trim()).filter(Boolean),
     image: form.image.trim(),
     detailImage: form.detailImage.trim(),
@@ -135,6 +142,10 @@ function CameraEditor({ camera, onClose, onSaved }) {
   };
   const setTier = (i, key, value) =>
     setForm((f) => ({ ...f, tiers: f.tiers.map((t, j) => (j === i ? { ...t, [key]: value } : t)) }));
+  const setSerial = (i, key, value) =>
+    setForm((f) => ({ ...f, serials: f.serials.map((u, j) => (j === i ? { ...u, [key]: value } : u)) }));
+  const listedSerials = form.serials.filter((u) => u.serial.trim());
+  const serialUnits = listedSerials.filter((u) => u.active).length;
   const setAddOn = (i, key, value) =>
     setForm((f) => ({ ...f, addOns: f.addOns.map((a, j) => (j === i ? { ...a, [key]: value } : a)) }));
 
@@ -206,7 +217,11 @@ function CameraEditor({ camera, onClose, onSaved }) {
                 </div>
                 <div>
                   <Label>Units owned *</Label>
-                  <input type="number" min="0" step="1" value={form.units} onChange={set("units")} required className="ui-input" />
+                  {listedSerials.length > 0 ? (
+                    <input value={`${serialUnits} (from serials)`} disabled className="ui-input" />
+                  ) : (
+                    <input type="number" min="0" step="1" value={form.units} onChange={set("units")} required className="ui-input" />
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -219,6 +234,60 @@ function CameraEditor({ camera, onClose, onSaved }) {
                   <input type="number" step="1" value={form.sortOrder} onChange={set("sortOrder")} placeholder="auto" className="ui-input" />
                 </div>
               </div>
+            </section>
+
+            <hr className="ui-divider" />
+
+            {/* Physical units */}
+            <section className="space-y-2">
+              <div className="ui-kicker">Units &amp; serial numbers</div>
+              <p className="font-mono text-[10px] text-[color:var(--color-dark-gray)]">
+                One row per physical camera. Staff pick the serial when releasing a unit, so a damaged
+                unit can be traced to whoever rented it last. Untick "In service" to retire a unit
+                (sold or broken) — it keeps its rental history.
+              </p>
+              {form.serials.map((u, i) => (
+                <div key={i} className="grid grid-cols-[1.2fr_1.5fr_auto_auto] items-end gap-2">
+                  <div>
+                    {i === 0 && <Label>Serial no.</Label>}
+                    <input
+                      value={u.serial}
+                      onChange={(e) => setSerial(i, "serial", e.target.value)}
+                      required
+                      placeholder="e.g. G7X-0412"
+                      className="ui-input ui-input--sm font-mono"
+                    />
+                  </div>
+                  <div>
+                    {i === 0 && <Label>Note</Label>}
+                    <input
+                      value={u.note}
+                      onChange={(e) => setSerial(i, "note", e.target.value)}
+                      placeholder="e.g. black, bought 2026-05"
+                      className="ui-input ui-input--sm"
+                    />
+                  </div>
+                  <label className="flex items-center gap-1 pb-2 text-[11px] font-semibold">
+                    <input type="checkbox" checked={u.active} onChange={(e) => setSerial(i, "active", e.target.checked)} />
+                    In service
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, serials: f.serials.filter((_, j) => j !== i) }))}
+                    className="ui-btn ui-btn--sm ui-btn--danger"
+                    aria-label="Remove serial"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, serials: [...f.serials, { serial: "", active: true, note: "" }] }))}
+                className="ui-btn ui-btn--sm"
+              >
+                + Add unit
+              </button>
             </section>
 
             <hr className="ui-divider" />
@@ -528,7 +597,10 @@ export default function Catalog() {
                   {c.active === false && <span className="ui-chip ui-chip--solid">Hidden</span>}
                 </div>
                 <div className="mt-1 font-mono text-[11px] text-[color:var(--color-dark-gray)]">
-                  {c.units} unit{c.units === 1 ? "" : "s"} · {pricingSummary(c.pricing)}
+                  {c.units} unit{c.units === 1 ? "" : "s"}
+                  {c.serials?.length ? ` (${c.serials.filter((u) => u.active !== false).map((u) => u.serial).join(", ")})` : " · no serials yet"}
+                  {" · "}
+                  {pricingSummary(c.pricing)}
                 </div>
                 <div className="font-mono text-[10px] text-[color:var(--color-dark-gray)]">
                   {(c.addOns || []).length} add-on{(c.addOns || []).length === 1 ? "" : "s"}

@@ -12,6 +12,7 @@ import RentalsTable from "./pages/RentalsTable.jsx";
 import Analytics from "./pages/Analytics.jsx";
 import Expenses from "./pages/Expenses.jsx";
 import Catalog from "./pages/Catalog.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
 
 export default function App() {
   const [authed, setAuthed] = useState(() =>
@@ -34,7 +35,8 @@ export default function App() {
       {/* Animated film grain over everything — the poster theme's texture. */}
       <div className="grain" aria-hidden="true" />
       <Routes>
-        <Route path="/" element={<MonthlySchedule />} />
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/schedule" element={<MonthlySchedule />} />
         <Route path="/camera" element={<Navigate to="/cameras" replace />} />
         <Route path="/camera/:cameraName" element={<CameraCalendar />} />
         <Route path="/cameras" element={<CameraList />} />

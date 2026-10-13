@@ -11,7 +11,9 @@
 > as the default. The architecture, schema, env and route sections below describe
 > the legacy MongoDB/Supabase setup. Current state: `CLAUDE.md` → "Firebase is the
 > database now" and `docs/ENGINEERING-NOTES.md` §0. New since then: `/api/catalog`
-> (12th function) and the owner-only `/catalog` page for cameras and rates.
+> (12th function) and the owner-only `/catalog` page for cameras, rates and
+> serial numbers; `/` is now the **Today** dashboard and the calendar is at
+> `/schedule`. The "Frontend (routed pages)" table below predates both.
 
 **Last updated:** 2026-09-02
 
