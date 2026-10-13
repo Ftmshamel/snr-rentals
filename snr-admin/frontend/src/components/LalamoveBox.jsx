@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { SHOP } from "../data/shop.js";
 
-// Everything staff need to book a Lalamove by hand, in one place: the
-// renter's delivery form (receiver, number, address, landmark, exact pin),
-// a "Copy details" button that pastes cleanly into the Lalamove app, and a
-// field for the order's tracking link — which the renter then sees on their
-// Track page. `kind` is "delivery" (shop → renter) or "return" (renter → shop).
+// Everything staff need to book a Lalamove by hand, laid out in the order the
+// Lalamove app asks for it: pick-up, drop-off, then the contact and note.
+// Every value has its own Copy button, because the app takes each one in a
+// separate field — one tap here, one paste there. The order's tracking link
+// is pasted back and shown to the renter on their Track page.
+// `kind` is "delivery" (shop → renter) or "return" (renter → shop).
 
 export function mapsLink(lat, lng) {
   return `https://www.google.com/maps?q=${lat},${lng}`;
@@ -29,82 +31,126 @@ export function stopFor(booking, kind) {
   return delivery;
 }
 
-function copyText(booking, kind, stop) {
-  const pin = Number.isFinite(stop.lat) ? mapsLink(stop.lat, stop.lng) : "no pin — confirm with renter";
-  const lines =
-    kind === "delivery"
-      ? [
-          `DROP-OFF: ${stop.address}`,
-          stop.landmark && `Landmark: ${stop.landmark}`,
-          `Pin: ${pin}`,
-          `Receiver: ${stop.recipientName} · ${stop.recipientPhone}`,
-          stop.notes && `Note to rider: ${stop.notes}`,
-          `Item: ${booking.PREFERRED_CAMERA} (camera) · Ref ${booking.responseId}`,
-        ]
-      : [
-          `PICK-UP (return): ${stop.address}`,
-          stop.landmark && `Landmark: ${stop.landmark}`,
-          `Pin: ${pin}`,
-          `Contact: ${stop.recipientName} · ${stop.recipientPhone}`,
-          stop.notes && `Note to rider: ${stop.notes}`,
-          `DROP-OFF: S&R Rentals`,
-          `Item: ${booking.PREFERRED_CAMERA}${booking.UNIT_SERIAL ? ` (${booking.UNIT_SERIAL})` : ""} · Ref ${booking.responseId}`,
-        ];
-  return lines.filter(Boolean).join("\n");
+function riderNote(booking, stop, kind) {
+  return [
+    stop.landmark && `Landmark: ${stop.landmark}`,
+    stop.notes,
+    kind === "return"
+      ? `Camera return: ${booking.PREFERRED_CAMERA}${booking.UNIT_SERIAL ? ` (${booking.UNIT_SERIAL})` : ""}`
+      : `Camera rental: ${booking.PREFERRED_CAMERA}`,
+    `Ref ${booking.responseId}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function useCopy() {
+  const [copied, setCopied] = useState(null);
+  async function copy(key, text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(key);
+      setTimeout(() => setCopied((k) => (k === key ? null : k)), 1500);
+    } catch {
+      /* clipboard blocked — the value is on screen to copy by hand */
+    }
+  }
+  return { copied, copy };
+}
+
+function CopyRow({ label, value, href, copyKey, copier }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-start justify-between gap-2 border-t border-[rgba(58,58,58,0.12)] py-1.5 first:border-t-0">
+      <div className="min-w-0">
+        <div className="font-mono text-[9px] font-bold uppercase tracking-wider text-[color:var(--color-dark-gray)]">{label}</div>
+        {href ? (
+          <a href={href} target="_blank" rel="noreferrer" className="break-all text-xs font-semibold underline">
+            {value}
+          </a>
+        ) : (
+          <div className="break-words text-xs font-semibold text-[color:var(--color-ink)]">{value}</div>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => copier.copy(copyKey, value)}
+        className="shrink-0 rounded-full border-2 border-[color:var(--color-ink)] px-2 py-0.5 font-mono text-[10px] font-bold"
+      >
+        {copier.copied === copyKey ? "✓" : "Copy"}
+      </button>
+    </div>
+  );
+}
+
+function StopCard({ title, rows, copier, prefix }) {
+  return (
+    <div className="rounded-[10px] border border-[rgba(58,58,58,0.2)] bg-white/80 px-2.5 py-1">
+      <div className="pt-1 font-mono text-[10px] font-bold uppercase tracking-wider">{title}</div>
+      {rows.map((r) => (
+        <CopyRow key={r.label} {...r} copyKey={`${prefix}-${r.label}`} copier={copier} />
+      ))}
+    </div>
+  );
 }
 
 export default function LalamoveBox({ booking, kind, link, onLinkChange, onSaveLink, busy }) {
   const stop = stopFor(booking, kind);
-  const [copied, setCopied] = useState(false);
+  const copier = useCopy();
   const hasPin = Number.isFinite(stop.lat) && Number.isFinite(stop.lng);
   const savedLink = kind === "delivery" ? booking.LALAMOVE_DELIVERY_LINK : booking.LALAMOVE_RETURN_LINK;
 
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(copyText(booking, kind, stop));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* clipboard blocked — the details are on screen */
-    }
-  }
+  const shop = {
+    title: "🏠 S&R Rentals (shop)",
+    rows: [
+      { label: "Shop location", value: SHOP.mapsLink, href: SHOP.mapsLink },
+      { label: "Contact", value: SHOP.name },
+      { label: "Mobile", value: SHOP.phone },
+    ],
+  };
+  const renter = {
+    title: kind === "delivery" ? "📍 Renter (drop-off)" : "📍 Renter (pick-up)",
+    rows: [
+      { label: "Address", value: stop.address },
+      hasPin && { label: "Pin (lat, lng)", value: `${stop.lat}, ${stop.lng}` },
+      hasPin && { label: "Pin on Google Maps", value: mapsLink(stop.lat, stop.lng), href: mapsLink(stop.lat, stop.lng) },
+      { label: kind === "delivery" ? "Receiver" : "Contact person", value: stop.recipientName },
+      { label: "Mobile", value: stop.recipientPhone },
+      { label: "Note to rider", value: riderNote(booking, stop, kind) },
+    ].filter(Boolean),
+  };
+  const [first, second] = kind === "delivery" ? [shop, renter] : [renter, shop];
 
   return (
     <div className="space-y-2 rounded-[14px] border-2 border-[rgba(58,58,58,0.25)] bg-white/70 p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="ui-kicker text-[0.6rem]">
-          🛵 Lalamove — {kind === "delivery" ? "deliver to" : "collect return from"}
-        </span>
+        <span className="ui-kicker text-[0.6rem]">🛵 Lalamove {kind === "delivery" ? "delivery" : "return pickup"}</span>
         {savedLink ? (
           <span className="rounded-full bg-green-600 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-white">Booked</span>
         ) : (
           <span className="rounded-full bg-blue-600 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-white">To book</span>
         )}
       </div>
-      <div className="text-xs leading-relaxed text-[color:var(--color-ink)]">
-        <div className="font-bold">
-          {stop.recipientName || "—"} · {stop.recipientPhone || "no number"}
+
+      <p className="font-mono text-[10px] text-[color:var(--color-dark-gray)]">
+        In the Lalamove app: <strong>1</strong> pick-up → <strong>2</strong> drop-off → contact &amp; note. Tap Copy, paste in the matching field.
+      </p>
+
+      <div className="font-mono text-[10px] font-bold">1 · Pick-up</div>
+      <StopCard {...first} copier={copier} prefix="a" />
+      <div className="font-mono text-[10px] font-bold">2 · Drop-off</div>
+      <StopCard {...second} copier={copier} prefix="b" />
+
+      {kind === "return" && booking.RETURN_DETAILS?.sameAsDelivery === false && (
+        <div className="font-mono text-[10px] font-bold text-orange-700">Return pickup is different from the delivery address.</div>
+      )}
+      {!hasPin && (
+        <div className="font-mono text-[10px] font-bold text-rose-600">
+          {stop.legacy ? "Booked before the delivery form — confirm the exact pin with the renter." : "No map pin — confirm with the renter."}
         </div>
-        <div>{stop.address || "No address"}</div>
-        {stop.landmark && <div className="text-[color:var(--color-dark-gray)]">Landmark: {stop.landmark}</div>}
-        {stop.notes && <div className="text-[color:var(--color-dark-gray)]">Note: {stop.notes}</div>}
-        {kind === "return" && booking.RETURN_DETAILS?.sameAsDelivery === false && (
-          <div className="font-mono text-[10px] font-bold text-orange-700">Different from the delivery address</div>
-        )}
-        {hasPin ? (
-          <a href={mapsLink(stop.lat, stop.lng)} target="_blank" rel="noreferrer" className="font-mono text-[10px] font-bold underline">
-            📍 Open pin in Google Maps ({stop.lat.toFixed(5)}, {stop.lng.toFixed(5)})
-          </a>
-        ) : (
-          <div className="font-mono text-[10px] font-bold text-rose-600">
-            {stop.legacy ? "Booked before the delivery form — confirm the exact pin with the renter." : "No map pin."}
-          </div>
-        )}
-      </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={copy} className="ui-btn ui-btn--sm">
-          {copied ? "Copied ✓" : "Copy details"}
-        </button>
         <a href="https://web.lalamove.com/" target="_blank" rel="noreferrer" className="ui-btn ui-btn--sm">
           Open Lalamove ↗
         </a>
@@ -115,7 +161,7 @@ export default function LalamoveBox({ booking, kind, link, onLinkChange, onSaveL
         )}
       </div>
       <label className="block">
-        <span className="ui-label">Lalamove tracking link (share link from the order)</span>
+        <span className="ui-label">3 · Paste the order's share / tracking link</span>
         <input
           value={link}
           onChange={(e) => onLinkChange(e.target.value)}

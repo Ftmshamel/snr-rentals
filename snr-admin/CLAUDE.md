@@ -68,8 +68,10 @@ split describes the legacy mode and the historical data.
   `DELIVERY_DETAILS { recipientName, recipientPhone, address, landmark, notes, lat, lng }`
   with a map pin — and says where to collect it back (`RETURN_DETAILS`, same
   or a second form). Rules: `backend/lib/delivery.js`.
-- Admin: the booking's `LalamoveBox` shows those details, copies them for the
-  Lalamove app and takes the order's tracking link
+- Admin: the booking's `LalamoveBox` lays the details out in the Lalamove
+  app's order (pick-up → drop-off → contact/note) with a Copy button per
+  field — the shop's own location and number are in `frontend/src/data/shop.js` —
+  and takes the order's tracking link
   (`LALAMOVE_DELIVERY_LINK` / `LALAMOVE_RETURN_LINK`). The Today dashboard
   tags deliveries that still need a rider booked.
 - Renter: **`/track`** on the public site (reference code) shows the stage,
