@@ -150,12 +150,44 @@ async function bookLeg(responseId, kind, { serial } = {}) {
   );
 }
 
+/** Store a new order state on the booking and move the rental along with it. */
+async function applyOrderState(responseId, kind, booking, prev, state) {
+  const at = new Date().toISOString();
+  const label = (STATUS_LABEL[state.status] || state.status) + (state.simulated ? " (simulated)" : "");
+  const next = {
+    ...prev,
+    status: state.status,
+    statusLabel: label,
+    shareLink: state.shareLink || prev.shareLink || null,
+    driverId: state.driverId || prev.driverId || "",
+    driver: state.driver ?? prev.driver ?? null,
+    simulated: Boolean(state.simulated || prev.simulated),
+    syncedAt: at,
+  };
+  const fields = { [ORDER_FIELD[kind]]: next };
+  if (next.shareLink && next.shareLink !== booking[LINK_FIELD[kind]]) fields[LINK_FIELD[kind]] = next.shareLink;
+
+  const events = [];
+  if (state.status !== prev.status) {
+    const d = next.driver;
+    const who = d?.name ? ` (${d.name}${d.plateNumber ? `, ${d.plateNumber}` : ""})` : "";
+    events.push({ at, event: "lalamove_status", note: `Lalamove ${kind}: ${label}${who}` });
+  }
+  // A delivered delivery is the hand-over: the unit is now with the renter.
+  if (kind === "delivery" && state.status === "COMPLETED" && booking.FULFILLMENT_STATUS === "out_for_delivery") {
+    fields.FULFILLMENT_STATUS = "out";
+  }
+  return store.updateBookingByResponseId(responseId, fields, { internal: true, events });
+}
+
 /** Pull the latest status from Lalamove and move the rental along with it. */
 async function syncLeg(responseId, kind, { force = false } = {}) {
   assertKind(kind);
   const booking = await load(responseId);
   const prev = booking[ORDER_FIELD[kind]];
   if (!prev?.orderId) return booking;
+  // A simulated order is driven by "Simulate next step" only, never by Lalamove.
+  if (prev.simulated) return booking;
   if (!force && prev.syncedAt && Date.now() - Date.parse(prev.syncedAt) < SYNC_EVERY_MS) return booking;
   if (prev.status === "COMPLETED" || lalamove.FAILED.has(prev.status)) return booking;
 
@@ -164,29 +196,31 @@ async function syncLeg(responseId, kind, { force = false } = {}) {
   if (order.driverId && order.driverId !== prev.driverId) {
     driver = await lalamove.getDriver(order.orderId, order.driverId).catch(() => driver);
   }
-  const at = new Date().toISOString();
-  const next = {
-    ...prev,
-    status: order.status,
-    statusLabel: STATUS_LABEL[order.status] || order.status,
-    shareLink: order.shareLink || prev.shareLink || null,
-    driverId: order.driverId || prev.driverId || "",
-    driver,
-    syncedAt: at,
-  };
-  const fields = { [ORDER_FIELD[kind]]: next };
-  if (next.shareLink && next.shareLink !== booking[LINK_FIELD[kind]]) fields[LINK_FIELD[kind]] = next.shareLink;
+  return applyOrderState(responseId, kind, booking, prev, { ...order, driver });
+}
 
-  const events = [];
-  if (order.status !== prev.status) {
-    const who = driver?.name ? ` (${driver.name}${driver.plateNumber ? `, ${driver.plateNumber}` : ""})` : "";
-    events.push({ at, event: "lalamove_status", note: `Lalamove ${kind}: ${next.statusLabel}${who}` });
+// Sandbox only: Lalamove's sandbox has no riders to accept an order, so for
+// demos staff can step a sandbox order through the rider's journey by hand.
+// Every step is labelled "(simulated)" on the admin, the timeline and the
+// renter's Track page, and production never offers it.
+const SIM_NEXT = { ASSIGNING_DRIVER: "ON_GOING", ON_GOING: "PICKED_UP", PICKED_UP: "COMPLETED" };
+const SIM_DRIVER = { name: "Test Rider (simulated)", phone: "", plateNumber: "SIM 0000" };
+
+async function simulateLeg(responseId, kind) {
+  assertKind(kind);
+  if (lalamove.config().env === "production") {
+    throw new LifecycleError("Simulation is only available with the Lalamove sandbox.");
   }
-  // A delivered delivery is the hand-over: the unit is now with the renter.
-  if (kind === "delivery" && order.status === "COMPLETED" && booking.FULFILLMENT_STATUS === "out_for_delivery") {
-    fields.FULFILLMENT_STATUS = "out";
-  }
-  return store.updateBookingByResponseId(responseId, fields, { internal: true, events });
+  const booking = await load(responseId);
+  const prev = booking[ORDER_FIELD[kind]];
+  const status = prev && SIM_NEXT[prev.status];
+  if (!status) throw new LifecycleError("There's no active Lalamove order to move forward.");
+  return applyOrderState(responseId, kind, booking, prev, {
+    status,
+    driver: status === "ON_GOING" ? SIM_DRIVER : prev.driver,
+    driverId: status === "ON_GOING" ? "simulated" : prev.driverId,
+    simulated: true,
+  });
 }
 
 async function cancelLeg(responseId, kind) {
@@ -194,7 +228,10 @@ async function cancelLeg(responseId, kind) {
   const booking = await load(responseId);
   const o = activeOrder(booking, kind);
   if (!o) throw new LifecycleError("There's no active Lalamove order to cancel.");
-  await lalamove.cancelOrder(o.orderId);
+  // A simulated order may already have expired on Lalamove's side.
+  await lalamove.cancelOrder(o.orderId).catch((err) => {
+    if (!o.simulated) throw err;
+  });
   const at = new Date().toISOString();
   const fields = {
     [ORDER_FIELD[kind]]: { ...o, status: "CANCELED", statusLabel: STATUS_LABEL.CANCELED, syncedAt: at },
@@ -218,4 +255,4 @@ async function syncActive(responseId) {
   return booking;
 }
 
-module.exports = { quoteLeg, bookLeg, syncLeg, cancelLeg, syncActive, STATUS_LABEL };
+module.exports = { quoteLeg, bookLeg, syncLeg, simulateLeg, cancelLeg, syncActive, STATUS_LABEL };

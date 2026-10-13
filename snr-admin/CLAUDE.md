@@ -88,6 +88,12 @@ split describes the legacy mode and the historical data.
   marks the unit with the renter; a completed return does **not** mark it
   returned — staff check condition. Order summaries live in
   `LALAMOVE_DELIVERY_ORDER` / `LALAMOVE_RETURN_ORDER`, server-written only.
+- **Sandbox has no riders**, so a sandbox order sits at "Looking for a rider".
+  For demos, "Simulate next step" (sandbox only — refused when
+  `LALAMOVE_ENV=production`) steps it through rider found → picked up →
+  dropped off, labelled "(simulated)" everywhere; a simulated order is never
+  overwritten by Lalamove's real status. First real sandbox order: confirmed
+  working on 2026-10-13 (quotation, order, share link).
 - ⚠ The client was written from Lalamove's docs without network access to
   Lalamove and tested against a local mock of v3 (signature, quotation,
   order, driver, cancel). The first real check is a sandbox order from the

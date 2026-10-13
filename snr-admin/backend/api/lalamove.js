@@ -10,6 +10,7 @@ const { LifecycleError } = require("../lib/lifecycle");
 //   POST ?action=book    { ref, kind, serial? }  place the order (delivery also releases the unit)
 //   POST ?action=sync    { ref, kind }           pull the latest status from Lalamove
 //   POST ?action=cancel  { ref, kind }           cancel the active order
+//   POST ?action=simulate { ref, kind }          sandbox only: move the order one step (demo)
 //
 // kind is "delivery" or "return". See lib/lalamoveBookings.js.
 // This is the 12th serverless function — the Vercel Hobby limit.
@@ -56,6 +57,7 @@ module.exports = async (req, res) => {
     if (action === "book") return res.status(200).json({ ok: true, booking: await flow.bookLeg(ref, body.kind, { serial: body.serial }) });
     if (action === "sync") return res.status(200).json({ ok: true, booking: await flow.syncLeg(ref, body.kind, { force: true }) });
     if (action === "cancel") return res.status(200).json({ ok: true, booking: await flow.cancelLeg(ref, body.kind) });
+    if (action === "simulate") return res.status(200).json({ ok: true, booking: await flow.simulateLeg(ref, body.kind) });
     return res.status(400).json({ ok: false, error: "Unknown action" });
   } catch (err) {
     if (err instanceof LifecycleError || err instanceof lalamove.LalamoveError) {
