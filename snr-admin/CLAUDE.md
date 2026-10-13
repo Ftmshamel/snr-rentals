@@ -63,22 +63,37 @@ split describes the legacy mode and the historical data.
 
 ### Lalamove deliveries (Oct 2026)
 
-- S&R delivers by **Lalamove, booked by hand** (no Lalamove API key yet). The
+- S&R delivers by **Lalamove** — through the **Lalamove v3 API** when the
+  backend has `LALAMOVE_API_KEY` / `LALAMOVE_API_SECRET`, otherwise by hand.
+  The shop's address and pin are in `backend/lib/shop.js` (and
+  `frontend/src/data/shop.js` for the manual box) — change both together. The
   renter fills a Lalamove-style form when booking a delivery —
   `DELIVERY_DETAILS { recipientName, recipientPhone, address, landmark, notes, lat, lng }`
   with a map pin — and says where to collect it back (`RETURN_DETAILS`, same
   or a second form). Rules: `backend/lib/delivery.js`.
-- Admin: the booking's `LalamoveBox` shows those details, copies them for the
-  Lalamove app and takes the order's tracking link
+- Admin: the booking's `LalamoveBox` lays the details out in the Lalamove
+  app's order (pick-up → drop-off → contact/note) with a Copy button per
+  field — the shop's own location and number are in `frontend/src/data/shop.js` —
+  and takes the order's tracking link
   (`LALAMOVE_DELIVERY_LINK` / `LALAMOVE_RETURN_LINK`). The Today dashboard
   tags deliveries that still need a rider booked.
 - Renter: **`/track`** on the public site (reference code) shows the stage,
   timeline and Lalamove links, and lets them change the return pickup until
   the return rider is booked.
+- **API flow** (`lib/lalamove.js` client, `lib/lalamoveBookings.js` flow,
+  `api/lalamove.js` route, admin `LalamoveApiPanel`): Get price → Book. Booking
+  a delivery *is* the release (serial required); if Lalamove refuses, the
+  release is rolled back. Status is pulled (no webhook yet) when the booking
+  or the renter's Track page is opened, or on Refresh: a completed delivery
+  marks the unit with the renter; a completed return does **not** mark it
+  returned — staff check condition. Order summaries live in
+  `LALAMOVE_DELIVERY_ORDER` / `LALAMOVE_RETURN_ORDER`, server-written only.
+- ⚠ The client was written from Lalamove's docs without network access to
+  Lalamove and tested against a local mock of v3 (signature, quotation,
+  order, driver, cancel). The first real check is a sandbox order from the
+  deployed admin. `LALAMOVE_ENV=production` charges the Lalamove wallet.
 - Public routes are multiplexed: `api/public.js?action=availability|verify-renter|track|return-details`
-  (handlers in `lib/public/`). That freed a function slot — **11 of 12** used.
-- To automate later: Lalamove's v3 API (quotation, order, webhook status
-  updates, `shareLink`) needs a Partner Portal key; sandbox keys are free.
+  (handlers in `lib/public/`).
 
 ## Read before writing data
 
@@ -117,7 +132,8 @@ writes a backup to `database-backups/`. Keep that pattern for new ones.
 
 ## Constraints
 
-- **Vercel Hobby: 12 serverless functions max.** Currently **11** (`backend/api/**/*.js`).
+- **Vercel Hobby: 12 serverless functions max.** Currently **12** (`backend/api/**/*.js`;
+  `api/lalamove.js` took the last slot).
   A 13th breaks the build — multiplex on an existing route instead
   (see `api/bookings/by.js` and `api/public.js`).
 - `GET /api/bookings` deliberately omits base64 document columns (it was 12.5 MB).

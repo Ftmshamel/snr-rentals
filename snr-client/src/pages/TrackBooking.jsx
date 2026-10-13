@@ -134,6 +134,21 @@ function ReturnPickup({ booking, onSaved }) {
   );
 }
 
+function RiderLine({ label, info }) {
+  return (
+    <p className="bk-track__text bk-track__rider">
+      🛵 <strong>{label}:</strong> {info.status}
+      {info.rider && (
+        <>
+          {" "}
+          · rider <strong>{info.rider}</strong>
+          {info.plate && <> ({info.plate})</>}
+        </>
+      )}
+    </p>
+  );
+}
+
 function Result({ booking, onUpdated }) {
   const steps = stepsFor(booking.mode);
   const at = stepIndex(booking.stage.key, booking.mode);
@@ -183,6 +198,12 @@ function Result({ booking, onUpdated }) {
             </a>
           )}
         </div>
+      )}
+
+      {/* Live rider info when S&R booked through the Lalamove API. */}
+      {showDeliveryLink && booking.lalamove.delivery && <RiderLine label="Delivery" info={booking.lalamove.delivery} />}
+      {booking.lalamove.return && !["returned", "completed"].includes(booking.stage.key) && (
+        <RiderLine label="Return pickup" info={booking.lalamove.return} />
       )}
 
       {booking.mode === "delivery" && !ended && booking.stage.key !== "completed" && (

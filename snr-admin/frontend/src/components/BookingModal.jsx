@@ -590,11 +590,14 @@ export default function BookingModal({
       `/api/bookings/${encodeURIComponent(booking.responseId)}`,
       patch,
     );
-    if (result.booking) {
-      // Keep documents already loaded for this booking.
-      setSavedBooking((prev) => ({ ...prev, ...result.booking }));
-      setForm(initForm(result.booking));
-    }
+    if (result.booking) handleReplace(result.booking);
+  }
+
+  // A fresh copy of this booking from the server (e.g. after a Lalamove action).
+  function handleReplace(updated) {
+    // Keep documents already loaded for this booking.
+    setSavedBooking((prev) => ({ ...prev, ...updated }));
+    setForm(initForm(updated));
     setHasSaved(true);
     onChanged?.();
   }
@@ -709,6 +712,7 @@ export default function BookingModal({
             <ViewBody
               booking={savedBooking}
               onLifecycle={handleLifecycle}
+              onReplace={handleReplace}
               cameras={cameras}
               docsLoading={docsLoading}
               docsError={docsError}
@@ -826,6 +830,7 @@ export default function BookingModal({
 function ViewBody({
   booking,
   onLifecycle,
+  onReplace,
   cameras,
   docsLoading,
   docsError,
@@ -939,7 +944,7 @@ function ViewBody({
           </div>
         </section>
 
-        <LifecyclePanel booking={booking} cameras={cameras} onPatch={onLifecycle} />
+        <LifecyclePanel booking={booking} cameras={cameras} onPatch={onLifecycle} onReplace={onReplace} />
 
         <section>
           <div className="ui-kicker mb-2">
