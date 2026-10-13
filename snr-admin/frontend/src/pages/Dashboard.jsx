@@ -44,7 +44,18 @@ function lalamoveTag(booking, kind) {
   );
 }
 
-function Row({ booking, detail, onOpen, tag }) {
+// The unit the system assigned (staff can swap it in the booking), shown
+// where staff get things ready.
+function prepareTag(booking) {
+  if (!booking.UNIT_SERIAL) return null;
+  return (
+    <span className="rounded-full border-2 border-[color:var(--color-ink)] px-2 py-0.5 font-mono text-[9px] font-bold uppercase">
+      Prepare {booking.UNIT_SERIAL}
+    </span>
+  );
+}
+
+function Row({ booking, detail, onOpen, tag, showSerial = true }) {
   return (
     <button
       type="button"
@@ -61,7 +72,7 @@ function Row({ booking, detail, onOpen, tag }) {
         </div>
         <div className="truncate text-xs text-[color:var(--color-dark-gray)]">
           {booking.PREFERRED_CAMERA}
-          {booking.UNIT_SERIAL ? ` · ${booking.UNIT_SERIAL}` : ""}
+          {showSerial && booking.UNIT_SERIAL ? ` · ${booking.UNIT_SERIAL}` : ""}
         </div>
         {detail && <div className="truncate font-mono text-[10px] text-[color:var(--color-dark-gray)]">{detail}</div>}
       </div>
@@ -189,7 +200,8 @@ export default function Dashboard() {
                 key={b.responseId}
                 booking={b}
                 onOpen={setActive}
-                tag={lalamoveTag(b, "delivery")}
+                tag={<>{prepareTag(b)}{lalamoveTag(b, "delivery")}</>}
+                showSerial={false}
                 detail={`${b.PICK_UP_DATE < today ? `Was due ${shortDate(b.PICK_UP_DATE)}` : toAmPm(b.PICK_UP_TIME)} · ${b.DELIVERY_DETAILS?.address || b.COMPLETE_ADDRESS || ""}`}
               />
             )}
@@ -259,7 +271,14 @@ export default function Dashboard() {
             items={groups.upcoming}
             empty="No reservations in the next 7 days."
             render={(b) => (
-              <Row key={b.responseId} booking={b} onOpen={setActive} detail={`${shortDate(b.PICK_UP_DATE)} ${toAmPm(b.PICK_UP_TIME)} → ${shortDate(b.RETURN_DATE)}`} />
+              <Row
+                key={b.responseId}
+                booking={b}
+                onOpen={setActive}
+                tag={prepareTag(b)}
+                showSerial={false}
+                detail={`${shortDate(b.PICK_UP_DATE)} ${toAmPm(b.PICK_UP_TIME)} → ${shortDate(b.RETURN_DATE)}`}
+              />
             )}
           />
         </div>

@@ -56,6 +56,11 @@ split describes the legacy mode and the historical data.
   completing needs the unit returned.
 - **`TIMELINE` is written only by the server** — every status change appends
   `{ at, event, note }`. Never PATCH it from the client.
+- **The system assigns the unit** when a booking is approved
+  (`lib/unitAssignment.js`): a serial free for those dates, shown as
+  "Prepare <serial>" on the Today page and in the booking, where staff can
+  swap it until release. Dates/camera changes re-check it; cancelling frees
+  it; an overdue unit stays busy until returned.
 - Cameras list physical units in `serials` (Catalog page). With serials,
   `units` = units in service. A serial with rental history can't be deleted,
   only retired, so "who rented this unit last" always resolves

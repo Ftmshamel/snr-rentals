@@ -71,6 +71,19 @@ the §1 problem cannot happen: `/api/bookings/by?type=unmirrored` returns `[]`.
 - **Serials identify physical units across the whole catalogue** (unique
   across cameras). Bookings released before a camera had serials have no
   `UNIT_SERIAL`; that is expected, not an error.
+- **The server assigns the unit** (`lib/unitAssignment.js`, called from
+  `assignUnit` in `firestoreQueries.js`). Approving a booking — or creating
+  one already approved — gives it a unit free for its dates: its current
+  one if it still fits, else the unit idle longest. Changing dates or camera
+  re-checks it; cancel / reject / back to pending frees it. Staff can swap
+  it until release (PATCH `UNIT_SERIAL`; `"auto"` hands it back), and a
+  swap or release onto a unit another rental holds for overlapping dates is
+  refused. A unit that is out and **overdue** counts as busy for every date
+  until it is marked returned. "Busy" uses the same window as availability
+  (back-to-back at the same hour is not an overlap). Every change is a
+  `unit_assigned` timeline entry; the renter's Track page never shows it.
+  If no unit is free the booking stays unassigned with a note — availability
+  normally prevents that, but a manual booking or a retired serial can cause it.
 - **Delivery details are validated server-side** (`lib/delivery.js`): a new
   public delivery booking needs receiver, number, address and a pin inside
   the Philippines; anything else is a 400 the renter sees. Lalamove links

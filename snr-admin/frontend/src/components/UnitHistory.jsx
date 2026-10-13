@@ -29,6 +29,9 @@ function UnitCard({ unit, rentals, onOpen }) {
   // The last rental that came BACK — the one to ask about if the unit is found damaged.
   const last = rentals.find((b) => b.FULFILLMENT_STATUS === "returned" || String(b.status).toLowerCase() === "completed");
   const damaged = rentals.filter((b) => b.RETURN_CONDITION === "damaged").length;
+  // Approved rentals the system has assigned this unit to, not yet released.
+  const isReserved = (b) => String(b.status).toLowerCase() === "approved" && !b.FULFILLMENT_STATUS;
+  const next = rentals.filter(isReserved).at(-1);
 
   return (
     <div className={`ui-card px-4 py-3 ${unit.active === false ? "opacity-60" : ""}`}>
@@ -63,12 +66,19 @@ function UnitCard({ unit, rentals, onOpen }) {
             <ConditionChip booking={last} />
             {last.RETURN_NOTES && <span className="ml-1 italic">“{last.RETURN_NOTES}”</span>}
           </>
-        ) : rentals.length ? (
+        ) : rentals.some((b) => !isReserved(b)) ? (
           "No returned rentals yet."
         ) : (
           "Not rented out yet."
         )}
       </div>
+
+      {next && (
+        <div className="mt-1 text-xs text-[color:var(--color-dark-gray)]">
+          Next: <strong className="text-[color:var(--color-ink)]">{next.FULL_NAME}</strong> · {shortDate(next.PICK_UP_DATE)} →{" "}
+          {shortDate(next.RETURN_DATE)} <span className="ui-chip">Reserved</span>
+        </div>
+      )}
 
       {rentals.length > 0 && (
         <button type="button" onClick={() => setOpen((v) => !v)} className="mt-2 font-mono text-[10px] font-bold uppercase tracking-wider underline">
@@ -84,6 +94,7 @@ function UnitCard({ unit, rentals, onOpen }) {
                   {shortDate(b.PICK_UP_DATE)} → {shortDate(b.RETURN_DATE)}
                 </span>{" "}
                 <strong>{b.FULL_NAME}</strong> <ConditionChip booking={b} />
+                {isReserved(b) && <span className="ml-1 font-mono text-[10px]">(reserved)</span>}
                 {b.RETURN_NOTES && <span className="ml-1 italic text-[color:var(--color-dark-gray)]">“{b.RETURN_NOTES}”</span>}
               </button>
             </li>

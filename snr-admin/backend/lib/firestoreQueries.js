@@ -29,6 +29,7 @@ const {
   sanitizeLink,
   isDeliveryMode,
 } = require("./delivery");
+const { holderOf, pickSerial, sameSerial } = require("./unitAssignment");
 
 // ── Firestore layout ─────────────────────────────────────────────────────────
 //
@@ -273,6 +274,12 @@ async function upsertSubmittedBooking(payload, { source, catalog }) {
     if (value) documents[key] = value;
   }
 
+  // Created already approved (admin entry): assign its unit straight away.
+  if (!existing && status === "approved") {
+    const note = await assignUnit(ref.id, {}, record, record, null);
+    if (note) record.TIMELINE.push({ at: now, event: "unit_assigned", note });
+  }
+
   const batch = db().batch();
   batch.set(ref, record, { merge: true });
   for (const [key, value] of Object.entries(documents)) {
@@ -315,7 +322,8 @@ async function validateRelease(id, after) {
       `Pick which ${after.PREFERRED_CAMERA} unit is being released (serial number).`,
     );
   }
-  const holder = (await allBookings()).find(
+  const all = await allBookings();
+  const holder = all.find(
     ({ ref, data }) =>
       ref.id !== id &&
       isReleased(data.FULFILLMENT_STATUS ?? null) &&
@@ -327,7 +335,85 @@ async function validateRelease(id, after) {
         `(${holder.data.responseId}). Mark that rental returned first.`,
     );
   }
+  // Handing out a unit another rental is counting on for the same dates
+  // would leave that renter without one.
+  const reserved = holderOf(serial, after, id, all.map(({ ref, data }) => ({ id: ref.id, data })));
+  if (reserved) {
+    throw new LifecycleError(
+      `Unit ${serial} is assigned to ${reserved.data.FULL_NAME || "another renter"} ` +
+        `(${reserved.data.responseId}) for overlapping dates. Give that booking another unit first.`,
+    );
+  }
   return serial;
+}
+
+const SCHEDULE_FIELDS = ["PICK_UP_DATE", "PICK_UP_TIME", "RETURN_DATE", "RETURN_TIME", "PREFERRED_CAMERA"];
+
+/**
+ * Keep an approved, not-yet-released booking assigned to a unit (see
+ * lib/unitAssignment.js). Writes UNIT_SERIAL into `updates` / `after` and
+ * returns a timeline note when the assignment changed.
+ *
+ * UNIT_SERIAL in a PATCH is staff choosing a unit by hand ("auto" or empty
+ * hands the choice back to the system). The release path validates its own
+ * serial (validateRelease), so this skips released and returned units.
+ */
+async function assignUnit(id, before, updates, after, to) {
+  if (isReleased(to) || to === "returned") return null;
+  const status = String(after.status || "").toLowerCase();
+  const previous = before.UNIT_SERIAL ?? null;
+
+  if (status !== "approved") {
+    // Only an approved rental holds a unit; a cancelled / rejected / reopened
+    // one gives it back so it doesn't show up as that unit's renter.
+    if (previous && ["cancelled", "rejected", "pending"].includes(status)) {
+      updates.UNIT_SERIAL = after.UNIT_SERIAL = null;
+      return `Unit ${previous} freed`;
+    }
+    return null;
+  }
+
+  const camera = findCamera(await listCameras(), after.PREFERRED_CAMERA);
+  const serials = activeSerials(camera);
+  if (serials.length === 0) return null;
+
+  const requested = "UNIT_SERIAL" in updates ? updates.UNIT_SERIAL : undefined;
+  const manual = requested && requested.toLowerCase() !== "auto";
+  const wasApproved = String(before.status || "").toLowerCase() === "approved";
+  const due =
+    manual ||
+    requested !== undefined ||
+    !wasApproved ||
+    !previous ||
+    SCHEDULE_FIELDS.some((k) => k in updates && updates[k] !== before[k]);
+  if (!due) return null;
+
+  const others = (await allBookings()).map(({ ref, data }) => ({ id: ref.id, data }));
+  let serial;
+  if (manual) {
+    serial = serials.find((s) => sameSerial(s, requested));
+    if (!serial) throw new LifecycleError(`${requested} is not a ${after.PREFERRED_CAMERA} unit in service.`);
+    const holder = holderOf(serial, after, id, others);
+    if (holder) {
+      throw new LifecycleError(
+        `Unit ${serial} is already taken by ${holder.data.FULL_NAME || "another renter"} ` +
+          `(${holder.data.responseId}) for overlapping dates.`,
+      );
+    }
+  } else {
+    // An explicit "auto" re-picks from scratch; otherwise keep the current
+    // unit while it still fits.
+    serial = pickSerial(serials, { ...after, UNIT_SERIAL: requested !== undefined ? null : previous }, id, others);
+  }
+
+  updates.UNIT_SERIAL = after.UNIT_SERIAL = serial;
+  if (!serial) {
+    // Say so once — on approval, on a request, or when a unit was lost — not on every edit.
+    const news = previous || !wasApproved || requested !== undefined;
+    return news ? `No free ${after.PREFERRED_CAMERA} unit for these dates — pick one by hand` : null;
+  }
+  if (serial === previous) return null;
+  return manual ? `Unit ${serial} assigned by staff` : `Unit ${serial} assigned automatically`;
 }
 
 /** Checks that a status / unit-status change is a step the rental can take. */
@@ -358,6 +444,8 @@ async function applyLifecycle(id, before, updates) {
   const from = before.FULFILLMENT_STATUS ?? null;
   const to = after.FULFILLMENT_STATUS ?? null;
   const status = String(after.status || "").toLowerCase();
+
+  const unitNote = await assignUnit(id, before, updates, after, to);
 
   const serialChanged =
     "UNIT_SERIAL" in updates && updates.UNIT_SERIAL !== (before.UNIT_SERIAL ?? null);
@@ -401,6 +489,7 @@ async function applyLifecycle(id, before, updates) {
   if (updates.RETURN_DETAILS && updates._byRenter) {
     events.push({ at, event: "return_details", note: "Renter updated the return pickup details" });
   }
+  if (unitNote) events.push({ at, event: "unit_assigned", note: unitNote });
   delete updates._byRenter;
   if (events.length) updates.TIMELINE = [...(before.TIMELINE || []), ...events];
 }
