@@ -82,6 +82,15 @@ the §1 problem cannot happen: `/api/bookings/by?type=unmirrored` returns `[]`.
   (throttled to 30 s per order), not pushed — a webhook would need its own
   route, and every function slot is used. Phones are sent to Lalamove as
   E.164 (`+63…`).
+- **Rider map**: each order stores `route { from, to }` (the trip's two pins)
+  when booked, and `driver.location` from Lalamove's driver endpoint (re-read
+  on every sync while the order is active). The Track page draws them with
+  Leaflet (`snr-client/src/components/RiderMap.jsx`); the public view sends
+  coordinates only, never the stop labels. A **simulated** sandbox order
+  places the rider itself: near the pickup pin while "on the way", on the
+  sender's pin once picked up, on the recipient's pin once dropped off. The
+  delivery map stays on the Track page after drop-off until a return rider
+  is booked. Lalamove's own share-link page can't show a simulated rider.
 - **The public track view is a whitelist** (`lib/public/track.js` `publicView`):
   no documents, phone numbers or other renters' data. Add fields there
   deliberately.

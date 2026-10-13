@@ -92,7 +92,9 @@ split describes the legacy mode and the historical data.
   For demos, "Simulate next step" (sandbox only — refused when
   `LALAMOVE_ENV=production`) steps it through rider found → picked up →
   dropped off, labelled "(simulated)" everywhere; a simulated order is never
-  overwritten by Lalamove's real status. First real sandbox order: confirmed
+  overwritten by Lalamove's real status. The renter's Track page maps the
+  rider (🏠 shop, 📍 renter, 🛵 rider); a simulated rider sits near the
+  pickup, then on the sender's pin, then on the recipient's pin. First real sandbox order: confirmed
   working on 2026-10-13 (quotation, order, share link).
 - ⚠ The client was written from Lalamove's docs without network access to
   Lalamove and tested against a local mock of v3 (signature, quotation,

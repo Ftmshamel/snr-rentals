@@ -87,6 +87,16 @@ export default function LalamoveApiPanel({ booking, kind, serial, needsSerial, e
           ) : (
             active && <div className="text-[color:var(--color-dark-gray)]">Waiting for a rider to accept…</div>
           )}
+          {order.driver?.location && active && (
+            <a
+              href={`https://www.google.com/maps?q=${order.driver.location.lat},${order.driver.location.lng}`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono text-[10px] font-bold underline"
+            >
+              📍 Rider location — open in Google Maps
+            </a>
+          )}
           {kind === "return" && order.status === "COMPLETED" && (
             <div className="font-bold text-orange-700">The rider dropped it at the shop — check the unit and mark it returned below.</div>
           )}

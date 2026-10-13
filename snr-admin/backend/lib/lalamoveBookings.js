@@ -134,7 +134,13 @@ async function bookLeg(responseId, kind, { serial } = {}) {
   return store.updateBookingByResponseId(
     responseId,
     {
-      [ORDER_FIELD[kind]]: { ...order, statusLabel: STATUS_LABEL[order.status] || order.status, bookedAt: at, syncedAt: at },
+      [ORDER_FIELD[kind]]: {
+        ...order,
+        statusLabel: STATUS_LABEL[order.status] || order.status,
+        route: routeOf(leg),
+        bookedAt: at,
+        syncedAt: at,
+      },
       [LINK_FIELD[kind]]: order.shareLink || null,
     },
     {
@@ -150,6 +156,15 @@ async function bookLeg(responseId, kind, { serial } = {}) {
   );
 }
 
+/** The two ends of a leg, for the map on the admin and the Track page. */
+function routeOf(leg) {
+  const pt = (p, label) => ({ lat: Number(p.lat), lng: Number(p.lng), label });
+  return {
+    from: pt(leg.from, leg.sender.name),
+    to: pt(leg.to, leg.recipient.name),
+  };
+}
+
 /** Store a new order state on the booking and move the rental along with it. */
 async function applyOrderState(responseId, kind, booking, prev, state) {
   const at = new Date().toISOString();
@@ -162,6 +177,7 @@ async function applyOrderState(responseId, kind, booking, prev, state) {
     driverId: state.driverId || prev.driverId || "",
     driver: state.driver ?? prev.driver ?? null,
     simulated: Boolean(state.simulated || prev.simulated),
+    route: state.route || prev.route || null,
     syncedAt: at,
   };
   const fields = { [ORDER_FIELD[kind]]: next };
@@ -193,7 +209,8 @@ async function syncLeg(responseId, kind, { force = false } = {}) {
 
   const order = await lalamove.getOrder(prev.orderId);
   let driver = prev.driver || null;
-  if (order.driverId && order.driverId !== prev.driverId) {
+  // Re-read the rider while the order is moving, so their position stays current.
+  if (order.driverId && (order.driverId !== prev.driverId || lalamove.ACTIVE.has(order.status))) {
     driver = await lalamove.getDriver(order.orderId, order.driverId).catch(() => driver);
   }
   return applyOrderState(responseId, kind, booking, prev, { ...order, driver });
@@ -215,10 +232,26 @@ async function simulateLeg(responseId, kind) {
   const prev = booking[ORDER_FIELD[kind]];
   const status = prev && SIM_NEXT[prev.status];
   if (!status) throw new LifecycleError("There's no active Lalamove order to move forward.");
+  // Place the test rider on the real route: on the way to the pick-up (a
+  // short way off it), then at the sender's pin when picked up, then at the
+  // recipient's pin when dropped off.
+  const route = prev.route || routeOf(legFor(booking, kind));
+  const { from, to } = route;
+  const spot =
+    status === "ON_GOING"
+      ? { lat: from.lat + (to.lat - from.lat) * -0.08 + 0.006, lng: from.lng + (to.lng - from.lng) * -0.08 + 0.006 }
+      : status === "PICKED_UP"
+        ? { lat: from.lat, lng: from.lng }
+        : { lat: to.lat, lng: to.lng };
+  const round = (n) => Math.round(n * 1e6) / 1e6;
   return applyOrderState(responseId, kind, booking, prev, {
     status,
-    driver: status === "ON_GOING" ? SIM_DRIVER : prev.driver,
-    driverId: status === "ON_GOING" ? "simulated" : prev.driverId,
+    route,
+    driver: {
+      ...(prev.driver?.name ? prev.driver : SIM_DRIVER),
+      location: { lat: round(spot.lat), lng: round(spot.lng), updatedAt: new Date().toISOString() },
+    },
+    driverId: prev.driverId || "simulated",
     simulated: true,
   });
 }
