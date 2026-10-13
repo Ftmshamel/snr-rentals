@@ -41,7 +41,7 @@ export default function LalamoveApiPanel({ booking, kind, serial, needsSerial, e
 
   // Pull the latest status when the booking is opened with an order running.
   useEffect(() => {
-    if (active) act("sync");
+    if (active && !order?.simulated) act("sync");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order?.orderId]);
 
@@ -67,6 +67,11 @@ export default function LalamoveApiPanel({ booking, kind, serial, needsSerial, e
             <span className="font-mono text-[10px] text-[color:var(--color-dark-gray)]">
               Order {order.orderId} · ₱{Number(order.total || 0).toLocaleString()}
             </span>
+            {order.simulated && (
+              <span className="rounded-full border-2 border-amber-500 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-amber-700">
+                Simulated
+              </span>
+            )}
           </div>
           {order.driver?.name ? (
             <div>
@@ -91,7 +96,7 @@ export default function LalamoveApiPanel({ booking, kind, serial, needsSerial, e
                 Live tracking ↗
               </a>
             )}
-            {active && (
+            {active && !order.simulated && (
               <button type="button" disabled={Boolean(busy)} onClick={() => act("sync")} className="ui-btn ui-btn--sm">
                 {busy === "sync" ? "Refreshing…" : "Refresh status"}
               </button>
@@ -107,6 +112,24 @@ export default function LalamoveApiPanel({ booking, kind, serial, needsSerial, e
               </button>
             )}
           </div>
+          {/* Lalamove's sandbox has no riders, so nothing ever accepts a test
+              order. For demos, step it through by hand — clearly labelled. */}
+          {active && sandbox && (
+            <div className="mt-1 rounded-[10px] border-2 border-dashed border-amber-500 p-2">
+              <button
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => act("simulate")}
+                className="ui-btn ui-btn--sm w-full"
+              >
+                {busy === "simulate" ? "Moving…" : "⏭ Simulate next step (sandbox demo)"}
+              </button>
+              <p className="mt-1 font-mono text-[9px] text-amber-800">
+                Sandbox has no real riders. This moves the order to the next stage (rider found → picked up →
+                dropped off) and labels every step "simulated" — for demos only, never shown in production.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
