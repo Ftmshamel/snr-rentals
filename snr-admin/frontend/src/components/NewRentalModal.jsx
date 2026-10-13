@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { CAMERAS } from "../data/cameras.js";
+import { useCameras, findCamera } from "../hooks/useCameras.js";
 import { apiPostJson } from "../utils/api.js";
 import { fetchBookingDocuments } from "../utils/bookingDocuments.js";
 import {
@@ -111,13 +111,11 @@ function applyRenterToForm(renter) {
 }
 
 /** Returns placement info for the chosen camera/date range. */
-function findAvailability(form, existingBookings) {
+function findAvailability(form, existingBookings, cameras) {
   if (!form.PREFERRED_CAMERA || !form.PICK_UP_DATE || !form.RETURN_DATE)
     return null;
   if (form.RETURN_DATE < form.PICK_UP_DATE) return null;
-  const cam = CAMERAS.find(
-    (c) => c.name.toLowerCase() === form.PREFERRED_CAMERA.toLowerCase(),
-  );
+  const cam = findCamera(cameras, form.PREFERRED_CAMERA);
   const units = cam?.units ?? 1;
   const target = form.PREFERRED_CAMERA.trim().toLowerCase();
   const cameraBookings = getRelevantCameraBookings(existingBookings, target);
@@ -218,7 +216,8 @@ export default function NewRentalModal({
   const [error, setError] = useState(null);
   const [selectedRenterKey, setSelectedRenterKey] = useState("");
 
-  const availability = findAvailability(form, existingBookings);
+  const { cameras } = useCameras();
+  const availability = findAvailability(form, existingBookings, cameras);
   const conflict =
     availability && !availability.available ? availability : null;
 
@@ -512,7 +511,7 @@ export default function NewRentalModal({
                 className="ui-input"
               >
                 <option value="">— select —</option>
-                {CAMERAS.map((c) => (
+                {cameras.filter((c) => c.active !== false).map((c) => (
                   <option key={c.name} value={c.name}>
                     {c.name.toUpperCase()}
                   </option>

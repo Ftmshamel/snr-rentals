@@ -2,7 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import Header from "../components/Header.jsx";
 import BookingModal from "../components/BookingModal.jsx";
 import { apiGetJson } from "../utils/api.js";
-import { CAMERAS, getPricingForDate } from "../data/cameras.js";
+import { getPricingForDate } from "../data/cameras.js";
+import { useCameras, findCamera } from "../hooks/useCameras.js";
 
 const PAGE_SIZE = 20;
 
@@ -53,12 +54,10 @@ function getReservedAt(b) {
   return null;
 }
 
-function computeExpectedFee(b) {
+function computeExpectedFee(b, cameras) {
   const days = countDays(b.PICK_UP_DATE, b.RETURN_DATE);
   if (!days) return null;
-  const cam = CAMERAS.find(
-    (c) => c.name.toLowerCase() === (b.PREFERRED_CAMERA || "").toLowerCase(),
-  );
+  const cam = findCamera(cameras, b.PREFERRED_CAMERA);
   if (!cam) return null;
   // Rate this booking was actually made under, not today's — otherwise a
   // price change would flag every past booking's stored fee as "wrong".
@@ -76,9 +75,9 @@ function computeExpectedFee(b) {
   return Math.round(tier.pricePerDay * effectiveDays + addonFee);
 }
 
-function hasCorrectFee(b) {
+function hasCorrectFee(b, cameras) {
   if (b.RENTAL_FEE == null) return false;
-  const expected = computeExpectedFee(b);
+  const expected = computeExpectedFee(b, cameras);
   if (expected === null) return false;
   return Number(b.RENTAL_FEE) === expected;
 }
@@ -100,6 +99,7 @@ const selCls =
   "ui-input ui-input--sm";
 
 export default function RentalsReport() {
+  const { cameras } = useCameras();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -124,8 +124,8 @@ export default function RentalsReport() {
 
   // Only real Google Form submissions with correct fee computation
   const verified = useMemo(
-    () => bookings.filter((b) => b._source === "google_form" && hasCorrectFee(b)),
-    [bookings],
+    () => bookings.filter((b) => b._source === "google_form" && hasCorrectFee(b, cameras)),
+    [bookings, cameras],
   );
 
   const cameraOptions = useMemo(() => {

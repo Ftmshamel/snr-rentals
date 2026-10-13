@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import Header from "../components/Header.jsx";
 import BookingModal from "../components/BookingModal.jsx";
 import { apiGetJson } from "../utils/api.js";
+import { StageBadge } from "../utils/lifecycle.jsx";
 
 const PAGE_SIZE = 20;
 
@@ -103,16 +104,6 @@ function getAddons(b) {
     [];
   return Array.isArray(a) ? a : [];
 }
-
-const STATUS_STYLE = {
-  approved: "bg-[rgba(238,238,234,0.85)] text-[color:var(--color-ink)]",
-  pending:
-  "bg-yellow-100 text-yellow-800",
-  completed:
-  "bg-green-100 text-green-800",
-  rejected: "bg-rose-100 text-rose-700",
-  cancelled: "bg-rose-100 text-rose-700",
-};
 
 const selCls =
   "ui-input ui-input--sm";
@@ -222,6 +213,8 @@ export default function RentalsTable() {
           b.PREFERRED_CAMERA,
           b.COMPLETE_ADDRESS,
           b.SPECIFIC_DESTINATION,
+          b.UNIT_SERIAL,
+          b.responseId,
         ]
           .map((v) => (v || "").toLowerCase())
           .join(" ");
@@ -294,7 +287,7 @@ export default function RentalsTable() {
         <div className="mb-4 space-y-2">
           <input
             type="text"
-            placeholder="Search name, contact, camera…"
+            placeholder="Search name, contact, camera, serial no., reference…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full ui-input ui-input--sm"
@@ -424,9 +417,6 @@ function RentalCard({ booking: b, onClick }) {
     days != null
       ? days + (b.HALF_DAY_LATE ? 0.5 : 0) - (b.HALF_DAY_EARLY ? 0.5 : 0)
       : null;
-  const status = (b.status || "").toLowerCase();
-  const fs = (b.FULFILLMENT_STATUS || "").toLowerCase();
-  const isOverdue = fs === "out" && b.RETURN_DATE && b.RETURN_DATE < todayIso();
   const reservedAt = getReservedAt(b);
   const addons = getAddons(b);
 
@@ -445,23 +435,13 @@ function RentalCard({ booking: b, onClick }) {
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          {status && (
-            <span
-              className={`px-2 py-0.5 font-mono text-[10px] font-bold uppercase ${STATUS_STYLE[status] ?? STATUS_STYLE.approved}`}
-            >
-              {status}
-            </span>
+          <StageBadge booking={b} />
+          {b.UNIT_SERIAL && (
+            <span className="font-mono text-[10px] text-[color:var(--color-dark-gray)]">Unit {b.UNIT_SERIAL}</span>
           )}
-          {fs === "out" && (
-            <span
-              className={`px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-white ${isOverdue ? "bg-rose-600" : "bg-amber-500"}`}
-            >
-              {isOverdue ? "Out · Overdue" : "Out"}
-            </span>
-          )}
-          {fs === "returned" && (
-            <span className="bg-green-600 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-white">
-              Returned
+          {b.RETURN_CONDITION === "damaged" && (
+            <span className="rounded-full bg-rose-600 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-white">
+              Returned damaged
             </span>
           )}
         </div>

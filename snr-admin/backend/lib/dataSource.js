@@ -1,14 +1,20 @@
 // ── DATA SOURCE SWITCH ────────────────────────────────────────────────────────
 //
-//  To switch between Supabase and MongoDB, change DATASOURCE in backend/.env:
+//  Set DATASOURCE in backend/.env (or the Vercel project):
 //
-//    DATASOURCE=supabase    ← read/write from Supabase (current)
-//    DATASOURCE=mongodb     ← read/write from MongoDB  (original)
+//    DATASOURCE=firebase    ← Firestore (default) — see lib/firestoreQueries.js
+//    DATASOURCE=supabase    ← legacy: read/write Supabase
+//    DATASOURCE=mongodb     ← legacy: read/write MongoDB
 //
+//  The modules are required lazily so firebase mode never even loads the
+//  MongoDB or Supabase clients.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const source = (process.env.DATASOURCE || "mongodb").trim().toLowerCase();
+const { SOURCE } = require("./sourceName");
 
-module.exports = source === "supabase"
-  ? require("./supabaseQueries")
-  : require("./bookingQueries");
+module.exports =
+  SOURCE === "supabase"
+    ? require("./supabaseQueries")
+    : SOURCE === "mongodb"
+      ? require("./bookingQueries")
+      : require("./firestoreQueries");

@@ -1,6 +1,5 @@
-const { getDb } = require("../lib/mongo");
-const { getSupabaseClient } = require("../lib/supabase");
-const { mirrorBookingToSupabase } = require("../lib/mirrorToSupabase");
+const { isFirebase } = require("../lib/sourceName");
+const { LifecycleError } = require("../lib/lifecycle");
 const { verifyRepeatRenter } = require("../lib/verifyRepeatRenter");
 const {
   isCancelledStatus,
@@ -105,9 +104,19 @@ function validatePublicBooking(payload) {
   return null;
 }
 
+// Firebase mode: one write, to Firestore. The booking is priced against the
+// live catalogue (the cameras the owner edits on the Catalog page).
+async function submitToFirestore(payload, source) {
+  const { listCameras, upsertSubmittedBooking } = require("../lib/firestoreQueries");
+  const catalog = await listCameras();
+  const { action } = await upsertSubmittedBooking(payload, { source, catalog });
+  return { ok: true, action };
+}
+
 async function findSupabaseStatus(responseId) {
   if (!responseId) return null;
   try {
+    const { getSupabaseClient } = require("../lib/supabase");
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from("bookings")
@@ -178,6 +187,28 @@ module.exports = async (req, res) => {
   if (publicValidationError) {
     return res.status(400).json({ ok: false, error: publicValidationError });
   }
+
+  if (isFirebase()) {
+    if (!String(payload.responseId || "").trim()) {
+      return res.status(400).json({ ok: false, error: "responseId is required" });
+    }
+    try {
+      const result = await submitToFirestore(payload, normalizeSource(payload._source));
+      return res.status(200).json(result);
+    } catch (err) {
+      // e.g. a delivery booking without a map pin — the renter can fix it.
+      if (err instanceof LifecycleError) {
+        return res.status(400).json({ ok: false, error: err.message });
+      }
+      console.error("[api/submit firebase]", err);
+      return res.status(500).json({ ok: false, error: "Server error" });
+    }
+  }
+
+  // ── Legacy: DATASOURCE=supabase / mongodb ──────────────────────────────────
+  // Loaded here, not at the top, so firebase mode never touches these stores.
+  const { getDb } = require("../lib/mongo");
+  const { mirrorBookingToSupabase } = require("../lib/mirrorToSupabase");
 
   try {
     const normalizedStatus = normalizeBookingStatus(payload.status);

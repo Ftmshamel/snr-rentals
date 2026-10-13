@@ -7,7 +7,7 @@ const { normalizeBookingStatus } = require("./statusRules");
 // rather than setting status to completed, so a released unit also counts:
 // gear is never handed over without the documents having been checked.
 const VERIFIED_STATUSES = new Set(["approved", "completed"]);
-const VETTED_FULFILLMENTS = new Set(["out", "returned"]);
+const VETTED_FULFILLMENTS = new Set(["out_for_delivery", "out", "returned"]);
 const BLOCKED_STATUSES = new Set(["cancelled", "rejected"]);
 
 /**

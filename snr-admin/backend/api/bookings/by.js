@@ -4,7 +4,15 @@ const {
   findBookingsByCamera,
   findBookingsByAddon,
 } = require("../../lib/dataSource");
-const { findUnmirroredBookings } = require("../../lib/unmirrored");
+const { isFirebase } = require("../../lib/sourceName");
+
+// Un-mirrored bookings only exist in the legacy MongoDB → Supabase setup.
+// Firestore is a single store with nothing to fall out of sync, so the admin
+// banner always gets an empty list — and MongoDB is never opened.
+async function findUnmirroredBookings() {
+  if (isFirebase()) return [];
+  return require("../../lib/unmirrored").findUnmirroredBookings();
+}
 
 // GET /api/bookings/by?type=camera|addon&name=<name>
 // GET /api/bookings/by?type=unmirrored          (no name required)

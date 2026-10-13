@@ -51,6 +51,11 @@ export default function Header() {
               {link.label}
             </a>
           ))}
+          {/* A page link, not a section anchor — kept out of NAV_LINKS, which
+              the scroll-spy above resolves with querySelector. */}
+          <a href="/track" className="header__link" onClick={close}>
+            Track Booking
+          </a>
           <a href="/book" className="btn btn--solid header__cta" onClick={close}>
             Book Now
           </a>

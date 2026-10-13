@@ -1,6 +1,20 @@
-const { findAvailabilityBookings } = require("../lib/dataSource");
+const { findAvailabilityBookings } = require("../dataSource");
+const { isFirebase } = require("../sourceName");
+const { findCamera, getUnitsForDate } = require("../catalog");
 
-// Keep in step with frontend/src/data/cameras.js.
+// In firebase mode the unit count comes from the live catalogue (Firestore
+// `cameras`), as of the requested pick-up date. CAMERA_UNITS below is the
+// legacy (supabase / mongodb) source only.
+async function unitsFor(cameraName, pickUpDate) {
+  if (!isFirebase()) return CAMERA_UNITS[normalize(cameraName)];
+  const { listCameras } = require("../firestoreQueries");
+  const camera = findCamera(await listCameras(), cameraName);
+  // A hidden camera can't be booked from the public site.
+  if (!camera || camera.active === false) return undefined;
+  return getUnitsForDate(camera, pickUpDate);
+}
+
+// LEGACY ONLY — keep in step with frontend/src/data/cameras.js.
 //
 // This endpoint only ever quotes windows the renter is booking now, so the
 // current stock is the right count — no unit history needed here. The admin
@@ -81,11 +95,6 @@ module.exports = async (req, res) => {
   const pickUpTime = first(query.pickUpTime);
   const returnTime = first(query.returnTime);
   const cameraKey = normalize(camera);
-  const units = CAMERA_UNITS[cameraKey];
-
-  if (!units) {
-    return res.status(400).json({ ok: false, error: "Unknown camera" });
-  }
 
   const requestStart = toUtcMillis(pickUpDate, pickUpTime, [7, 0]);
   const requestEnd = toUtcMillis(returnDate, returnTime, [22, 0]);
@@ -94,6 +103,11 @@ module.exports = async (req, res) => {
   }
 
   try {
+    const units = await unitsFor(camera, pickUpDate);
+    if (units === undefined) {
+      return res.status(400).json({ ok: false, error: "Unknown camera" });
+    }
+
     const bookings = await findAvailabilityBookings();
     let booked = 0;
 

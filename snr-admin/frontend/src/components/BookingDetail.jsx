@@ -1,6 +1,6 @@
 ﻿import { useState } from "react";
 import BookingModal from "./BookingModal.jsx";
-import { todayISOLocal } from "../utils/dateHelpers.js";
+import { StageBadge } from "../utils/lifecycle.jsx";
 
 export default function BookingDetail({
   bookings,
@@ -134,20 +134,9 @@ function formatTime12h(selectedDate, b) {
   return "—";
 }
 
+// Same stage wording as the dashboard and booking modal (utils/lifecycle).
 function renderFulfillmentBadge(b) {
-  const fs = (b.FULFILLMENT_STATUS || "").toLowerCase();
-  if (fs !== "out" && fs !== "returned") return null;
-  if (fs === "returned") {
-    return (
-      <span className="ui-chip border-green-700 bg-green-700 text-white">Returned</span>
-    );
-  }
-  const overdue = b.RETURN_DATE && b.RETURN_DATE < todayISOLocal();
-  return (
-    <span className={`ui-chip text-white ${overdue ? "border-rose-700 bg-rose-700" : "border-amber-600 bg-amber-600"}`}>
-      {overdue ? "Out · Overdue" : "Out"}
-    </span>
-  );
+  return <StageBadge booking={b} />;
 }
 
 function renderPickupReturnTag(selectedDate, b) {

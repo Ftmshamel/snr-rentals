@@ -11,12 +11,14 @@ export default function ProductCard({ camera, index, onPreview }) {
       style={{ "--d": `${(index % 3) * 110}ms` }}
     >
       <div className="product-card__art">
-        <img
-          src={assets.image}
-          alt={camera.name}
-          className="product-card__image"
-          loading="lazy"
-        />
+        {assets.image && (
+          <img
+            src={assets.image}
+            alt={camera.name}
+            className="product-card__image"
+            loading="lazy"
+          />
+        )}
       </div>
 
       <span className="product-card__tag">{camera.tag}</span>

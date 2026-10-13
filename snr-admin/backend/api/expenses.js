@@ -1,6 +1,43 @@
 const { setCorsJson } = require("../lib/cors");
 const { requireAuth } = require("../lib/auth");
-const { getSupabaseClient } = require("../lib/supabase");
+const { isFirebase } = require("../lib/sourceName");
+
+function parseJson(raw) {
+  return raw && typeof raw === "object" && !Buffer.isBuffer(raw)
+    ? raw
+    : JSON.parse(raw || "{}");
+}
+
+async function handleFirestore(req, res) {
+  const store = require("../lib/firestoreQueries");
+  const id = req.query?.id;
+
+  if (req.method === "GET" && !id) {
+    return res.status(200).json({ ok: true, expenses: await store.listExpenses() });
+  }
+  if (req.method === "POST") {
+    const { amount, description, date } = parseJson(req.body);
+    if (!amount || !description || !date)
+      return res.status(400).json({ ok: false, error: "amount, description, and date are required" });
+    const expense = await store.createExpense({ amount, description, date });
+    return res.status(201).json({ ok: true, expense });
+  }
+  if (req.method === "PATCH" && id) {
+    const body = parseJson(req.body);
+    const updates = {};
+    if (body.amount != null) updates.amount = Number(body.amount);
+    if (body.description) updates.description = String(body.description).trim();
+    if (body.date) updates.date = body.date;
+    const expense = await store.updateExpense(id, updates);
+    if (!expense) return res.status(404).json({ ok: false, error: "Not found" });
+    return res.status(200).json({ ok: true, expense });
+  }
+  if (req.method === "DELETE" && id) {
+    await store.deleteExpense(id);
+    return res.status(200).json({ ok: true });
+  }
+  return res.status(405).json({ ok: false, error: "Method not allowed" });
+}
 
 module.exports = async (req, res) => {
   setCorsJson(req, res);
@@ -11,6 +48,10 @@ module.exports = async (req, res) => {
   if (!requireAuth(req, res)) return;
 
   try {
+    if (isFirebase()) return await handleFirestore(req, res);
+
+    // Legacy: DATASOURCE=supabase / mongodb.
+    const { getSupabaseClient } = require("../lib/supabase");
     const sb = getSupabaseClient();
     const id = req.query?.id;
 

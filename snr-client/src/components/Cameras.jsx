@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CAMERAS } from "../data/content.js";
+import { useCatalog } from "../data/catalog.js";
 import { getCameraAssets } from "../data/assets.js";
 import ProductCard from "./ProductCard.jsx";
 import GearGrid from "./GearGrid.jsx";
@@ -88,8 +88,9 @@ function CameraDetails({ camera, onClose }) {
 }
 
 export default function Cameras() {
-  const ref = useReveal();
   const [details, setDetails] = useState(null);
+  const { cameras, loading, error } = useCatalog();
+  const ref = useReveal(cameras.length);
 
   return (
     <section id="cameras" className="section" ref={ref}>
@@ -106,8 +107,16 @@ export default function Cameras() {
         </p>
       </div>
 
+      {(loading || error || cameras.length === 0) && (
+        <p className="section__lede">
+          {loading
+            ? "Loading cameras…"
+            : "Our camera list can't be shown right now — please refresh, or message us to book."}
+        </p>
+      )}
+
       <div className="product-grid">
-        {CAMERAS.map((camera, i) => (
+        {cameras.map((camera, i) => (
           <ProductCard
             key={camera.id}
             camera={camera}

@@ -1,6 +1,37 @@
 const { setCorsJson } = require("../lib/cors");
 const { requireAuth } = require("../lib/auth");
-const { getSupabaseClient } = require("../lib/supabase");
+const { isFirebase } = require("../lib/sourceName");
+
+async function handleFirestore(req, res) {
+  const store = require("../lib/firestoreQueries");
+  const date = req.query?.date;
+  // The date is the Firestore document id, so it must be exactly YYYY-MM-DD.
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(String(date)))
+    return res.status(400).json({ ok: false, error: "date must be YYYY-MM-DD" });
+
+  if (req.method === "GET") {
+    if (!date) return res.status(400).json({ ok: false, error: "date is required" });
+    const data = await store.getDateNote(date);
+    return res.status(200).json({ ok: true, note: data?.note || "" });
+  }
+  if (req.method === "POST") {
+    const raw = req.body;
+    const body =
+      raw && typeof raw === "object" && !Buffer.isBuffer(raw) ? raw : JSON.parse(raw || "{}");
+    const { date: d, note } = body;
+    if (!d || note == null)
+      return res.status(400).json({ ok: false, error: "date and note are required" });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d)))
+      return res.status(400).json({ ok: false, error: "date must be YYYY-MM-DD" });
+    return res.status(200).json({ ok: true, note: await store.upsertDateNote(d, note) });
+  }
+  if (req.method === "DELETE") {
+    if (!date) return res.status(400).json({ ok: false, error: "date is required" });
+    await store.deleteDateNote(date);
+    return res.status(200).json({ ok: true });
+  }
+  return res.status(405).json({ ok: false, error: "Method not allowed" });
+}
 
 module.exports = async (req, res) => {
   setCorsJson(req, res);
@@ -11,6 +42,10 @@ module.exports = async (req, res) => {
   if (!requireAuth(req, res)) return;
 
   try {
+    if (isFirebase()) return await handleFirestore(req, res);
+
+    // Legacy: DATASOURCE=supabase / mongodb.
+    const { getSupabaseClient } = require("../lib/supabase");
     const sb = getSupabaseClient();
     const date = req.query?.date;
 

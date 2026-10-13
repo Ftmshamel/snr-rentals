@@ -5,6 +5,7 @@ const {
   updateBookingByResponseId,
   deleteBookingByResponseId,
 } = require("../../lib/dataSource");
+const { LifecycleError } = require("../../lib/lifecycle");
 
 module.exports = async (req, res) => {
   setCorsJson(req, res);
@@ -38,6 +39,11 @@ module.exports = async (req, res) => {
       if (!booking) return res.status(404).json({ ok: false, error: "Not found" });
       return res.status(200).json({ ok: true, booking });
     } catch (err) {
+      // A step the rental can't take (e.g. releasing without a serial) is the
+      // admin's to fix, so say what's wrong instead of "Server error".
+      if (err instanceof LifecycleError) {
+        return res.status(400).json({ ok: false, error: err.message });
+      }
       console.error("[api/bookings/:responseId PATCH]", err);
       return res.status(500).json({ ok: false, error: err.message || "Server error" });
     }
