@@ -105,8 +105,26 @@ split describes the legacy mode and the historical data.
   Lalamove and tested against a local mock of v3 (signature, quotation,
   order, driver, cancel). The first real check is a sandbox order from the
   deployed admin. `LALAMOVE_ENV=production` charges the Lalamove wallet.
-- Public routes are multiplexed: `api/public.js?action=availability|verify-renter|track|return-details`
+- Public routes are multiplexed: `api/public.js?action=availability|verify-renter|track|return-details|me|claim`
   (handlers in `lib/public/`).
+
+### Member tiers — S&R Rewards (Oct 2026)
+
+- Optional **Google sign-in** on the public site (Firebase Authentication;
+  `snr-client/src/auth/firebase.js`, `hooks/useMember.js`). Signed-in
+  renters get `/account` (tier card, perks, bookings, link a past booking by
+  reference code), a member strip and member price on `/book`, and the
+  landing page's Rewards section. Guests book exactly as before.
+- Tier = completed rentals linked to their account (`RENTER_UID`). Tiers
+  and perks are owner-editable on the admin's **`/rewards`** page, which
+  also lists members. Rules: `backend/lib/loyalty.js`.
+- **The server verifies the renter's ID token and applies the perks**; the
+  booking stores them frozen in `MEMBER` and `RENTAL_FEE` is **net**. The
+  client sends the fee *before* perks. Details and traps:
+  `docs/ENGINEERING-NOTES.md` §0 "Member tiers".
+- Routes (no new function): `api/public.js?action=me|claim`,
+  `api/catalog.js` (`GET` now includes `tiers`; owner `?action=members`,
+  `PATCH ?action=tiers`).
 
 ## Read before writing data
 

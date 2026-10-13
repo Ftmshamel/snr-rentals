@@ -30,6 +30,14 @@ const {
   isDeliveryMode,
 } = require("./delivery");
 const { holderOf, pickSerial, sameSerial } = require("./unitAssignment");
+const {
+  DEFAULT_TIERS,
+  LoyaltyError,
+  sanitizeTiers,
+  countsAsCompleted,
+  tierFor,
+  perksForBooking,
+} = require("./loyalty");
 
 // ── Firestore layout ─────────────────────────────────────────────────────────
 //
@@ -226,7 +234,7 @@ function isRepeatRenter(payload) {
  * the MongoDB + Supabase setup: a cancelled booking stays cancelled, otherwise
  * the requested status wins over the stored one, defaulting to pending.
  */
-async function upsertSubmittedBooking(payload, { source, catalog }) {
+async function upsertSubmittedBooking(payload, { source, catalog, member = null }) {
   const id = bookingDocId(payload.responseId);
   if (!id) throw new Error("responseId is required");
   const ref = bookingsCol().doc(id);
@@ -272,6 +280,30 @@ async function upsertSubmittedBooking(payload, { source, catalog }) {
     const value = record[key]?.[0];
     delete record[key];
     if (value) documents[key] = value;
+  }
+
+  // Signed-in renter (verified by api/submit): link the booking to their
+  // account and apply their tier's perks — new bookings only, so a
+  // resubmission never reprices a rental. RENTAL_FEE is stored net.
+  if (!existing && member) {
+    record.RENTER_UID = member.uid;
+    const perks = perksForBooking(member, catalog, record, addons);
+    record.MEMBER = {
+      ...member,
+      discount: perks.discount,
+      freeAddons: perks.freeAddons.map((a) => a.name),
+      freeAddonAmount: perks.freeAmount,
+      savings: perks.savings,
+    };
+    if (perks.savings > 0) {
+      if (Number.isFinite(Number(record.RENTAL_FEE)) && record.RENTAL_FEE != null) {
+        record.RENTAL_FEE = Math.max(Number(record.RENTAL_FEE) - perks.savings, 0);
+      }
+      if (record.TOTAL_PAYABLE_BEFORE_RELEASE != null && Number.isFinite(Number(record.TOTAL_PAYABLE_BEFORE_RELEASE))) {
+        record.TOTAL_PAYABLE_BEFORE_RELEASE = Math.max(Number(record.TOTAL_PAYABLE_BEFORE_RELEASE) - perks.savings, 0);
+      }
+    }
+    if (member.priority) record.TIMELINE.push({ at: now, event: "priority", note: `${member.tierName} member — priority` });
   }
 
   // Created already approved (admin entry): assign its unit straight away.
@@ -712,6 +744,103 @@ async function seedCameras(defaults) {
   return listCameras();
 }
 
+// ── Members (renter accounts + tiers) ───────────────────────────────────────
+//
+//   renters/{uid}       { uid, email, name, picture, createdAt, lastSeenAt }
+//   settings/loyalty    { tiers: [...] } — see lib/loyalty.js
+//   bookings.RENTER_UID links a booking to its renter's account
+
+function loyaltyDoc() {
+  return db().collection("settings").doc("loyalty");
+}
+
+async function getLoyaltyTiers() {
+  const snap = await loyaltyDoc().get();
+  const tiers = snap.exists ? snap.get("tiers") : null;
+  return Array.isArray(tiers) && tiers.length === DEFAULT_TIERS.length ? tiers : DEFAULT_TIERS;
+}
+
+async function saveLoyaltyTiers(input) {
+  const tiers = sanitizeTiers(input);
+  await loyaltyDoc().set({ tiers, updatedAt: new Date().toISOString() });
+  return tiers;
+}
+
+async function upsertRenter({ uid, email, name, picture }) {
+  const ref = db().collection("renters").doc(uid);
+  const snap = await ref.get();
+  const now = new Date().toISOString();
+  const data = { uid, email: email || "", name: name || "", picture: picture || "", lastSeenAt: now };
+  if (!snap.exists) data.createdAt = now;
+  await ref.set(data, { merge: true });
+  return { ...(snap.exists ? snap.data() : {}), ...data };
+}
+
+async function bookingsOfRenter(uid) {
+  const snap = await bookingsCol().where("RENTER_UID", "==", uid).get();
+  return snap.docs.map((d) => partial(d.data())).sort(byPickUpDate);
+}
+
+/** A renter's tier right now, and the bookings it is based on. */
+async function memberStatus(uid) {
+  const [tiers, bookings] = await Promise.all([getLoyaltyTiers(), bookingsOfRenter(uid)]);
+  const completed = bookings.filter(countsAsCompleted).length;
+  return { tiers, bookings, completed, ...tierFor(tiers, completed) };
+}
+
+/**
+ * Link a past booking to a renter's account. The reference code is the
+ * credential (as on the Track page); a booking already linked to someone
+ * else stays theirs.
+ */
+async function linkBookingToRenter(responseId, uid) {
+  const id = bookingDocId(decodeId(responseId));
+  const tries = [id, id && id.toUpperCase()].filter(Boolean);
+  for (const docId of [...new Set(tries)]) {
+    const ref = bookingsCol().doc(docId);
+    const snap = await ref.get();
+    if (!snap.exists) continue;
+    const owner = snap.get("RENTER_UID");
+    if (owner && owner !== uid) throw new LoyaltyError("That booking is already linked to another account.");
+    const status = String(snap.get("status") || "").toLowerCase();
+    if (status === "cancelled" || status === "rejected") {
+      throw new LoyaltyError("Cancelled or declined bookings can't be added.");
+    }
+    if (!owner) await ref.update({ RENTER_UID: uid, _lastUpdatedAt: new Date().toISOString() });
+    return partial({ ...snap.data(), RENTER_UID: uid });
+  }
+  throw new LoyaltyError("No booking found for that reference code.");
+}
+
+/** Every member with their completed-rental count and tier (admin). */
+async function listMembers() {
+  const [tiers, rentersSnap, all] = await Promise.all([
+    getLoyaltyTiers(),
+    db().collection("renters").get(),
+    allBookings(),
+  ]);
+  const byUid = new Map();
+  for (const { data } of all) {
+    if (!data.RENTER_UID) continue;
+    const entry = byUid.get(data.RENTER_UID) || { bookings: 0, completed: 0, spent: 0, lastRental: null };
+    entry.bookings += 1;
+    if (countsAsCompleted(data)) {
+      entry.completed += 1;
+      entry.spent += Number(data.RENTAL_FEE) || 0;
+    }
+    if (!entry.lastRental || String(data.PICK_UP_DATE) > entry.lastRental) entry.lastRental = data.PICK_UP_DATE || null;
+    byUid.set(data.RENTER_UID, entry);
+  }
+  return rentersSnap.docs
+    .map((d) => {
+      const r = d.data();
+      const stats = byUid.get(d.id) || { bookings: 0, completed: 0, spent: 0, lastRental: null };
+      const { tier, next, toNext } = tierFor(tiers, stats.completed);
+      return { ...r, ...stats, tier: tier.key, tierName: tier.name, nextTierName: next?.name || null, toNext };
+    })
+    .sort((a, b) => b.completed - a.completed || String(a.name).localeCompare(String(b.name)));
+}
+
 module.exports = {
   addDaysIso,
   DOCUMENT_FIELDS,
@@ -742,4 +871,12 @@ module.exports = {
   updateCamera,
   deleteCamera,
   seedCameras,
+  // members
+  getLoyaltyTiers,
+  saveLoyaltyTiers,
+  upsertRenter,
+  bookingsOfRenter,
+  memberStatus,
+  linkBookingToRenter,
+  listMembers,
 };

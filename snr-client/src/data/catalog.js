@@ -24,7 +24,8 @@ function normalizeCamera(c) {
   };
 }
 
-let state = { cameras: [], loading: true, error: null };
+// `tiers` — member tiers and perks (Rewards), edited on the admin Rewards page.
+let state = { cameras: [], tiers: [], loading: true, error: null };
 let request = null;
 const listeners = new Set();
 
@@ -35,10 +36,10 @@ function load() {
         const cameras = (Array.isArray(data.cameras) ? data.cameras : [])
           .filter((c) => c.active !== false)
           .map(normalizeCamera);
-        state = { cameras, loading: false, error: null };
+        state = { cameras, tiers: Array.isArray(data.tiers) ? data.tiers : [], loading: false, error: null };
       })
       .catch((err) => {
-        state = { cameras: [], loading: false, error: err?.message || "Could not load cameras." };
+        state = { cameras: [], tiers: [], loading: false, error: err?.message || "Could not load cameras." };
         request = null; // allow a retry on the next mount
       })
       .finally(() => listeners.forEach((fn) => fn(state)));
@@ -46,7 +47,7 @@ function load() {
   return request;
 }
 
-/** @returns {{ cameras: object[], loading: boolean, error: string|null }} */
+/** @returns {{ cameras: object[], tiers: object[], loading: boolean, error: string|null }} */
 export function useCatalog() {
   const [snapshot, setSnapshot] = useState(state);
   useEffect(() => {

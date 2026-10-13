@@ -191,6 +191,7 @@ export const NAV_LINKS = [
   { label: "Home", href: "#home" },
   { label: "Cameras", href: "#cameras" },
   { label: "How to Rent", href: "#how-to-rent" },
+  { label: "Rewards", href: "#rewards" },
   { label: "Terms", href: "#terms" },
   { label: "FAQs", href: "#faqs" },
   { label: "Contact", href: "#contact" },

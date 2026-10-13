@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getPricingForDate } from "../data/cameras.js";
 import { useCameras, findCamera } from "../hooks/useCameras.js";
 import LifecyclePanel from "./LifecyclePanel.jsx";
+import { MemberBadge, memberPerks } from "../utils/loyalty.jsx";
 import { getContractForCamera } from "../data/contracts.js";
 import { apiPatchJson, apiDeleteJson } from "../utils/api.js";
 import {
@@ -481,8 +482,11 @@ function getAutoRate(pricing, days) {
   return tier ? tier.pricePerDay : null;
 }
 
-/** Compute fee from current form state. Returns { fee, halfDayAmount } */
-function computeAutoFee(form, cameras) {
+/**
+ * Compute fee from current form state. Returns { fee, halfDayAmount, perks }.
+ * A member booking keeps its frozen perks (booking.MEMBER) through edits.
+ */
+function computeAutoFee(form, cameras, member) {
   const days = countDays(form.PICK_UP_DATE, form.RETURN_DATE);
   if (!days) return { fee: null, halfDayAmount: null };
   const cam = findCamera(cameras, form.PREFERRED_CAMERA);
@@ -496,12 +500,16 @@ function computeAutoFee(form, cameras) {
   const effectiveDays =
     days + (form.HALF_DAY_LATE ? 0.5 : 0) - (form.HALF_DAY_EARLY ? 0.5 : 0);
   const cameraFee = rate * effectiveDays;
-  const addOnFee = (form.addons || []).reduce((sum, name) => {
-    const a = cam.addOns?.find((x) => x.name === name);
-    return sum + (a ? a.pricePerDay * effectiveDays : 0);
-  }, 0);
+  const addOnLines = (form.addons || [])
+    .map((name) => {
+      const a = cam.addOns?.find((x) => x.name === name);
+      return a ? { name: a.name, amount: a.pricePerDay * effectiveDays } : null;
+    })
+    .filter(Boolean);
+  const addOnFee = addOnLines.reduce((sum, a) => sum + a.amount, 0);
+  const perks = memberPerks(member, cameraFee, addOnLines);
 
-  return { fee: Math.round(cameraFee + addOnFee), halfDayAmount };
+  return { fee: Math.max(Math.round(cameraFee + addOnFee - perks.savings), 0), halfDayAmount, perks };
 }
 
 function initForm(b) {
@@ -547,7 +555,7 @@ export default function BookingModal({
   );
   const [docsError, setDocsError] = useState(null);
   const { cameras } = useCameras();
-  const { fee: autoFee, halfDayAmount } = computeAutoFee(form, cameras);
+  const { fee: autoFee, halfDayAmount, perks: autoPerks } = computeAutoFee(form, cameras, savedBooking.MEMBER);
 
   // Bookings arriving from a list endpoint have no document columns (see
   // utils/bookingDocuments.js) — pull them for this one booking. Only the
@@ -692,8 +700,9 @@ export default function BookingModal({
                   "—"}
             </div>
             {mode === "view" && (
-              <div className="mt-0.5 text-sm text-[color:var(--color-dark-gray)]">
+              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-[color:var(--color-dark-gray)]">
                 {savedBooking.PREFERRED_CAMERA || "—"}
+                <MemberBadge member={savedBooking.MEMBER} />
               </div>
             )}
           </div>
@@ -1065,6 +1074,18 @@ function ViewBody({
                   </div>
                 );
               })()}
+            {booking.MEMBER && (
+              <div className="flex flex-wrap items-center gap-2 text-xs text-[color:var(--color-ink)]">
+                <MemberBadge member={booking.MEMBER} />
+                <span>
+                  {booking.MEMBER.savings > 0
+                    ? `Member price — saved ₱${Number(booking.MEMBER.savings).toLocaleString()}`
+                    : "Member booking"}
+                  {booking.MEMBER.discount > 0 && ` · ${booking.MEMBER.discountPercent}% off camera (₱${Number(booking.MEMBER.discount).toLocaleString()})`}
+                  {booking.MEMBER.freeAddons?.length > 0 && ` · free ${booking.MEMBER.freeAddons.join(", ")}`}
+                </span>
+              </div>
+            )}
             {booking.HALF_DAY_LATE && (
               <div className="text-xs font-medium text-[color:var(--color-dark-gray)]">
                 +0.5 day — late return
@@ -1478,6 +1499,11 @@ function EditForm({
                 </span>
               )}
             </div>
+            {autoFee != null && autoPerks?.savings > 0 && (
+              <div className="mt-0.5 font-mono text-[10px] text-[color:var(--color-dark-gray)]">
+                includes {savedBooking.MEMBER.tierName} member savings −₱{autoPerks.savings.toLocaleString()}
+              </div>
+            )}
           </div>
         )}
 
