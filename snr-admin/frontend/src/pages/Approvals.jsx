@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Header from "../components/Header.jsx";
 import { apiGetJson, apiPatchJson } from "../utils/api.js";
+import { MemberBadge } from "../utils/loyalty.jsx";
 import {
   documentOpenLabel,
   documentThumb,
@@ -44,7 +45,9 @@ export default function Approvals() {
     setError(null);
     try {
       const data = await apiGetJson("/api/bookings/pending");
-      setBookings(data.bookings || []);
+      // Priority members (Platinum by default) are reviewed first.
+      const list = data.bookings || [];
+      setBookings([...list.filter((b) => b.MEMBER?.priority), ...list.filter((b) => !b.MEMBER?.priority)]);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -179,8 +182,11 @@ function BookingCard({
       >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="truncate text-base font-bold text-[color:var(--color-black)]">
-              {b.FACEBOOK_ACCOUNT_NAME || b.FULL_NAME || "—"}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="truncate text-base font-bold text-[color:var(--color-black)]">
+                {b.FACEBOOK_ACCOUNT_NAME || b.FULL_NAME || "—"}
+              </span>
+              <MemberBadge member={b.MEMBER} />
             </div>
             <div className="mt-0.5 text-sm text-[color:var(--color-dark-gray)]">
               {b.PREFERRED_CAMERA || "—"}

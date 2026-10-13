@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NAV_LINKS } from "../data/content.js";
 import Logo from "./Logo.jsx";
+import AccountButton from "./AccountButton.jsx";
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -56,6 +57,7 @@ export default function Header() {
           <a href="/track" className="header__link" onClick={close}>
             Track Booking
           </a>
+          <AccountButton onNavigate={close} className="header__account" />
           <a href="/book" className="btn btn--solid header__cta" onClick={close}>
             Book Now
           </a>

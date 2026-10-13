@@ -12,6 +12,7 @@ const NAV = [
   { to: "/cameras", label: "Cameras", match: (p) => p.startsWith("/camera"), group: true },
   { to: "/addons", label: "Add-ons", match: (p) => p.startsWith("/addon") },
   { to: "/catalog", label: "Catalog", match: (p) => p === "/catalog", ownerOnly: true },
+  { to: "/rewards", label: "Rewards", match: (p) => p === "/rewards", ownerOnly: true },
   { to: "/quotation", label: "Quote", match: (p) => p === "/quotation", group: true },
   { to: "/analytics", label: "Analytics", match: (p) => p === "/analytics", ownerOnly: true },
   { to: "/expenses", label: "Expenses", match: (p) => p === "/expenses", ownerOnly: true },

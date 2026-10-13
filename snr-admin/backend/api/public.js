@@ -8,11 +8,15 @@ const { setCorsJson } = require("../lib/cors");
 //   GET  ?action=verify-renter&ref=      repeat-renter check (prefills the form)
 //   GET  ?action=track&ref=              a renter's own booking status + Lalamove links
 //   POST ?action=return-details          renter updates where the return is collected
+//   GET  ?action=me                      signed-in renter: tier, perks, bookings
+//   POST ?action=claim                   signed-in renter: link a past booking
 const HANDLERS = {
   availability: require("../lib/public/availability"),
   "verify-renter": require("../lib/public/verifyRenter"),
   track: require("../lib/public/track"),
   "return-details": require("../lib/public/returnDetails"),
+  me: require("../lib/public/member"),
+  claim: require("../lib/public/member"),
 };
 
 function getQuery(req) {

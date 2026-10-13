@@ -3,6 +3,7 @@ const { requireOwner } = require("../lib/auth");
 const { isFirebase } = require("../lib/sourceName");
 const { CatalogValidationError, todayManila } = require("../lib/catalog");
 const { DEFAULT_CATALOG } = require("../lib/defaultCatalog");
+const { LoyaltyError } = require("../lib/loyalty");
 
 // The camera catalogue — names, units, day rates, add-ons, inclusions.
 //
@@ -12,6 +13,8 @@ const { DEFAULT_CATALOG } = require("../lib/defaultCatalog");
 //   POST   ?action=seed       owner: load DEFAULT_CATALOG into an empty catalogue
 //   PATCH  ?id=<id>           owner: edit                    body: { camera, effectiveDate }
 //   DELETE ?id=<id>           owner: remove
+//   GET    ?action=members    owner: renter accounts with their tier
+//   PATCH  ?action=tiers      owner: member tiers + perks   body: { tiers }
 //
 // A changed price or unit count is never overwritten in place: the old value
 // is kept in history up to `effectiveDate` (default: today, Manila time) so
@@ -52,15 +55,27 @@ module.exports = async (req, res) => {
   const action = req.query?.action;
 
   try {
+    if (req.method === "GET" && action === "members") {
+      if (!requireOwner(req, res)) return;
+      res.setHeader("Cache-Control", "no-store");
+      return res.status(200).json({ ok: true, members: await store.listMembers() });
+    }
+
     if (req.method === "GET") {
       // No CDN caching: the admin re-reads this right after saving an edit.
+      // `tiers` — the member tiers and perks, shown on the public site.
       res.setHeader("Cache-Control", "no-store");
-      return res.status(200).json({ ok: true, cameras: await store.listCameras() });
+      const [cameras, tiers] = await Promise.all([store.listCameras(), store.getLoyaltyTiers()]);
+      return res.status(200).json({ ok: true, cameras, tiers });
     }
 
     if (!requireOwner(req, res)) return;
     const body = parseJson(req.body);
     if (body === null) return res.status(400).json({ ok: false, error: "Invalid JSON body" });
+
+    if (req.method === "PATCH" && action === "tiers") {
+      return res.status(200).json({ ok: true, tiers: await store.saveLoyaltyTiers(body.tiers) });
+    }
 
     if (req.method === "POST" && action === "seed") {
       const cameras = await store.seedCameras(DEFAULT_CATALOG);
@@ -87,7 +102,7 @@ module.exports = async (req, res) => {
 
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   } catch (err) {
-    if (err instanceof CatalogValidationError) {
+    if (err instanceof CatalogValidationError || err instanceof LoyaltyError) {
       return res.status(400).json({ ok: false, error: err.message });
     }
     console.error("[api/catalog]", err);

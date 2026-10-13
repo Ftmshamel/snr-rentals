@@ -106,11 +106,26 @@ function validatePublicBooking(payload) {
 
 // Firebase mode: one write, to Firestore. The booking is priced against the
 // live catalogue (the cameras the owner edits on the Catalog page).
-async function submitToFirestore(payload, source) {
+async function submitToFirestore(payload, source, member) {
   const { listCameras, upsertSubmittedBooking } = require("../lib/firestoreQueries");
   const catalog = await listCameras();
-  const { action } = await upsertSubmittedBooking(payload, { source, catalog });
+  const { action } = await upsertSubmittedBooking(payload, { source, catalog, member });
   return { ok: true, action };
+}
+
+/**
+ * A signed-in renter sends their Firebase ID token as RENTER_TOKEN. Verify it
+ * and work out their tier here — the client's word is never taken for either.
+ * The token is never stored.
+ */
+async function resolveMember(token) {
+  const { verifyRenterToken } = require("../lib/renterAuth");
+  const { memberSnapshot } = require("../lib/loyalty");
+  const store = require("../lib/firestoreQueries");
+  const renter = await verifyRenterToken(token);
+  await store.upsertRenter(renter);
+  const { tier, completed } = await store.memberStatus(renter.uid);
+  return memberSnapshot(renter, tier, completed);
 }
 
 async function findSupabaseStatus(responseId) {
@@ -188,12 +203,28 @@ module.exports = async (req, res) => {
     return res.status(400).json({ ok: false, error: publicValidationError });
   }
 
+  const renterToken = String(payload.RENTER_TOKEN || "").trim();
+  delete payload.RENTER_TOKEN;
+
   if (isFirebase()) {
     if (!String(payload.responseId || "").trim()) {
       return res.status(400).json({ ok: false, error: "responseId is required" });
     }
+    let member = null;
+    if (renterToken) {
+      try {
+        member = await resolveMember(renterToken);
+      } catch (err) {
+        const { RenterAuthError } = require("../lib/renterAuth");
+        // They expect their member price — don't quietly book at the full one.
+        if (err instanceof RenterAuthError) return res.status(401).json({ ok: false, error: err.message });
+        console.error("[api/submit member]", err);
+        return res.status(500).json({ ok: false, error: "Server error" });
+      }
+    }
     try {
-      const result = await submitToFirestore(payload, normalizeSource(payload._source));
+      const result = await submitToFirestore(payload, normalizeSource(payload._source), member);
+      if (member) result.member = { tierName: member.tierName };
       return res.status(200).json(result);
     } catch (err) {
       // e.g. a delivery booking without a map pin — the renter can fix it.

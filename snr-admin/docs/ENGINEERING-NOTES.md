@@ -104,6 +104,33 @@ the §1 problem cannot happen: `/api/bookings/by?type=unmirrored` returns `[]`.
   sender's pin once picked up, on the recipient's pin once dropped off. The
   delivery map stays on the Track page after drop-off until a return rider
   is booked. Lalamove's own share-link page can't show a simulated rider.
+- **Member tiers (S&R Rewards)** — `lib/loyalty.js`. Renters may sign in
+  with Google on the public site (Firebase Authentication, optional; guests
+  still book). Their tier (Bronze 0 / Silver 3 / Gold 6 / Platinum 10
+  completed rentals by default; owner edits them on `/rewards`, stored in
+  `settings/loyalty`) is counted from bookings carrying their `RENTER_UID`
+  that are `completed` or `returned`. Rules worth knowing:
+  - **The server decides the tier and the price.** The client sends its
+    Firebase ID token as `RENTER_TOKEN` (never stored) and the fee *before*
+    perks; `api/submit` verifies the token, computes the perks from the
+    catalogue (`perksForBooking`) and stores `RENTAL_FEE` **net** — so
+    Analytics shows what was charged. An invalid token is a 401, not a
+    silent full-price booking.
+  - Perks are **frozen on the booking** as `MEMBER { tier, discountPercent,
+    freeAddons, priority, discount, freeAddons[], savings, … }` on insert
+    only: a later tier change or a resubmission never reprices a rental.
+    The admin's fee recompute (`BookingModal` `computeAutoFee`) re-applies
+    the frozen perks, so editing dates keeps the member price.
+  - Discount is on the **camera** fee; free add-ons are the most expensive
+    ones picked, and stay in the add-on list (they still leave the shop).
+  - `memberPerks` exists in three copies — backend `lib/loyalty.js`, admin
+    `utils/loyalty.jsx`, client `src/utils/loyalty.js`. Keep them identical.
+  - Past bookings join an account by reference code (`?action=claim`, the
+    code is the credential as on `/track`); one already linked to another
+    account stays theirs. Linked bookings count toward the tier but get no
+    retroactive discount.
+  - Platinum's "priority" sorts their requests first on `/approvals`.
+  - Collections: `renters/{uid}`, `settings/loyalty`.
 - **The public track view is a whitelist** (`lib/public/track.js` `publicView`):
   no documents, phone numbers or other renters' data. Add fields there
   deliberately.
@@ -392,6 +419,7 @@ Use PowerShell `System.Drawing` for resizing (see git history for the pattern).
 | **`repeat_renter` / `repeat_ref` columns do not exist** | `toMongoFormat` reads them; `select("*")` tolerated it silently. The "Repeat renter" badge in `BookingModal` can therefore never display. |
 | **Canon EOS R50 scratch fees are placeholders** | Copied from the G7X (₱3,000 / ₱5,000 / ₱10,000), marked `TODO — CONFIRM` in both `contracts.js` files. **These appear in the contract renters sign.** |
 | **Genuine overbookings exist in history** | e.g. Canon G7X 6 out against 4 units on 2026-06-06. The `⚠ Overbooked by N` chip on `/cameras` and `/addons` surfaces these. |
+| **Google sign-in needs console setup** | The public site hides sign-in until `VITE_FIREBASE_*` are set (renter-side Vercel project), Google is enabled under Firebase Authentication → Sign-in method, and the site's domain is in Authorized domains. The popup flow was tested only against the Auth emulator: this dev environment can't load Google's sign-in script. |
 | **Analytics all-time vs month scope** | Overview is all-time by design; the Months tab is scoped. Labelled, but easy to misread. |
 
 ---

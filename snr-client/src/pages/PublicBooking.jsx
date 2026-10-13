@@ -8,6 +8,9 @@ import { apiGetJson, apiPostJson } from "../utils/api.js";
 import Logo from "../components/Logo.jsx";
 import GearGrid, { GearImage } from "../components/GearGrid.jsx";
 import useLockBodyScroll from "../hooks/useLockBodyScroll.js";
+import { getIdToken, refreshMe, signIn, useMember } from "../hooks/useMember.js";
+import { TIER_ICONS, memberPerks } from "../utils/loyalty.js";
+import { GoogleMark } from "../components/AccountButton.jsx";
 import DeliveryDetailsForm, {
   EMPTY_DELIVERY,
   deliveryMissing,
@@ -1280,6 +1283,63 @@ function CopyButton({ text }) {
   );
 }
 
+// Optional sign-in at the top of the form: members see their tier and that
+// the member price is applied; guests get a one-tap Google sign-in.
+function MemberStrip({ member }) {
+  const [busy, setBusy] = useState(false);
+  if (member.status === "off" || member.status === "loading") return null;
+  if (member.status === "member") {
+    const tier = member.me?.tier;
+    if (!tier) return null;
+    const perks = [
+      tier.discountPercent ? `${tier.discountPercent}% off the camera` : null,
+      tier.freeAddons ? `${tier.freeAddons} free add-on${tier.freeAddons > 1 ? "s" : ""}` : null,
+      tier.priority ? "priority review" : null,
+    ].filter(Boolean);
+    return (
+      <div className={`bk-member bk-member--member tier--${tier.key}`}>
+        {member.user?.photo && <img src={member.user.photo} alt="" className="bk-member__avatar" referrerPolicy="no-referrer" />}
+        <p className="bk-member__text">
+          Hi {(member.user?.name || "").split(" ")[0] || "there"}! You're a{" "}
+          <strong>
+            {TIER_ICONS[tier.key]} {tier.name}
+          </strong>{" "}
+          member
+          {perks.length ? ` — ${perks.join(" + ")} applied to this booking.` : " — your details are filled in for you."}
+        </p>
+        <a href="/account" className="bk-member__link">
+          My rewards →
+        </a>
+      </div>
+    );
+  }
+  return (
+    <div className="bk-member">
+      <p className="bk-member__text">
+        <strong>Have a Google account?</strong> Sign in to fill in your details, skip re-uploading IDs, and earn
+        member discounts. Optional.
+      </p>
+      <button
+        type="button"
+        className="btn btn--outline"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          try {
+            await signIn();
+          } catch (err) {
+            window.alert(err.message || "Sign-in failed. Please try again.");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <GoogleMark /> {busy ? "Signing in…" : "Sign in"}
+      </button>
+    </div>
+  );
+}
+
 export function BookingTopBar() {
   return (
     <div className="bk-top">
@@ -1304,6 +1364,10 @@ export default function PublicBooking() {
   const [cameraName, setCameraName] = useState(initialCameraName);
   const catalog = useCatalog();
   const cameras = catalog.cameras;
+  const member = useMember();
+  // The tier whose perks the server will apply (it re-checks on submit).
+  const memberTier = member.status === "member" ? member.me?.tier || null : null;
+  const memberPrefilled = useRef(false);
   const [selectedAddOns, setSelectedAddOns] = useState([]);
   const [brandLogo, setBrandLogo] = useState(COMPANY_LOGO);
   const [repSignature, setRepSignature] = useState("");
@@ -1443,6 +1507,8 @@ export default function PublicBooking() {
         cameraSubtotal: 0,
         addOnsSubtotal: 0,
         rushFee: 0,
+        perks: memberPerks(null),
+        grossTotal: 0,
         total: 0,
       };
     }
@@ -1458,15 +1524,49 @@ export default function PublicBooking() {
       return total + (addon?.pricePerDay || 0) * days;
     }, 0);
     const rushFee = isSameDayBooking(form.pickupDate) ? RUSH_FEE : 0;
+    // Member price preview — the server works it out again from the catalogue.
+    const addonLines = selectedAddOns
+      .map((addonName) => {
+        const addon = addOns.find((item) => item.name === addonName);
+        return addon ? { name: addon.name, amount: addon.pricePerDay * days } : null;
+      })
+      .filter(Boolean);
+    const perks = memberPerks(memberTier, cameraSubtotal, addonLines);
+    const grossTotal = cameraSubtotal + addOnsSubtotal + rushFee;
 
     return {
       days,
       cameraSubtotal,
       addOnsSubtotal,
       rushFee,
-      total: cameraSubtotal + addOnsSubtotal + rushFee,
+      perks,
+      grossTotal,
+      total: Math.max(grossTotal - perks.savings, 0),
     };
-  }, [addOns, form.pickupDate, form.returnDate, selectedAddOns, selectedCamera]);
+  }, [addOns, form.pickupDate, form.returnDate, memberTier, selectedAddOns, selectedCamera]);
+
+  // Signed-in member: fill in what we already know (once, after any saved
+  // draft is restored) and, if they've rented before, verify them as a
+  // repeat renter so they can skip the ID uploads.
+  useEffect(() => {
+    const me = member.me;
+    if (!draftReady || !me || memberPrefilled.current) return;
+    memberPrefilled.current = true;
+    const p = me.profile || {};
+    setForm((current) => ({
+      ...current,
+      fullName: current.fullName || p.fullName || "",
+      contactNumber: current.contactNumber || p.contactNumber || "",
+      facebookName: current.facebookName || p.facebookName || "",
+      facebookLink: current.facebookLink || p.facebookLink || "",
+      address: current.address || p.address || "",
+      ...(me.repeatRef && current.repeatRenter === "no" && !current.repeatVerifiedName
+        ? { repeatRenter: "yes", repeatRef: me.repeatRef }
+        : {}),
+    }));
+    if (me.repeatRef && form.repeatRenter === "no") verifyRepeatRenter(me.repeatRef);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftReady, member.me]);
 
   const validWindow = windowIsValid(form);
   const totalPayableBeforeRelease = quote.total + SECURITY_DEPOSIT;
@@ -1562,8 +1662,9 @@ export default function PublicBooking() {
     setCameraName(value);
   }
 
-  async function verifyRepeatRenter() {
-    const ref = form.repeatRef.trim();
+  async function verifyRepeatRenter(refArg) {
+    // Called from the button (an event) or with a member's past booking ref.
+    const ref = (typeof refArg === "string" ? refArg : form.repeatRef).trim();
     if (!ref) {
       setRepeatCheck({
         loading: false,
@@ -1691,10 +1792,12 @@ export default function PublicBooking() {
                 : { sameAsDelivery: true },
           }
         : {}),
-      RENTAL_FEE: quote.total || null,
+      // Sent BEFORE member perks: the server verifies the renter's tier and
+      // subtracts the perks itself (api/submit → upsertSubmittedBooking).
+      RENTAL_FEE: quote.grossTotal || null,
       RUSH_FEE: quote.rushFee,
       SECURITY_DEPOSIT,
-      TOTAL_PAYABLE_BEFORE_RELEASE: totalPayableBeforeRelease,
+      TOTAL_PAYABLE_BEFORE_RELEASE: quote.grossTotal + SECURITY_DEPOSIT,
       "Please_choose_your_add-ons": selectedAddOns,
       CONTRACT_CAMERA: selectedContract.unit,
       CONTRACT_TERMS_AND_CONDITIONS: selectedContract.terms,
@@ -1830,8 +1933,23 @@ export default function PublicBooking() {
     setSubmitState({ loading: true, error: null, success: null });
     try {
       const documents = await buildUploadedDocuments();
-      await apiPostJson("/api/submit", buildPayload(responseId, documents));
+      const renterToken = member.status === "member" ? await getIdToken().catch(() => null) : null;
+      const result = await apiPostJson("/api/submit", {
+        ...buildPayload(responseId, documents),
+        ...(renterToken ? { RENTER_TOKEN: renterToken } : {}),
+      });
       await clearBookingDraft().catch(() => {});
+      const memberSuccess =
+        result.member && member.me
+          ? {
+              tierName: member.me.tier.name,
+              tierKey: member.me.tier.key,
+              savings: quote.perks.savings,
+              next: member.me.next,
+              toNext: member.me.toNext,
+            }
+          : null;
+      if (renterToken) refreshMe();
       setSubmitState({
         loading: false,
         error: null,
@@ -1841,6 +1959,7 @@ export default function PublicBooking() {
           delivery: form.mode === "Deliver",
           camera: cameraName,
           pickupDate: form.pickupDate,
+          member: memberSuccess,
         },
       });
       setForm(initialForm);
@@ -2714,6 +2833,20 @@ export default function PublicBooking() {
               <span className="bk-num">{money(0)}</span>
             </div>
           )}
+          {quote.perks.discount > 0 && memberTier && (
+            <div className="bk-quote__row bk-quote__row--member">
+              <span>
+                {TIER_ICONS[memberTier.key]} {memberTier.name} member · {memberTier.discountPercent}% off camera
+              </span>
+              <span className="bk-num">−{money(quote.perks.discount)}</span>
+            </div>
+          )}
+          {quote.perks.freeAddons.map((addon) => (
+            <div className="bk-quote__row bk-quote__row--member" key={`free-${addon.name}`}>
+              <span>Free add-on · {addon.name}</span>
+              <span className="bk-num">−{money(addon.amount)}</span>
+            </div>
+          ))}
           {quote.rushFee > 0 && (
             <div className="bk-quote__row bk-quote__row--rush">
               <span>Same-Day Rush Fee</span>
@@ -3132,6 +3265,20 @@ export default function PublicBooking() {
             <div className="bk-success__ref">{submitState.success.responseId}</div>
             <CopyButton text={submitState.success.responseId} />
           </div>
+          {submitState.success.member && (
+            <div className={`bk-success__member tier--${submitState.success.member.tierKey} float-in`} style={{ "--d": "580ms" }}>
+              {submitState.success.member.savings > 0
+                ? `${submitState.success.member.tierName} member price — you saved ${pesoMoney(submitState.success.member.savings)}. `
+                : `Saved to your ${submitState.success.member.tierName} account. `}
+              {submitState.success.member.next
+                ? `Once this rental is completed you'll be ${
+                    submitState.success.member.toNext <= 1
+                      ? `${submitState.success.member.next.name}!`
+                      : `${submitState.success.member.toNext - 1} away from ${submitState.success.member.next.name}.`
+                  }`
+                : "Thanks for being a top-tier renter!"}
+            </div>
+          )}
           <ol className="bk-next float-in" style={{ "--d": "620ms" }}>
             <li>
               <strong>We review your requirements</strong>
@@ -3168,6 +3315,11 @@ export default function PublicBooking() {
             >
               Track my booking
             </a>
+            {submitState.success.member && (
+              <a href="/account" className="btn btn--outline">
+                My rewards
+              </a>
+            )}
             <button type="button" onClick={resetSuccess} className="btn btn--outline">
               Book another
             </button>
@@ -3212,6 +3364,7 @@ export default function PublicBooking() {
         <p className="bk-sub bk-sub--small float-in" style={{ "--d": "540ms" }}>
           Already booked? <a href="/track">Track your booking →</a>
         </p>
+        <MemberStrip member={member} />
       </header>
 
       <form onSubmit={handleFormSubmit} className="bk-form float-in" style={{ "--d": "600ms" }}>
