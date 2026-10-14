@@ -1,13 +1,13 @@
 /* ============================================================
    S&R Rewards — member tiers, account page, sign-in controls.
    Same poster language as the rest of the site (ink borders, hard
-   offset shadows); each tier has one flat colour.
+   offset shadows); each tier gets a metallic colour of its own.
    ============================================================ */
 
-.tier-card--bronze, .member-card--bronze, .tier--bronze { --tier-bg: #b27c51; --tier-fg: #fffaf4; }
-.tier-card--silver, .member-card--silver, .tier--silver { --tier-bg: #cdd2d8; --tier-fg: #141414; }
-.tier-card--gold, .member-card--gold, .tier--gold { --tier-bg: #e0bd52; --tier-fg: #141414; }
-.tier-card--platinum, .member-card--platinum, .tier--platinum { --tier-bg: #3e4f66; --tier-fg: #f6f8fb; }
+.tier-card--bronze, .member-card--bronze, .tier--bronze { --tier-bg: linear-gradient(135deg, #6e4019, #c98a4b 52%, #84522a); --tier-fg: #fff7ee; --tier-solid: #a86f3d; }
+.tier-card--silver, .member-card--silver, .tier--silver { --tier-bg: linear-gradient(135deg, #6c727a, #e3e6ea 52%, #8a9098); --tier-fg: #141414; --tier-solid: #9aa1a9; }
+.tier-card--gold, .member-card--gold, .tier--gold { --tier-bg: linear-gradient(135deg, #7d5f04, #f4d465 52%, #a87b06); --tier-fg: #141414; --tier-solid: #c99a1c; }
+.tier-card--platinum, .member-card--platinum, .tier--platinum { --tier-bg: linear-gradient(135deg, #243245, #c4d0de 52%, #3e5470); --tier-fg: #f4f8ff; --tier-solid: #3e5470; }
 
 /* ---------- Tier ladder ---------- */
 .tier-ladder {
@@ -851,7 +851,7 @@
    Toned down (Oct 2026): same S&R poster style, less decoration —
    no sheen, quieter labels, lighter shadows, plain lists.
    ============================================================ */
-.member-card::after, .mh-hero::after { display: none; }
+.mh-hero::after { display: none; }
 
 /* Labels read as small headings, not shouty all-caps tags. */
 .dash-panel__kicker, .dash-stat__label, .member-card__brand, .signin__kicker,
@@ -879,13 +879,10 @@
 
 /* Member home: a plain card with the tier as a coloured edge. */
 .mh-hero {
-  background: var(--color-card);
-  color: var(--color-ink);
-  border-left: 14px solid var(--tier-bg);
   box-shadow: 6px 7px 0 rgba(0, 0, 0, 0.14);
 }
 .mh-hero__name { font-size: clamp(1.9rem, 5vw, 3rem); line-height: 1.05; margin: 0 0 0.5rem; letter-spacing: -0.03em; }
-.mh-hero__tier { font-weight: 600; color: var(--color-dark-gray); }
+.mh-hero__tier { font-weight: 700; }
 .mh-hero__progress { background: rgba(255, 255, 255, 0.6); border-width: 2px; }
 
 /* Quick links: a plain list. */
@@ -906,14 +903,7 @@
 /* Membership card: flat colour, no shine. */
 .member-card { box-shadow: 6px 7px 0 rgba(0, 0, 0, 0.14); }
 .member-card__tier { font-size: 0.85rem; padding: 0.15rem 0.7rem; }
-.dash-perks {
-  background: var(--color-card);
-  color: var(--color-ink);
-  border-left: 12px solid var(--tier-bg);
-  box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.12);
-}
-.dash-perks .dash-panel__kicker { opacity: 1; color: var(--color-dark-gray); }
-.dash-perks__auto { color: var(--color-dark-gray); opacity: 1; }
+.dash-perks { box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.12); }
 .dash-perks__list li::before { content: ""; }
 .dash-perks__list { list-style: disc; padding-left: 1.2rem; font-weight: 700; }
 
@@ -922,4 +912,4 @@
 .account-btn__tier { font-size: 0.8rem; }
 
 /* Booking form member strip: a card with the tier as a coloured edge. */
-.bk-member--member { background: var(--color-card); color: var(--color-ink); border-left: 12px solid var(--tier-bg); }
+
