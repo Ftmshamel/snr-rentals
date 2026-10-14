@@ -913,3 +913,19 @@
 
 /* Booking form member strip: a card with the tier as a coloured edge. */
 
+
+/* Track: the cameras of a multi-camera booking */
+.trk-order { margin: 1rem 0 0.4rem; padding: 0.9rem 1rem; border: 2px solid var(--color-border); border-radius: 14px; background: rgba(255, 255, 255, 0.55); }
+.trk-order ul { list-style: none; margin: 0.5rem 0; padding: 0; display: grid; gap: 0.45rem; }
+.trk-order__item { width: 100%; display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 0.7rem; border: 2px solid transparent; border-radius: 12px; background: #fff; font: inherit; text-align: left; cursor: pointer; color: var(--color-ink); }
+.trk-order__item:hover { border-color: var(--color-border); }
+.trk-order__item.is-on { border-color: var(--color-ink); cursor: default; }
+.trk-order__num { width: 1.6rem; height: 1.6rem; border-radius: 50%; display: grid; place-items: center; background: var(--color-ink); color: #fff; font-size: 0.8rem; font-weight: 800; flex-shrink: 0; }
+.trk-order__cam { flex: 1; min-width: 0; display: grid; }
+.trk-order__cam small { font-size: 0.78rem; opacity: 0.7; }
+.trk-order__item em { font-style: normal; font-size: 0.75rem; white-space: nowrap; }
+@media (max-width: 520px) {
+  .trk-order__item { flex-wrap: wrap; }
+  .trk-order__item em { margin-left: 2.3rem; }
+}
+.mp-rental__order { display: block; font-size: 0.72rem; font-weight: 600; opacity: 0.65; margin-top: 0.15rem; font-family: inherit; letter-spacing: 0; }

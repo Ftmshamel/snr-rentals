@@ -3138,3 +3138,169 @@ select.bk-input {
   border-color: #fff;
   box-shadow: 0 0 0 6px rgba(20, 20, 20, 0.18), 0 2px 6px rgba(0, 0, 0, 0.35);
 }
+
+/* ── More than one camera in a booking ─────────────────────────────── */
+.bk-extras {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.bk-extra {
+  border: 3px solid var(--color-border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 0.9rem 1rem 1rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.bk-extra.is-invalid {
+  border-color: #b3261e;
+}
+
+.bk-extra__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bk-extra__num {
+  font-family: var(--font-display, inherit);
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.bk-extra__remove {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+  color: var(--color-ink);
+}
+
+.bk-extra__pick {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bk-extra__pick select {
+  flex: 1;
+  min-width: 0;
+}
+
+.bk-extra__thumb {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #fff;
+  border: 2px solid var(--color-border);
+  padding: 0.2rem;
+  flex-shrink: 0;
+}
+
+.bk-extra__avail {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.bk-extra__avail--ok {
+  color: #1d6b38;
+}
+
+.bk-extra__avail--bad,
+.bk-extra__avail--error {
+  color: #b3261e;
+}
+
+.bk-extra__avail--loading,
+.bk-extra__avail--idle {
+  color: #6b6b6b;
+}
+
+.bk-extra__addons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.bk-extra__addon {
+  border: 2px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  background: #fff;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bk-extra__addon small {
+  opacity: 0.7;
+  margin-left: 0.2rem;
+}
+
+.bk-extra__addon.is-selected {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-bg-light);
+}
+
+.bk-extra__addon:focus-within {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.bk-extras__add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.6rem;
+  width: 100%;
+  border: 3px dashed rgba(58, 58, 58, 0.4);
+  border-radius: 16px;
+  background: transparent;
+  padding: 0.95rem 1.1rem;
+  font: inherit;
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--color-ink);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.bk-extras__add:hover {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: var(--color-ink);
+}
+
+.bk-extras__add small {
+  font-weight: 500;
+  font-size: 0.82rem;
+  color: #5b5b5b;
+}
+
+.bk-quote__cam {
+  padding: 0.4rem 0 0.5rem;
+  border-bottom: 1px dashed rgba(58, 58, 58, 0.25);
+}
+
+.bk-quote__cam-title {
+  font-size: 0.75rem;
+  font-weight: 800;
+  opacity: 0.6;
+  margin-bottom: 0.15rem;
+}
+
+.bk-quote__row--sub {
+  font-weight: 700;
+}
+
+.bk-doc__extra {
+  margin: 0.4rem 0 0.2rem;
+}
+.bk-quote__rental-total .bk-num, .bk-quote__deposit .bk-num, .bk-quote__total .bk-num, .bk-quote__dp .bk-num { white-space: nowrap; }

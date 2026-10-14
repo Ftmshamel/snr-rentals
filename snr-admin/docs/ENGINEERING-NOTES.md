@@ -131,6 +131,44 @@ the §1 problem cannot happen: `/api/bookings/by?type=unmirrored` returns `[]`.
     retroactive discount.
   - Platinum's "priority" sorts their requests first on `/approvals`.
   - Collections: `renters/{uid}`, `settings/loyalty`.
+- **Multi-camera bookings (one reference code, several cameras)** — added
+  2026-10-14. The public form's "Add another camera" sends the extra cameras
+  as `ORDER_ITEMS: [{ camera, addons, rentalFee, contractUnit, contractTerms }]`;
+  `api/submit` splits the order into **one booking per camera** — the first
+  keeps the code (`responseId = ref`), the others are `<ref>-2`, `<ref>-3`…
+  (max 5 cameras) — each with `ORDER_REF` / `ORDER_SIZE` / `ORDER_INDEX`.
+  Extras are written first so the code never points at a half-saved order.
+  How the money works, and why:
+  - **Each camera is its own rental**: own `RENTAL_FEE`, own ₱1,000
+    `SECURITY_DEPOSIT`, own serial, contract unit, lifecycle and
+    `TOTAL_PAYABLE_BEFORE_RELEASE` (= that camera's fee + its deposit).
+    Analytics needs no change — it sums bookings, and each camera is one.
+    An extra sent without `rentalFee` is priced from the catalogue.
+  - **The rush fee is per order**, inside the first camera's fee only.
+  - **The renter pays** Σ fees + ₱1,000 × cameras before release; the
+    downpayment is 20% of Σ fees. The form shows it per camera and in total;
+    the admin booking window shows "Booked together" with the whole sum.
+  - **Member perks**: the discount applies to every camera; the tier's free
+    add-ons are *per rental* and an order is **one rental**, so they go to
+    the first camera's add-ons and any left over to the next camera's
+    (`orderMembers` in `api/submit.js`, mirrored in the form's `priceCamera`).
+    Tier counts use distinct `ORDER_REF || responseId` (`completedRentals`),
+    so a 3-camera order is 1 completed rental, not 3.
+  - Documents are copied to every camera's booking (each opens on its own).
+  - **One Lalamove rider per order** (`riderGroup` in `lib/lalamoveBookings.js`):
+    booking the delivery from any camera releases every approved, unreleased
+    camera of the order and places ONE order, stored on each with `group`
+    (their codes). Refused while another camera of it is still pending;
+    declined/cancelled ones are left out; any failed release or Lalamove
+    refusal rolls every release back. Sync, simulate and cancel apply to the
+    whole `group`. The renter's return-pickup change applies to every camera
+    still editable.
+  - `/track` with any code of the order returns `order: { reference, size,
+    items[] }` (camera, stage, unitSerial once released); `me` cards carry
+    `order`; claiming one code links the whole order.
+  - Admin: "N of M cameras" chip on Approvals / Today rows, "Approve all N
+    cameras" on Approvals, and the sibling list in the booking window
+    (`utils/order.jsx`, read from the cached `/api/bookings`).
 - **The public track view is a whitelist** (`lib/public/track.js` `publicView`):
   no documents, phone numbers or other renters' data. Add fields there
   deliberately. `unitSerial` is included only once the unit is released

@@ -138,7 +138,8 @@ split describes the legacy mode and the historical data.
   tiers), and **`/track` / `/book`** wrapped in the same shell — Track lists
   their bookings to tap instead of typing a code, a member strip and member price on `/book`, and the
   landing page's Rewards section. Guests book exactly as before.
-- Tier = completed rentals linked to their account (`RENTER_UID`). Tiers
+- Tier = completed rentals linked to their account (`RENTER_UID`; a
+  multi-camera order is one rental). Tiers
   and perks are owner-editable on the admin's **`/rewards`** page, which
   also lists members. Rules: `backend/lib/loyalty.js`.
 - **The server verifies the renter's ID token and applies the perks**; the
@@ -148,6 +149,19 @@ split describes the legacy mode and the historical data.
 - Routes (no new function): `api/public.js?action=me|claim`,
   `api/catalog.js` (`GET` now includes `tiers`; owner `?action=members`,
   `PATCH ?action=tiers`).
+
+### Several cameras in one booking (Oct 2026)
+
+- The public form takes up to 5 cameras for the same dates under **one
+  reference code**. The server saves **one booking per camera** (`<ref>`,
+  `<ref>-2`, …, linked by `ORDER_REF` / `ORDER_SIZE` / `ORDER_INDEX`), each
+  with its **own fee, own ₱1,000 deposit**, serial, contract and lifecycle.
+  Rush fee once (first camera), downpayment 20% of all fees, total before
+  release = all fees + ₱1,000 × cameras. Member discount on every camera,
+  free add-ons once per order; an order counts as **one** rental for tiers.
+- **One Lalamove rider per order**: booking the delivery/return from any
+  camera carries all of them; sync/cancel apply to all. Details and the
+  full money rules: `docs/ENGINEERING-NOTES.md` §0 "Multi-camera bookings".
 
 ## Read before writing data
 

@@ -28,6 +28,8 @@ function bookingCard(b, publicStage) {
     fee: b.RENTAL_FEE ?? null,
     savings: b.MEMBER?.savings || 0,
     tierName: b.MEMBER?.tierName || null,
+    // Part of a multi-camera order (same reference code for all of them).
+    order: b.ORDER_REF ? { ref: b.ORDER_REF, size: b.ORDER_SIZE || null, index: b.ORDER_INDEX || null } : null,
   };
 }
 

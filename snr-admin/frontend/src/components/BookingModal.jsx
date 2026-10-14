@@ -3,6 +3,7 @@ import { getPricingForDate } from "../data/cameras.js";
 import { useCameras, findCamera } from "../hooks/useCameras.js";
 import LifecyclePanel from "./LifecyclePanel.jsx";
 import { MemberBadge, memberPerks } from "../utils/loyalty.jsx";
+import { OrderChip, OrderSiblings } from "../utils/order.jsx";
 import { getContractForCamera } from "../data/contracts.js";
 import { apiPatchJson, apiDeleteJson } from "../utils/api.js";
 import {
@@ -704,6 +705,7 @@ export default function BookingModal({
             {mode === "view" && (
               <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-[color:var(--color-dark-gray)]">
                 {savedBooking.PREFERRED_CAMERA || "—"}
+                <OrderChip booking={savedBooking} />
                 <MemberBadge member={savedBooking.MEMBER} />
               </div>
             )}
@@ -904,6 +906,7 @@ function ViewBody({
         <LifecyclePanel booking={booking} cameras={cameras} onPatch={onLifecycle} onReplace={onReplace} />
       </div>
       <div className="bm-info">
+        <OrderSiblings booking={booking} />
         <section>
           <div className="mb-2 flex items-center gap-2">
             <span className="ui-kicker">

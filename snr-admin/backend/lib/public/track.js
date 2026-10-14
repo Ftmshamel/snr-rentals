@@ -110,6 +110,20 @@ function publicView(b) {
   };
 }
 
+/** The other cameras booked with this one (same reference code). */
+async function orderView(booking) {
+  const { findBookingsByOrder } = require("../firestoreQueries");
+  const items = await findBookingsByOrder(booking.ORDER_REF);
+  return {
+    reference: booking.ORDER_REF,
+    size: booking.ORDER_SIZE || items.length,
+    items: items.map((b) => {
+      const v = publicView(b);
+      return { reference: v.reference, camera: v.camera, stage: v.stage, unitSerial: v.unitSerial, current: b.responseId === booking.responseId };
+    }),
+  };
+}
+
 async function findBooking(ref) {
   const { findBookingByResponseId } = require("../firestoreQueries");
   const code = String(ref || "").trim();
@@ -133,7 +147,10 @@ module.exports = async function track(req, res, query) {
   // Refresh any active Lalamove order so the renter sees the rider's status.
   const { syncActive } = require("../lalamoveBookings");
   booking = (await syncActive(booking.responseId).catch(() => null)) || booking;
-  return res.status(200).json({ ok: true, booking: publicView(booking) });
+  const view = publicView(booking);
+  // A multi-camera order: any of its codes shows every camera in it.
+  if (booking.ORDER_REF) view.order = await orderView(booking);
+  return res.status(200).json({ ok: true, booking: view });
 };
 
 module.exports.findBooking = findBooking;

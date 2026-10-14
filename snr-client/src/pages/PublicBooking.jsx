@@ -17,6 +17,42 @@ import DeliveryDetailsForm, {
 
 const RUSH_FEE = 300;
 const SECURITY_DEPOSIT = 1000;
+// Several cameras can be booked together (one reference code). Each camera
+// is its own rental on our side: its own fee, its own ₱1,000 deposit and
+// its own contract unit; the rush fee is per order.
+const MAX_ORDER_CAMERAS = 5;
+
+/** Distinct add-ons a camera offers (the catalogue can repeat a name). */
+function cameraAddOns(camera) {
+  const seen = new Set();
+  return (camera?.addOns || []).filter((addon) => {
+    const key = addon.name.trim().toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
+ * One camera's price for the rental, before and after member perks.
+ * `freeLeft` = the tier's free add-ons not yet used by an earlier camera of
+ * the same order (they're per rental, and an order is one rental).
+ */
+function priceCamera(camera, addOnNames, days, tier, freeLeft) {
+  const rate = (camera?.pricing || []).find(
+    (item) => days >= item.minDays && (item.maxDays === null || days <= item.maxDays),
+  );
+  const cameraSubtotal = (rate?.pricePerDay || 0) * days;
+  const offered = cameraAddOns(camera);
+  const addonLines = addOnNames
+    .map((name) => offered.find((a) => a.name === name))
+    .filter(Boolean)
+    .map((a) => ({ name: a.name, amount: a.pricePerDay * days }));
+  const addOnsSubtotal = addonLines.reduce((sum, a) => sum + a.amount, 0);
+  const perks = memberPerks(tier ? { ...tier, freeAddons: freeLeft } : null, cameraSubtotal, addonLines);
+  const gross = cameraSubtotal + addOnsSubtotal;
+  return { cameraSubtotal, addonLines, addOnsSubtotal, perks, gross, net: Math.max(gross - perks.savings, 0) };
+}
 const COMPANY_NAME = "S&R Rentals";
 const COMPANY_CONTACT = "0912 016 1865";
 const COMPANY_LOGO = "/logo.png";
@@ -1214,8 +1250,8 @@ function PaymentQrBlock() {
           Payment QR · 20% rental downpayment
         </div>
         <p className="bk-pay__deposit-reminder">
-          The ₱1,000 refundable security deposit is separate from this
-          downpayment and must be settled before the unit is released.
+          The refundable security deposit (₱1,000 per camera) is separate
+          from this downpayment and must be settled before release.
         </p>
 
         <div className="bk-pay__tabs" role="tablist">
@@ -1357,6 +1393,9 @@ export default function PublicBooking() {
   const memberTier = member.status === "member" ? member.me?.tier || null : null;
   const memberPrefilled = useRef(false);
   const [selectedAddOns, setSelectedAddOns] = useState([]);
+  // More cameras in the same booking: [{ key, camera, addOns }].
+  const [extraItems, setExtraItems] = useState([]);
+  const [extraAvailability, setExtraAvailability] = useState({});
   const [brandLogo, setBrandLogo] = useState(COMPANY_LOGO);
   const [repSignature, setRepSignature] = useState("");
   const [assetPreview, setAssetPreview] = useState(null);
@@ -1400,6 +1439,14 @@ export default function PublicBooking() {
         if (Array.isArray(draft.selectedAddOns)) {
           setSelectedAddOns(draft.selectedAddOns);
         }
+        if (Array.isArray(draft.extraItems)) {
+          setExtraItems(
+            draft.extraItems
+              .filter((item) => item && typeof item.camera === "string")
+              .slice(0, MAX_ORDER_CAMERAS - 1)
+              .map((item, i) => ({ key: `d${i}`, camera: item.camera, addOns: Array.isArray(item.addOns) ? item.addOns : [] })),
+          );
+        }
         if (Number.isInteger(draft.currentStep)) {
           setCurrentStep(Math.max(0, Math.min(draft.currentStep, STEPS.length - 1)));
         }
@@ -1423,13 +1470,14 @@ export default function PublicBooking() {
         files,
         cameraName,
         selectedAddOns,
+        extraItems,
         currentStep,
       }).catch(() => {
         // Never block the renter if browser draft storage is unavailable.
       });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [cameraName, currentStep, draftReady, files, form, selectedAddOns, submitState.success]);
+  }, [cameraName, currentStep, draftReady, extraItems, files, form, selectedAddOns, submitState.success]);
 
   // A requested or restored camera that isn't (or is no longer) offered —
   // removed, hidden, or a typo in a link — is dropped; casing is corrected.
@@ -1439,6 +1487,19 @@ export default function PublicBooking() {
     if (!match) setCameraName("");
     else if (match.name !== cameraName) setCameraName(match.name);
   }, [catalog.loading, catalog.error, cameras, cameraName]);
+
+  useEffect(() => {
+    if (catalog.loading || catalog.error) return;
+    setExtraItems((items) => {
+      const next = items
+        .map((item) => {
+          const match = findCamera(cameras, item.camera);
+          return match ? { ...item, camera: match.name } : null;
+        })
+        .filter(Boolean);
+      return JSON.stringify(next) === JSON.stringify(items) ? items : next;
+    });
+  }, [catalog.loading, catalog.error, cameras]);
 
   // Entering the renter step for a delivery: start the Lalamove form from the
   // renter's own name, number and address — most deliveries go to them.
@@ -1470,15 +1531,7 @@ export default function PublicBooking() {
     [selectedCamera],
   );
 
-  const addOns = useMemo(() => {
-    const seen = new Set();
-    return (selectedCamera?.addOns || []).filter((addon) => {
-      const key = addon.name.trim().toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }, [selectedCamera]);
+  const addOns = useMemo(() => cameraAddOns(selectedCamera), [selectedCamera]);
   const selectedAddonDetails = useMemo(
     () =>
       selectedAddOns
@@ -1501,25 +1554,15 @@ export default function PublicBooking() {
       };
     }
 
-    const tier = selectedCamera.pricing.find(
-      (item) =>
-        days >= item.minDays &&
-        (item.maxDays === null || days <= item.maxDays),
-    );
-    const cameraSubtotal = (tier?.pricePerDay || 0) * days;
-    const addOnsSubtotal = selectedAddOns.reduce((total, addonName) => {
-      const addon = addOns.find((item) => item.name === addonName);
-      return total + (addon?.pricePerDay || 0) * days;
-    }, 0);
     const rushFee = isSameDayBooking(form.pickupDate) ? RUSH_FEE : 0;
     // Member price preview — the server works it out again from the catalogue.
-    const addonLines = selectedAddOns
-      .map((addonName) => {
-        const addon = addOns.find((item) => item.name === addonName);
-        return addon ? { name: addon.name, amount: addon.pricePerDay * days } : null;
-      })
-      .filter(Boolean);
-    const perks = memberPerks(memberTier, cameraSubtotal, addonLines);
+    const { cameraSubtotal, addOnsSubtotal, perks } = priceCamera(
+      selectedCamera,
+      selectedAddOns,
+      days,
+      memberTier,
+      memberTier?.freeAddons || 0,
+    );
     const grossTotal = cameraSubtotal + addOnsSubtotal + rushFee;
 
     return {
@@ -1531,7 +1574,35 @@ export default function PublicBooking() {
       grossTotal,
       total: Math.max(grossTotal - perks.savings, 0),
     };
-  }, [addOns, form.pickupDate, form.returnDate, memberTier, selectedAddOns, selectedCamera]);
+  }, [form.pickupDate, form.returnDate, memberTier, selectedAddOns, selectedCamera]);
+
+  // The other cameras in this booking, each priced on its own.
+  const extraQuotes = useMemo(() => {
+    let freeLeft = Math.max((memberTier?.freeAddons || 0) - quote.perks.freeAddons.length, 0);
+    return extraItems.map((item) => {
+      const camera = cameras.find((c) => c.name === item.camera) || null;
+      const priced = priceCamera(camera, item.addOns, quote.days || 0, memberTier, freeLeft);
+      freeLeft -= priced.perks.freeAddons.length;
+      return { ...item, cameraInfo: camera, ...priced };
+    });
+  }, [cameras, extraItems, memberTier, quote.days, quote.perks.freeAddons.length]);
+
+  // What the renter pays for the whole booking.
+  const order = useMemo(() => {
+    const extras = extraQuotes.filter((item) => item.cameraInfo);
+    const count = 1 + extras.length;
+    const rentalTotal = quote.total + extras.reduce((sum, item) => sum + item.net, 0);
+    const savings = quote.perks.savings + extras.reduce((sum, item) => sum + item.perks.savings, 0);
+    const deposits = SECURITY_DEPOSIT * count;
+    return {
+      count,
+      rentalTotal,
+      savings,
+      deposits,
+      payable: rentalTotal + deposits,
+      downpayment: Math.ceil(rentalTotal * 0.2),
+    };
+  }, [extraQuotes, quote.perks.savings, quote.total]);
 
   // Signed-in member: fill in what we already know (once, after any saved
   // draft is restored) and, if they've rented before, verify them as a
@@ -1557,7 +1628,7 @@ export default function PublicBooking() {
   }, [draftReady, member.me]);
 
   const validWindow = windowIsValid(form);
-  const totalPayableBeforeRelease = quote.total + SECURITY_DEPOSIT;
+  const totalPayableBeforeRelease = order.payable;
 
   useEffect(() => {
     setSelectedAddOns([]);
@@ -1621,6 +1692,83 @@ export default function PublicBooking() {
     form.returnTime,
     validWindow,
   ]);
+
+  // Availability of each other camera in the booking (one check per model).
+  const extraCameraKey = [...new Set(extraItems.map((item) => item.camera).filter(Boolean))].sort().join("|");
+  useEffect(() => {
+    const names = extraCameraKey ? extraCameraKey.split("|") : [];
+    if (names.length === 0 || !validWindow) {
+      setExtraAvailability({});
+      return undefined;
+    }
+    let active = true;
+    setExtraAvailability(Object.fromEntries(names.map((name) => [name, { state: "loading" }])));
+    for (const name of names) {
+      const params = new URLSearchParams({
+        camera: name,
+        pickUpDate: form.pickupDate,
+        pickUpTime: form.pickupTime,
+        returnDate: form.returnDate,
+        returnTime: form.returnTime,
+      });
+      apiGetJson(`/api/public?action=availability&${params.toString()}`)
+        .then((data) => {
+          if (active) setExtraAvailability((cur) => ({ ...cur, [name]: { state: "ready", available: data.available || 0 } }));
+        })
+        .catch((err) => {
+          if (active) {
+            setExtraAvailability((cur) => ({
+              ...cur,
+              [name]: { state: "error", error: err.message || "Availability check failed" },
+            }));
+          }
+        });
+    }
+    return () => {
+      active = false;
+    };
+  }, [extraCameraKey, form.pickupDate, form.pickupTime, form.returnDate, form.returnTime, validWindow]);
+
+  function addExtraItem() {
+    setSubmitState((state) => ({ ...state, error: null }));
+    setForm((current) => ({ ...current, signatureDataUrl: "" }));
+    setExtraItems((items) =>
+      items.length >= MAX_ORDER_CAMERAS - 1
+        ? items
+        : [...items, { key: `${Date.now()}-${items.length}`, camera: "", addOns: [] }],
+    );
+  }
+
+  function updateExtraItem(key, patch) {
+    setSubmitState((state) => ({ ...state, error: null }));
+    if ("camera" in patch) setForm((current) => ({ ...current, signatureDataUrl: "" }));
+    setExtraItems((items) =>
+      items.map((item) =>
+        item.key === key ? { ...item, ...patch, ...("camera" in patch ? { addOns: [] } : {}) } : item,
+      ),
+    );
+  }
+
+  function toggleExtraAddon(key, addonName) {
+    setExtraItems((items) =>
+      items.map((item) =>
+        item.key === key
+          ? {
+              ...item,
+              addOns: item.addOns.includes(addonName)
+                ? item.addOns.filter((name) => name !== addonName)
+                : [...item.addOns, addonName],
+            }
+          : item,
+      ),
+    );
+  }
+
+  function removeExtraItem(key) {
+    setSubmitState((state) => ({ ...state, error: null }));
+    setForm((current) => ({ ...current, signatureDataUrl: "" }));
+    setExtraItems((items) => items.filter((item) => item.key !== key));
+  }
 
   function updateField(key, value) {
     setSubmitState((state) => ({ ...state, error: null }));
@@ -1785,10 +1933,28 @@ export default function PublicBooking() {
       RENTAL_FEE: quote.grossTotal || null,
       RUSH_FEE: quote.rushFee,
       SECURITY_DEPOSIT,
+      // This camera's own total — each camera of the booking has its own.
       TOTAL_PAYABLE_BEFORE_RELEASE: quote.grossTotal + SECURITY_DEPOSIT,
       "Please_choose_your_add-ons": selectedAddOns,
       CONTRACT_CAMERA: selectedContract.unit,
       CONTRACT_TERMS_AND_CONDITIONS: selectedContract.terms,
+      // The other cameras: the server saves each as its own booking
+      // (<code>-2, <code>-3…) with its own fee and ₱1,000 deposit. Fees are
+      // before member perks, like RENTAL_FEE above.
+      ...(extraQuotes.length
+        ? {
+            ORDER_ITEMS: extraQuotes.map((item) => {
+              const contract = getContractForCamera(item.camera);
+              return {
+                camera: item.camera,
+                addons: item.addOns,
+                rentalFee: item.gross || null,
+                contractUnit: contract.unit,
+                contractTerms: contract.terms,
+              };
+            }),
+          }
+        : {}),
       ...documents,
       Data_Privacy_Act_of_2012: form.privacy
         ? ["YES, I understand that my data will be used to process my booking"]
@@ -1913,6 +2079,11 @@ export default function PublicBooking() {
       return;
     }
 
+    if (extraProblem) {
+      setSubmitState({ loading: false, error: extraProblem, success: null });
+      return;
+    }
+
     const responseId = `PUBLIC-${Date.now()}-${Math.random()
       .toString(36)
       .slice(2, 8)
@@ -1932,7 +2103,7 @@ export default function PublicBooking() {
           ? {
               tierName: member.me.tier.name,
               tierKey: member.me.tier.key,
-              savings: quote.perks.savings,
+              savings: order.savings,
               next: member.me.next,
               toNext: member.me.toNext,
             }
@@ -1943,9 +2114,11 @@ export default function PublicBooking() {
         error: null,
         success: {
           responseId,
-          total: quote.total,
+          total: order.rentalTotal,
           delivery: form.mode === "Deliver",
           camera: cameraName,
+          cameras: [cameraName, ...extraQuotes.map((item) => item.camera)],
+          references: result.order?.references || [responseId],
           pickupDate: form.pickupDate,
           member: memberSuccess,
         },
@@ -1958,6 +2131,7 @@ export default function PublicBooking() {
       setCurrentStep(0);
       setValidatedSteps(new Set());
       setSelectedAddOns([]);
+      setExtraItems([]);
     } catch (err) {
       setSubmitState({
         loading: false,
@@ -1990,7 +2164,37 @@ export default function PublicBooking() {
           ? "bad"
           : "idle";
 
+  // Every camera of the booking must have enough free units — the same model
+  // twice needs two.
+  const unitsWanted = {};
+  for (const name of [cameraName, ...extraItems.map((item) => item.camera)]) {
+    if (name) unitsWanted[name] = (unitsWanted[name] || 0) + 1;
+  }
+  function unitsFree(name) {
+    if (name === cameraName) return availabilityReady ? { state: "ready", available: availabilityCount } : availability;
+    return extraAvailability[name] || { state: validWindow ? "loading" : "idle" };
+  }
+  const extraProblem = (() => {
+    if (extraItems.some((item) => !item.camera)) return "Choose a camera for each added camera, or remove it.";
+    for (const item of extraItems) {
+      const free = unitsFree(item.camera);
+      if (free.state === "loading") return "Please wait for availability.";
+      if (free.state === "error") return free.error;
+      if (free.state !== "ready") return "Please complete the availability check.";
+      if (free.available < unitsWanted[item.camera]) {
+        return free.available <= 0
+          ? `${item.camera} is not available for that schedule.`
+          : `Only ${free.available} ${item.camera} ${free.available === 1 ? "unit is" : "units are"} free for that schedule.`;
+      }
+    }
+    if (cameraName && availabilityReady && availabilityCount > 0 && availabilityCount < unitsWanted[cameraName]) {
+      return `Only ${availabilityCount} ${cameraName} ${availabilityCount === 1 ? "unit is" : "units are"} free for that schedule.`;
+    }
+    return null;
+  })();
+
   const availabilityStepComplete =
+    !extraProblem &&
     Boolean(cameraName) &&
     Boolean(form.mode) &&
     Boolean(form.pickupDate) &&
@@ -2071,6 +2275,7 @@ export default function PublicBooking() {
       if (availability.state === "error") return availability.error;
       if (!availabilityReady) return "Please complete the availability check.";
       if (availabilityCount <= 0) return "Selected unit is not available.";
+      if (extraProblem) return extraProblem;
     }
     if (step === 1) {
       if (!form.privacy) return "Data privacy consent is required.";
@@ -2334,16 +2539,25 @@ export default function PublicBooking() {
         }`,
         { after: 10 },
       );
+      // Other cameras in the same booking — one contract, one signature.
+      contractExtras().forEach((item, index) => {
+        drawLine(`Unit ${index + 2}: ${item.unit}`, { bold: true });
+        drawLine(`Others: ${item.addOns.length ? item.addOns.join(", ") : "None"}`, { after: 6 });
+      });
 
       section("III. FEES");
-      drawLine(`Rental Fee: ${pesoMoney(quote.total)}`);
+      drawLine(
+        `Rental Fee: ${pesoMoney(order.rentalTotal)}${order.count > 1 ? ` (${order.count} units)` : ""}`,
+      );
       if (quote.rushFee > 0) {
         drawLine(
           `Same-Day Rush Fee (included in rental fee): ${pesoMoney(quote.rushFee)}`,
         );
       }
       drawLine(
-        `Security Deposit: ${pesoMoney(SECURITY_DEPOSIT)} (Refundable upon safe return)`,
+        order.count > 1
+          ? `Security Deposit: ${pesoMoney(order.deposits)} (${pesoMoney(SECURITY_DEPOSIT)} per unit, refundable upon safe return)`
+          : `Security Deposit: ${pesoMoney(SECURITY_DEPOSIT)} (Refundable upon safe return)`,
       );
       drawLine(`Total Payables: ${pesoMoney(totalPayableBeforeRelease)}`, {
         after: 10,
@@ -2558,6 +2772,87 @@ export default function PublicBooking() {
     );
   }
 
+  function renderExtraItems() {
+    if (!cameraName) return null;
+    const canAdd = extraItems.length < MAX_ORDER_CAMERAS - 1;
+    return (
+      <section className="bk-extras">
+        {extraQuotes.map((item, index) => {
+          const offered = cameraAddOns(item.cameraInfo);
+          const free = item.camera ? unitsFree(item.camera) : null;
+          const short = free?.state === "ready" && free.available < (unitsWanted[item.camera] || 1);
+          const missing = showCurrentStepErrors && !item.camera;
+          return (
+            <div className={`bk-extra ${missing || short ? "is-invalid" : ""}`} key={item.key}>
+              <div className="bk-extra__head">
+                <span className="bk-extra__num">Camera {index + 2}</span>
+                <button type="button" className="bk-extra__remove" onClick={() => removeExtraItem(item.key)}>
+                  Remove
+                </button>
+              </div>
+              <div className="bk-extra__pick">
+                {item.cameraInfo && getCameraAssets(item.cameraInfo).image && (
+                  <img src={getCameraAssets(item.cameraInfo).image} alt="" className="bk-extra__thumb" />
+                )}
+                <select
+                  className={`bk-input ${missing ? "is-invalid" : ""}`}
+                  value={item.camera}
+                  onChange={(event) => updateExtraItem(item.key, { camera: event.target.value })}
+                  aria-label={`Camera ${index + 2}`}
+                >
+                  <option value="" disabled>
+                    Choose a camera
+                  </option>
+                  {cameras.map((camera) => (
+                    <option key={camera.name} value={camera.name}>
+                      {camera.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {item.camera && (
+                <p className={`bk-extra__avail bk-extra__avail--${free?.state === "ready" ? (short ? "bad" : "ok") : free?.state || "idle"}`}>
+                  {free?.state === "ready"
+                    ? short
+                      ? free.available <= 0
+                        ? "Not available for that schedule"
+                        : `Only ${free.available} free for that schedule — you picked ${unitsWanted[item.camera]}`
+                      : "Available for your schedule ✓"
+                    : free?.state === "loading"
+                      ? "Checking availability…"
+                      : free?.state === "error"
+                        ? free.error
+                        : "Pick a schedule to check availability"}
+                </p>
+              )}
+              {offered.length > 0 && (
+                <div className="bk-extra__addons">
+                  {offered.map((addon) => (
+                    <label key={addon.name} className={`bk-extra__addon ${item.addOns.includes(addon.name) ? "is-selected" : ""}`}>
+                      <input
+                        type="checkbox"
+                        className="bk-sr-only"
+                        checked={item.addOns.includes(addon.name)}
+                        onChange={() => toggleExtraAddon(item.key, addon.name)}
+                      />
+                      {addon.name} <small>₱{addon.pricePerDay}/day</small>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {canAdd && (
+          <button type="button" className="bk-extras__add" onClick={addExtraItem}>
+            <span aria-hidden="true">+</span> Add another camera
+            <small>Same dates · each camera has its own ₱1,000 deposit</small>
+          </button>
+        )}
+      </section>
+    );
+  }
+
   function renderCameraChooser() {
     return (
       <section
@@ -2628,6 +2923,13 @@ export default function PublicBooking() {
         )}
       </section>
     );
+  }
+
+  /** The other cameras as they appear on the contract. */
+  function contractExtras() {
+    return extraQuotes
+      .filter((item) => item.cameraInfo)
+      .map((item) => ({ key: item.key, unit: getContractForCamera(item.camera).unit, addOns: item.addOns }));
   }
 
   function renderFullContract() {
@@ -2711,8 +3013,22 @@ export default function PublicBooking() {
             </span>
           </p>
 
+          {contractExtras().map((item, index) => (
+            <div className="bk-doc__extra" key={item.key}>
+              <p>
+                <strong>
+                  Unit {index + 2}: {item.unit}
+                </strong>
+              </p>
+              <p>Others: {item.addOns.length ? item.addOns.join(", ") : "None"}</p>
+            </div>
+          ))}
+
           <h4>III. FEES</h4>
-          <p>Rental Fee: {pesoMoney(quote.total)}</p>
+          <p>
+            Rental Fee: {pesoMoney(order.rentalTotal)}
+            {order.count > 1 ? ` (${order.count} units)` : ""}
+          </p>
           {quote.rushFee > 0 && (
             <p>
               Same-Day Rush Fee (included in rental fee):{" "}
@@ -2720,8 +3036,9 @@ export default function PublicBooking() {
             </p>
           )}
           <p>
-            Security Deposit: {pesoMoney(SECURITY_DEPOSIT)} (Refundable upon safe
-            return)
+            {order.count > 1
+              ? `Security Deposit: ${pesoMoney(order.deposits)} (${pesoMoney(SECURITY_DEPOSIT)} per unit, refundable upon safe return)`
+              : `Security Deposit: ${pesoMoney(SECURITY_DEPOSIT)} (Refundable upon safe return)`}
           </p>
           <p>Total Payables: {pesoMoney(totalPayableBeforeRelease)}</p>
 
@@ -2793,7 +3110,20 @@ export default function PublicBooking() {
   }
 
   function renderQuotation({ payment = false } = {}) {
-    const downpayment = Math.ceil(quote.total * 0.2);
+    const many = order.count > 1;
+    const cameraLines = [
+      {
+        key: "first",
+        name: cameraName || "Preferred Unit",
+        cameraSubtotal: quote.cameraSubtotal,
+        addonLines: selectedAddonDetails.map((addon) => ({ name: addon.name, amount: addon.pricePerDay * quote.days })),
+        perks: quote.perks,
+        net: quote.total - quote.rushFee,
+      },
+      ...extraQuotes
+        .filter((item) => item.cameraInfo)
+        .map((item) => ({ key: item.key, name: item.camera, ...item })),
+    ];
     return (
       <div className={`bk-quote ${payment ? "bk-quote--payment" : ""}`}>
         <div className="bk-quote__title">
@@ -2804,40 +3134,51 @@ export default function PublicBooking() {
             <span>Days</span>
             <span className="bk-num">{quote.days || "–"}</span>
           </div>
-          <div className="bk-quote__row">
-            <span>{cameraName || "Preferred Unit"}</span>
-            <span className="bk-num">{money(quote.cameraSubtotal)}</span>
-          </div>
-          {selectedAddonDetails.length > 0 ? (
-            selectedAddonDetails.map((addon) => (
-              <div className="bk-quote__row" key={addon.name}>
-                <span>{addon.name} add-on</span>
-                <span className="bk-num">{money(addon.pricePerDay * quote.days)}</span>
+          {cameraLines.map((line, index) => (
+            <div className={many ? "bk-quote__cam" : undefined} key={line.key}>
+              {many && <div className="bk-quote__cam-title">Camera {index + 1}</div>}
+              <div className="bk-quote__row">
+                <span>{line.name}</span>
+                <span className="bk-num">{money(line.cameraSubtotal)}</span>
               </div>
-            ))
-          ) : (
-            <div className="bk-quote__row">
-              <span>Add-ons</span>
-              <span className="bk-num">{money(0)}</span>
-            </div>
-          )}
-          {quote.perks.discount > 0 && memberTier && (
-            <div className="bk-quote__row bk-quote__row--member">
-              <span>
-                {memberTier.name} member · {memberTier.discountPercent}% off camera
-              </span>
-              <span className="bk-num">−{money(quote.perks.discount)}</span>
-            </div>
-          )}
-          {quote.perks.freeAddons.map((addon) => (
-            <div className="bk-quote__row bk-quote__row--member" key={`free-${addon.name}`}>
-              <span>Free add-on · {addon.name}</span>
-              <span className="bk-num">−{money(addon.amount)}</span>
+              {line.addonLines.length > 0
+                ? line.addonLines.map((addon) => (
+                    <div className="bk-quote__row" key={addon.name}>
+                      <span>{addon.name} add-on</span>
+                      <span className="bk-num">{money(addon.amount)}</span>
+                    </div>
+                  ))
+                : !many && (
+                    <div className="bk-quote__row">
+                      <span>Add-ons</span>
+                      <span className="bk-num">{money(0)}</span>
+                    </div>
+                  )}
+              {line.perks.discount > 0 && memberTier && (
+                <div className="bk-quote__row bk-quote__row--member">
+                  <span>
+                    {memberTier.name} member · {memberTier.discountPercent}% off camera
+                  </span>
+                  <span className="bk-num">−{money(line.perks.discount)}</span>
+                </div>
+              )}
+              {line.perks.freeAddons.map((addon) => (
+                <div className="bk-quote__row bk-quote__row--member" key={`free-${addon.name}`}>
+                  <span>Free add-on · {addon.name}</span>
+                  <span className="bk-num">−{money(addon.amount)}</span>
+                </div>
+              ))}
+              {many && (
+                <div className="bk-quote__row bk-quote__row--sub">
+                  <span>Rental fee · Camera {index + 1}</span>
+                  <span className="bk-num">{money(line.net)}</span>
+                </div>
+              )}
             </div>
           ))}
           {quote.rushFee > 0 && (
             <div className="bk-quote__row bk-quote__row--rush">
-              <span>Same-Day Rush Fee</span>
+              <span>Same-Day Rush Fee{many ? " (once per booking)" : ""}</span>
               <span className="bk-num">{money(quote.rushFee)}</span>
             </div>
           )}
@@ -2847,19 +3188,23 @@ export default function PublicBooking() {
           delivery date is today.
         </p>
         <div className="bk-quote__rental-total">
-          <span>Total Rental Fee</span>
-          <span className="bk-num">{money(quote.total)}</span>
+          <span>Total Rental Fee{many ? ` · ${order.count} cameras` : ""}</span>
+          <span className="bk-num">{money(order.rentalTotal)}</span>
         </div>
         <div className="bk-quote__deposit">
           <span>
-            Security Deposit
-            <small>Refundable upon safe and complete return</small>
+            Security Deposit{many ? ` · ${money(SECURITY_DEPOSIT)} × ${order.count} cameras` : ""}
+            <small>
+              {many
+                ? "Each camera has its own deposit, refunded when that camera comes back safe and complete"
+                : "Refundable upon safe and complete return"}
+            </small>
           </span>
-          <span className="bk-num">{money(SECURITY_DEPOSIT)}</span>
+          <span className="bk-num">{money(order.deposits)}</span>
         </div>
         <div className="bk-quote__total">
           <span>Total Payable Before Release</span>
-          <span className="bk-num">{money(totalPayableBeforeRelease)}</span>
+          <span className="bk-num">{money(order.payable)}</span>
         </div>
         <div className="bk-quote__dp">
           <span>
@@ -2867,14 +3212,15 @@ export default function PublicBooking() {
               ? "Pay this downpayment now (20% of rental fee)"
               : "Downpayment (20% of rental fee)"}
           </span>
-          <span className="bk-num">{money(downpayment)}</span>
+          <span className="bk-num">{money(order.downpayment)}</span>
         </div>
         {payment && (
           <p className="bk-quote__payment-note">
-            Pay exactly {money(downpayment)} now using one of the accounts
+            Pay exactly {money(order.downpayment)} now using one of the accounts
             below, then upload your proof of downpayment. The refundable
-            {` ${money(SECURITY_DEPOSIT)} `}security deposit is paid separately
-            before release.
+            {` ${money(order.deposits)} `}security deposit
+            {many ? ` (${money(SECURITY_DEPOSIT)} per camera)` : ""} is paid
+            separately before release.
           </p>
         )}
       </div>
@@ -2887,6 +3233,7 @@ export default function PublicBooking() {
         <div className="bk-stack">
           {renderCameraChooser()}
           {renderAddOns()}
+          {renderExtraItems()}
           <Field label="Preferred Option" invalid={showCurrentStepErrors && !form.mode}>
             <select
               value={form.mode}
@@ -2951,7 +3298,7 @@ export default function PublicBooking() {
             <span className="bk-status__dot" aria-hidden="true" />
             {availabilityLabel}
           </div>
-          {quote.total > 0 && renderQuotation()}
+          {order.rentalTotal > 0 && renderQuotation()}
         </div>
       );
     }
@@ -3169,7 +3516,7 @@ export default function PublicBooking() {
     if (currentStep === 3) {
       return (
         <div className="bk-stack">
-          {quote.total > 0 ? (
+          {order.rentalTotal > 0 ? (
             renderQuotation({ payment: true })
           ) : (
             <div className="bk-quote bk-quote--payment bk-quote--pending">
@@ -3212,7 +3559,9 @@ export default function PublicBooking() {
           </div>
           <div className="bk-review-card">
             <div className="bk-panel-label">Booking</div>
-            <div className="bk-review-card__main">{cameraName}</div>
+            <div className="bk-review-card__main">
+              {[cameraName, ...extraQuotes.filter((item) => item.cameraInfo).map((item) => item.camera)].join(" + ")}
+            </div>
             <div className="bk-review-card__sub">
               {form.pickupDate} {formatTimeLabel(form.pickupTime)} to{" "}
               {form.returnDate} {formatTimeLabel(form.returnTime)}
@@ -3242,7 +3591,16 @@ export default function PublicBooking() {
             </span>
           </h1>
           <p className="bk-success__note float-in" style={{ "--d": "420ms" }}>
-            Your request for the <strong>{submitState.success.camera}</strong> is in.
+            {submitState.success.cameras?.length > 1 ? (
+              <>
+                Your request for <strong>{submitState.success.cameras.length} cameras</strong> —{" "}
+                {submitState.success.cameras.join(", ")} — is in. One reference code covers all of them.
+              </>
+            ) : (
+              <>
+                Your request for the <strong>{submitState.success.camera}</strong> is in.
+              </>
+            )}{" "}
             Save your reference code — you'll use it to track this booking and
             to skip the ID uploads next time.
           </p>
@@ -3270,8 +3628,14 @@ export default function PublicBooking() {
               <span>and message you on Facebook once your booking is approved.</span>
             </li>
             <li>
-              <strong>Settle the balance + ₱1,000 deposit</strong>
-              <span>before the camera is released. The deposit is refunded when it comes back in good condition.</span>
+              <strong>
+                Settle the balance + {pesoMoney(SECURITY_DEPOSIT * (submitState.success.cameras?.length || 1))} deposit
+              </strong>
+              <span>
+                {submitState.success.cameras?.length > 1
+                  ? `before the cameras are released — ${pesoMoney(SECURITY_DEPOSIT)} per camera, each refunded when that camera comes back in good condition.`
+                  : "before the camera is released. The deposit is refunded when it comes back in good condition."}
+              </span>
             </li>
             {submitState.success.delivery ? (
               <li>

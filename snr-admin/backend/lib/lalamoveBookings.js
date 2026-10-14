@@ -17,6 +17,10 @@ const store = require("./firestoreQueries");
 // /track. sync() pulls the latest status from Lalamove: a completed delivery
 // marks the unit delivered; a completed return does NOT mark it returned —
 // staff still check the unit's condition first.
+//
+// A multi-camera order (bookings sharing ORDER_REF) goes in ONE rider: the
+// order is stored on every camera it carries (`group` lists their codes),
+// and every status change, sync and cancel is applied to all of them.
 
 const ORDER_FIELD = { delivery: "LALAMOVE_DELIVERY_ORDER", return: "LALAMOVE_RETURN_ORDER" };
 const LINK_FIELD = { delivery: "LALAMOVE_DELIVERY_LINK", return: "LALAMOVE_RETURN_LINK" };
@@ -45,12 +49,13 @@ function renterStop(booking, kind) {
   return s;
 }
 
-function riderNote(booking, s, kind) {
+function riderNote(booking, s, kind, count = 1) {
+  const what = count > 1 ? `${count} cameras` : "Camera";
   return [
     s.landmark && `Landmark: ${s.landmark}`,
     s.notes,
-    kind === "return" ? `Camera return to S&R Rentals` : `Camera rental from S&R Rentals`,
-    `Ref ${booking.responseId}`,
+    kind === "return" ? `${what} return to S&R Rentals` : `${what} rental from S&R Rentals`,
+    `Ref ${booking.ORDER_REF || booking.responseId}`,
   ]
     .filter(Boolean)
     .join(" · ")
@@ -58,7 +63,7 @@ function riderNote(booking, s, kind) {
 }
 
 /** Pick-up, drop-off and who to call at each end, for one leg. */
-function legFor(booking, kind) {
+function legFor(booking, kind, count = 1) {
   if (!shopReady()) {
     throw new LifecycleError("The shop's map location isn't set (SHOP_LAT / SHOP_LNG / SHOP_ADDRESS).");
   }
@@ -70,13 +75,13 @@ function legFor(booking, kind) {
         from: shop,
         to: renter,
         sender: { name: SHOP.name, phone: SHOP.phone },
-        recipient: { name: s.recipientName, phone: s.recipientPhone, remarks: riderNote(booking, s, kind) },
+        recipient: { name: s.recipientName, phone: s.recipientPhone, remarks: riderNote(booking, s, kind, count) },
       }
     : {
         from: renter,
         to: shop,
         sender: { name: s.recipientName, phone: s.recipientPhone },
-        recipient: { name: SHOP.name, phone: SHOP.phone, remarks: riderNote(booking, s, kind) },
+        recipient: { name: SHOP.name, phone: SHOP.phone, remarks: riderNote(booking, s, kind, count) },
       };
 }
 
@@ -101,60 +106,114 @@ async function quoteLeg(responseId, kind) {
   return { total: q.total, currency: q.currency, serviceType: q.serviceType, expiresAt: q.expiresAt };
 }
 
+const CLOSED = new Set(["cancelled", "rejected"]);
+
+/**
+ * The bookings one rider carries: just this one, or — for a multi-camera
+ * order — every camera of the order still due for this leg.
+ */
+async function riderGroup(booking, kind) {
+  if (!booking.ORDER_REF) return [booking];
+  const siblings = (await store.findBookingsByOrder(booking.ORDER_REF)).filter(
+    (b) => !CLOSED.has(String(b.status || "").toLowerCase()) && isDeliveryMode(b.PREFERRED_MODE),
+  );
+  const due =
+    kind === "delivery"
+      ? siblings.filter((b) => !isReleased(b.FULFILLMENT_STATUS ?? null) && b.FULFILLMENT_STATUS !== "returned")
+      : siblings.filter((b) => b.FULFILLMENT_STATUS === "out");
+  const group = due.filter((b) => b.responseId === booking.responseId || !activeOrder(b, kind));
+  if (kind === "delivery") {
+    const waiting = group.filter((b) => String(b.status || "").toLowerCase() !== "approved");
+    if (waiting.length) {
+      throw new LifecycleError(
+        `This order goes in one rider — approve or decline the other camera(s) first: ${waiting
+          .map((b) => `${b.PREFERRED_CAMERA} (${b.responseId})`)
+          .join(", ")}.`,
+      );
+    }
+  }
+  return group.some((b) => b.responseId === booking.responseId) ? group : [booking, ...group];
+}
+
 async function bookLeg(responseId, kind, { serial } = {}) {
   assertKind(kind);
   let booking = await load(responseId);
   if (activeOrder(booking, kind)) throw new LifecycleError("A Lalamove order is already active for this — refresh or cancel it first.");
-  const leg = legFor(booking, kind);
   const fs = booking.FULFILLMENT_STATUS ?? null;
+  if (kind === "delivery" && (isReleased(fs) || fs === "returned")) throw new LifecycleError("This unit was already released.");
+  if (kind === "return" && fs !== "out") throw new LifecycleError("Book the return once the renter has the camera.");
 
+  const group = await riderGroup(booking, kind);
+  const refs = group.map((b) => b.responseId);
+  const leg = legFor(booking, kind, group.length);
+
+  // Release every camera the rider takes. Each release runs every lifecycle
+  // check (approved, serial, unit not out elsewhere); if any fails, or
+  // Lalamove refuses, all of them go back on the shelf.
+  const released = [];
+  const undo = () =>
+    Promise.all(
+      released.map((ref) => store.updateBookingByResponseId(ref, { FULFILLMENT_STATUS: null }).catch(() => {})),
+    );
   if (kind === "delivery") {
-    if (isReleased(fs) || fs === "returned") throw new LifecycleError("This unit was already released.");
-    // Release first: this runs every lifecycle check (approved, serial, unit not out elsewhere).
-    booking = await store.updateBookingByResponseId(responseId, {
-      FULFILLMENT_STATUS: "out_for_delivery",
-      UNIT_SERIAL: serial ?? booking.UNIT_SERIAL ?? null,
-    });
-  } else if (fs !== "out") {
-    throw new LifecycleError("Book the return once the renter has the camera.");
+    try {
+      for (const b of group) {
+        const own = b.responseId === responseId;
+        await store.updateBookingByResponseId(b.responseId, {
+          FULFILLMENT_STATUS: "out_for_delivery",
+          UNIT_SERIAL: (own ? serial : null) ?? b.UNIT_SERIAL ?? null,
+        });
+        released.push(b.responseId);
+      }
+    } catch (err) {
+      await undo();
+      if (group.length > 1 && err instanceof LifecycleError) {
+        throw new LifecycleError(`${err.message} (This order's ${group.length} cameras go in one rider.)`);
+      }
+      throw err;
+    }
   }
 
   let order;
   try {
     const q = await lalamove.quote(leg.from, leg.to);
-    order = await lalamove.placeOrder(q, leg.sender, leg.recipient, { ref: responseId, leg: kind });
+    order = await lalamove.placeOrder(q, leg.sender, leg.recipient, { ref: booking.ORDER_REF || responseId, leg: kind });
   } catch (err) {
-    if (kind === "delivery") {
-      await store.updateBookingByResponseId(responseId, { FULFILLMENT_STATUS: null }).catch(() => {});
-    }
+    await undo();
     throw err;
   }
 
   const at = new Date().toISOString();
-  return store.updateBookingByResponseId(
-    responseId,
-    {
-      [ORDER_FIELD[kind]]: {
-        ...order,
-        statusLabel: STATUS_LABEL[order.status] || order.status,
-        route: routeOf(leg),
-        bookedAt: at,
-        syncedAt: at,
+  const summary = {
+    ...order,
+    statusLabel: STATUS_LABEL[order.status] || order.status,
+    route: routeOf(leg),
+    group: refs,
+    bookedAt: at,
+    syncedAt: at,
+  };
+  const what = kind === "delivery" ? "delivery" : "return pickup";
+  const together = refs.length > 1 ? ` · one rider for ${refs.length} cameras (${refs.join(", ")})` : "";
+  for (const ref of refs) {
+    const saved = await store.updateBookingByResponseId(
+      ref,
+      { [ORDER_FIELD[kind]]: summary, [LINK_FIELD[kind]]: order.shareLink || null },
+      {
+        internal: true,
+        events: [
+          {
+            at,
+            event: kind === "delivery" ? "lalamove_api_booked" : "lalamove_api_return_booked",
+            note: `Lalamove ${what} booked via API · ₱${order.total} · order ${order.orderId}${together}`,
+          },
+        ],
       },
-      [LINK_FIELD[kind]]: order.shareLink || null,
-    },
-    {
-      internal: true,
-      events: [
-        {
-          at,
-          event: kind === "delivery" ? "lalamove_api_booked" : "lalamove_api_return_booked",
-          note: `Lalamove ${kind === "delivery" ? "delivery" : "return pickup"} booked via API · ₱${order.total} · order ${order.orderId}`,
-        },
-      ],
-    },
-  );
+    );
+    if (ref === responseId) booking = saved;
+  }
+  return booking;
 }
+
 
 /** The two ends of a leg, for the map on the admin and the Track page. */
 function routeOf(leg) {
@@ -181,7 +240,7 @@ async function applyOrderState(responseId, kind, booking, prev, state) {
     syncedAt: at,
   };
   const fields = { [ORDER_FIELD[kind]]: next };
-  if (next.shareLink && next.shareLink !== booking[LINK_FIELD[kind]]) fields[LINK_FIELD[kind]] = next.shareLink;
+  if (next.shareLink) fields[LINK_FIELD[kind]] = next.shareLink;
 
   const events = [];
   if (state.status !== prev.status) {
@@ -189,11 +248,20 @@ async function applyOrderState(responseId, kind, booking, prev, state) {
     const who = d?.name ? ` (${d.name}${d.plateNumber ? `, ${d.plateNumber}` : ""})` : "";
     events.push({ at, event: "lalamove_status", note: `Lalamove ${kind}: ${label}${who}` });
   }
-  // A delivered delivery is the hand-over: the unit is now with the renter.
-  if (kind === "delivery" && state.status === "COMPLETED" && booking.FULFILLMENT_STATUS === "out_for_delivery") {
-    fields.FULFILLMENT_STATUS = "out";
+  // Every camera this rider carries gets the same state; a delivered
+  // delivery is the hand-over — each unit is now with the renter.
+  let result = null;
+  for (const ref of prev.group?.length ? prev.group : [responseId]) {
+    const b = ref === responseId ? booking : await store.findBookingByResponseId(ref);
+    if (!b || b[ORDER_FIELD[kind]]?.orderId !== prev.orderId) continue;
+    const own = { ...fields };
+    if (kind === "delivery" && state.status === "COMPLETED" && b.FULFILLMENT_STATUS === "out_for_delivery") {
+      own.FULFILLMENT_STATUS = "out";
+    }
+    const saved = await store.updateBookingByResponseId(ref, own, { internal: true, events });
+    if (ref === responseId) result = saved;
   }
-  return store.updateBookingByResponseId(responseId, fields, { internal: true, events });
+  return result || store.findBookingByResponseId(responseId);
 }
 
 /** Pull the latest status from Lalamove and move the rental along with it. */
@@ -270,12 +338,20 @@ async function cancelLeg(responseId, kind) {
     [ORDER_FIELD[kind]]: { ...o, status: "CANCELED", statusLabel: STATUS_LABEL.CANCELED, syncedAt: at },
     [LINK_FIELD[kind]]: null,
   };
-  // Cancelling the delivery before hand-over puts the unit back in the shop.
-  if (kind === "delivery" && booking.FULFILLMENT_STATUS === "out_for_delivery") fields.FULFILLMENT_STATUS = null;
-  return store.updateBookingByResponseId(responseId, fields, {
-    internal: true,
-    events: [{ at, event: "lalamove_status", note: `Lalamove ${kind} order cancelled` }],
-  });
+  let result = null;
+  for (const ref of o.group?.length ? o.group : [responseId]) {
+    const b = ref === responseId ? booking : await store.findBookingByResponseId(ref);
+    if (!b || b[ORDER_FIELD[kind]]?.orderId !== o.orderId) continue;
+    const own = { ...fields };
+    // Cancelling the delivery before hand-over puts the unit back in the shop.
+    if (kind === "delivery" && b.FULFILLMENT_STATUS === "out_for_delivery") own.FULFILLMENT_STATUS = null;
+    const saved = await store.updateBookingByResponseId(ref, own, {
+      internal: true,
+      events: [{ at, event: "lalamove_status", note: `Lalamove ${kind} order cancelled` }],
+    });
+    if (ref === responseId) result = saved;
+  }
+  return result;
 }
 
 /** Keep any active orders on this booking fresh (cheap: throttled per order). */

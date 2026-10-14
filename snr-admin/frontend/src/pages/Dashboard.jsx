@@ -1,4 +1,5 @@
 import { MemberBadge } from "../utils/loyalty.jsx";
+import { OrderChip } from "../utils/order.jsx";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "../components/Header.jsx";
@@ -69,6 +70,7 @@ function Row({ booking, detail, onOpen, tag, showSerial = true }) {
             {booking.FULL_NAME || booking.FACEBOOK_ACCOUNT_NAME || "—"}
           </span>
           <span className="ui-chip">{isDelivery(booking) ? "Delivery" : "Pickup"}</span>
+          <OrderChip booking={booking} small />
           <MemberBadge member={booking.MEMBER} small />
           {tag}
         </div>

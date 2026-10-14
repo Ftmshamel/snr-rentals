@@ -33,10 +33,18 @@ module.exports = async function returnDetails(req, res) {
 
   const { updateBookingByResponseId } = require("../firestoreQueries");
   try {
-    const updated = await updateBookingByResponseId(booking.responseId, {
-      RETURN_DETAILS: body.returnDetails ?? { sameAsDelivery: true },
-      _byRenter: true,
-    });
+    const fields = { RETURN_DETAILS: body.returnDetails ?? { sameAsDelivery: true }, _byRenter: true };
+    const updated = await updateBookingByResponseId(booking.responseId, { ...fields });
+    // One rider collects a multi-camera order, so every camera of it that
+    // can still change follows.
+    if (booking.ORDER_REF) {
+      const { findBookingsByOrder } = require("../firestoreQueries");
+      for (const b of await findBookingsByOrder(booking.ORDER_REF)) {
+        if (b.responseId !== booking.responseId && publicView(b).canEditReturn) {
+          await updateBookingByResponseId(b.responseId, { ...fields }).catch(() => {});
+        }
+      }
+    }
     return res.status(200).json({ ok: true, booking: publicView(updated) });
   } catch (err) {
     if (err instanceof LifecycleError) return res.status(400).json({ ok: false, error: err.message });
