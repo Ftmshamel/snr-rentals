@@ -47,9 +47,23 @@ export default function MemberHome({ member }) {
     ? Math.min(100, Math.round(((me.completed - me.tier.minRentals) / Math.max(me.next.minRentals - me.tier.minRentals, 1)) * 100))
     : 100;
 
+  if (!me) {
+    return (
+      <MemberShell member={member}>
+        <div className="dash" aria-busy="true" aria-label="Loading your home">
+          <div className="mh-hero mh-skel mh-skel--hero" />
+          <div className="mh-grid">
+            <div className="dash-panel mh-skel mh-skel--card" />
+            <div className="dash-panel mh-skel mh-skel--card" />
+          </div>
+        </div>
+      </MemberShell>
+    );
+  }
+
   return (
     <MemberShell member={member}>
-      <div className="dash">
+      <div className="dash mh-in">
         <section className={`mh-hero tier--${tier?.key || "bronze"}`}>
           <div className="mh-hero__text">
             <p className="mh-hero__hello">{greeting()},</p>

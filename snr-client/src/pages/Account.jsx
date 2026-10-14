@@ -1,9 +1,8 @@
 import { useState } from "react";
 import MemberCard from "../components/MemberCard.jsx";
 import TierLadder from "../components/TierLadder.jsx";
-import { GoogleMark } from "../components/AccountButton.jsx";
 import { useCatalog } from "../data/catalog.js";
-import { claimBooking, refreshMe, signIn, signOut, useMember } from "../hooks/useMember.js";
+import { claimBooking, openSignIn, refreshMe, signOut, useMember } from "../hooks/useMember.js";
 import { TIER_ICONS, perkLines } from "../utils/loyalty.js";
 import MemberShell from "../components/MemberShell.jsx";
 import RentalSpotlight, { ACTIVE, greeting, peso, shortDate, spotlightBooking } from "../components/RentalSpotlight.jsx";
@@ -13,8 +12,6 @@ import RentalSpotlight, { ACTIVE, greeting, peso, shortDate, spotlightBooking } 
 // with their current rental, every booking, perks and the tier ladder.
 
 function SignInPage({ tiers }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
   return (
     <div className="dash">
       <section className="dash-join">
@@ -22,7 +19,7 @@ function SignInPage({ tiers }) {
           <p className="bk-kicker">S&amp;R Rewards ✦</p>
           <h1 className="dash-join__title">Rent more. Pay less.</h1>
           <p className="dash-join__lead">
-            Sign in with Google and every completed rental moves you up a tier — Silver, Gold, then Platinum. Your
+            Sign in and every completed rental moves you up a tier — Silver, Gold, then Platinum. Your
             discount and free add-ons apply to the price automatically when you book.
           </p>
           <ul className="dash-join__points">
@@ -30,25 +27,9 @@ function SignInPage({ tiers }) {
             <li>Skip re-uploading IDs after your first rental</li>
             <li>All your bookings and live tracking in one place</li>
           </ul>
-          <button
-            type="button"
-            className="btn btn--solid dash-join__google"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              setError(null);
-              try {
-                await signIn();
-              } catch (err) {
-                setError(err.message || "Sign-in failed. Please try again.");
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            <GoogleMark /> {busy ? "Signing in…" : "Continue with Google"}
+          <button type="button" className="btn btn--solid dash-join__google" onClick={openSignIn}>
+            Sign in or create an account
           </button>
-          {error && <p className="bk-error">✕ {error}</p>}
           <p className="dash-join__fine">Free. We only use your name and email. You can always book as a guest.</p>
         </div>
         <div className="dash-join__ladder">
@@ -159,7 +140,7 @@ function Dashboard({ me, user }) {
   const unlock = me.next ? perkLines(me.next).filter((line) => !current.includes(line)) : [];
 
   return (
-    <div className="dash">
+    <div className="dash mh-in">
       <section className="dash-hero">
         <div className="dash-hero__left">
           <p className="dash-hero__hello">
@@ -259,8 +240,15 @@ export default function Account() {
         </button>
       </div>
     ) : (
-      <div className="dash dash-center dash-loading" aria-busy="true">
-        Loading your dashboard…
+      <div className="dash" aria-busy="true" aria-label="Loading your dashboard">
+        <div className="dash-hero">
+          <div className="mh-skel mh-skel--card" />
+          <div className="mh-skel mh-skel--card" />
+        </div>
+        <div className="dash-main">
+          <div className="mh-skel mh-skel--card" />
+          <div className="mh-skel mh-skel--card" />
+        </div>
       </div>
     );
   } else {

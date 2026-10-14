@@ -13,12 +13,22 @@ import TrackBooking from "./pages/TrackBooking.jsx";
 import Account from "./pages/Account.jsx";
 import Rewards from "./components/Rewards.jsx";
 import MemberHome from "./pages/MemberHome.jsx";
-import MemberShell from "./components/MemberShell.jsx";
-import { useMember, wasSignedIn } from "./hooks/useMember.js";
+import { looksSignedIn, useMember } from "./hooks/useMember.js";
+import SignInModal from "./components/SignInModal.jsx";
 import "./booking.css";
 import "./members.css";
 
 export default function App() {
+  // The sign-in window is shared by every page.
+  return (
+    <>
+      <Page />
+      <SignInModal />
+    </>
+  );
+}
+
+function Page() {
   if (window.location.pathname.startsWith("/track")) {
     return (
       <div className="booking-app">
@@ -52,18 +62,13 @@ export default function App() {
 // "/": signed-in renters get their own home; everyone else the landing page.
 function Home() {
   const member = useMember();
-  const signedIn = member.status === "member";
-  if (signedIn || (member.status === "loading" && wasSignedIn())) {
+  // Signed in (or restoring a session): the member home, which shows a
+  // skeleton until the account has loaded — never the landing page first.
+  if (looksSignedIn(member)) {
     return (
       <div className="booking-app">
         <div className="grain" aria-hidden="true" />
-        {signedIn ? (
-          <MemberHome member={member} />
-        ) : (
-          <MemberShell member={member}>
-            <div className="dash dash-center dash-loading">Loading your home…</div>
-          </MemberShell>
-        )}
+        <MemberHome member={member} />
       </div>
     );
   }
