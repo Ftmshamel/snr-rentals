@@ -150,6 +150,15 @@ split describes the legacy mode and the historical data.
   `api/catalog.js` (`GET` now includes `tiers`; owner `?action=members`,
   `PATCH ?action=tiers`).
 
+### Public booking form steps (Oct 2026)
+
+`snr-client/src/pages/PublicBooking.jsx` `STEPS`: Check Availability (date,
+camera(s), add-ons) → Privacy & Terms → Renter Details → Requirements (IDs,
+billing, selfie) → Review & Sign (contract + e-signature) → **Downpayment**
+(payment QRs + proof of downpayment) → Submit. Payment is deliberately last,
+after the renter has signed; the capstone paper's booking flow (Figure 3)
+follows this order.
+
 ### Several cameras in one booking (Oct 2026)
 
 - The public form takes up to 5 cameras for the same dates under **one
