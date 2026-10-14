@@ -60,8 +60,42 @@ the §1 problem cannot happen: `/api/bookings/by?type=unmirrored` returns `[]`.
   date, refuses a date earlier than the last recorded change, and refuses
   renames (bookings reference cameras by name). Add-on **prices** have no
   history yet — changing one reprices old bookings when they are edited.
-- **Owner-only writes are enforced server-side**: the owner login now gets
-  `OWNER_TOKEN`, distinct from the admin token (`lib/auth.js` `requireOwner`).
+- **Admin login (2026-10-14): hashed passwords, signed expiring sessions.**
+  `api/auth/login.js` checks the password against a scrypt hash from the
+  environment (`OWNER_PASSWORD_HASH`, `ADMIN_PASSWORD_HASH`; usernames
+  `OWNER_USERNAME` / `ADMIN_USERNAME`, default `owner` / `admin`) and returns a
+  JWT (HS256, `lib/session.js`) signed with `AUTH_SECRET` that carries the
+  role and expires after 12 h. `lib/auth.js` `requireAuth` / `requireOwner`
+  verify it, so owner-only writes are enforced server-side and a staff token
+  can't be edited into an owner one. Login is rate-limited (8/min per
+  address). **Nothing has a default:** with no `AUTH_SECRET` or no hashes,
+  login answers 503 "isn't set up" — set them on the API's Vercel project
+  before deploying. `node scripts/hash-password.js` makes a hash (and
+  `--secret` an `AUTH_SECRET`). The hash format is `scrypt:N:r:p:salt:hash`
+  in base64url — no `$`, so it pastes safely into PowerShell or bash. The old
+  plaintext passwords and fixed tokens are gone from the code but remain in
+  this public repo's git history: never reuse them.
+- **Data privacy (RA 10173), 2026-10-14.** The public site has `/privacy`
+  (policy + request form). `POST /api/public?action=privacy-request` takes a
+  reference code + the contact number on that booking as proof, and queues
+  `privacy_requests/{id}` `{ type: access|correction|deletion, ref, refs[]
+  (every camera of the order), details, status, resolution }` — the contact
+  number itself isn't stored on the request. The owner works them on the
+  admin's `/privacy` (`GET|PATCH /api/bookings/by?type=privacy`). **Erasure**
+  is `DELETE /api/bookings/{id}?mode=erase` (owner only,
+  `erasePersonalData`): refused unless the booking is completed, cancelled or
+  rejected; deletes the documents sub-collection (IDs, selfie, billing,
+  payment proof, signature) and blanks name, contact, address, Facebook,
+  delivery/return details, rider route and the member link, but keeps dates,
+  camera, serial, fees and status for the books; stamps `ERASED_AT` and a
+  `personal_data_erased` timeline event. An erased booking can no longer
+  verify a repeat renter. A plain `DELETE` still deletes the whole booking.
+- **Google Analytics is consent-gated.** The public site's `index.html` no
+  longer loads gtag directly: it defines `window.snrLoadAnalytics()`, which
+  runs only once the visitor accepts the cookie banner
+  (`components/CookieConsent.jsx`, choice kept in `localStorage`
+  `snr-cookie-consent`). Declining means GA never loads. Don't add another
+  tracker without putting it behind the same consent and in the policy.
 - **Rental lifecycle is enforced server-side.** `applyLifecycle` validates
   every `status` / `FULFILLMENT_STATUS` change (see `CLAUDE.md` → "Rental
   lifecycle and serial numbers") and appends to `TIMELINE`. A PATCH that jumps
@@ -408,6 +442,7 @@ All live in `backend/scripts/`. Run from `backend/`.
 
 | Script | Purpose | Safe to re-run? |
 | --- | --- | --- |
+| `hash-password.js` | Prints a `*_PASSWORD_HASH` for the admin login (asks for the password), or with `--secret` a random `AUTH_SECRET`. Writes nothing. | yes — read-only |
 | `restore-unmirrored-bookings.js` | Replay failed Supabase mirrors. `--days=N` (default 30) or `--ref=<id>`. | yes — upserts on `response_id` |
 | `backfill-missing-fees.js` | Fill `rental_fee` where NULL. `--with-addons` to include add-ons. | yes — only touches NULLs |
 | `fix-historical-rate-card.js` | Re-cost bookings priced on the wrong rate card. | yes — only touches rows still on the new-card value |
@@ -453,7 +488,6 @@ Use PowerShell `System.Drawing` for resizing (see git history for the pattern).
 | --- | --- |
 | **~25 orphan rows in Mongo** | Deleted from Supabase but retained in Mongo. Harmless while nothing syncs Mongo→Supabase; a sync would resurrect them. Do not bulk-delete without re-checking ages (§1). |
 | **Add-on naming is inconsistent** | The client site submits `"Extra Battery"`; the admin uses `"Extra G7X Battery"` / `"Extra X-T100 Battery"` / `"Extra R50 Battery"`. Both spellings exist in `booking_addons`. The 9 generic `"Extra Battery"` rows match no entry in `frontend/src/data/addons.js`, so they are invisible to add-on availability. |
-| **Credentials are in the source of a public repo** | `lib/authConfig.js` hardcodes the admin/owner passwords and the shared token, and `Ftmshamel/snr-rentals` is public. Anyone can read them and call the API (all bookings, ID photos included). Move them to env vars and rotate. `OWNER_TOKEN` must be set in the environment — its fallback is derivable from the source. |
 | **Contracts are still static** | Damage fees / terms per camera live in `contracts.js` (client + admin). A camera added on the Catalog page gets the standard terms with no scratch fees until it is added there. |
 | **`backend/lib/cameraDefaults.js` is dead** | Nothing imports it. Its header references `lib/cameraPricing.js` and a `camera_prices` table — **neither exists**. Leftover from an editable-pricing feature that was added then reverted. Its values are kept accurate anyway. Not a source of truth. |
 | **`repeat_renter` / `repeat_ref` columns do not exist** | `toMongoFormat` reads them; `select("*")` tolerated it silently. The "Repeat renter" badge in `BookingModal` can therefore never display. |

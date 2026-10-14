@@ -116,7 +116,7 @@ split describes the legacy mode and the historical data.
   Lalamove and tested against a local mock of v3 (signature, quotation,
   order, driver, cancel). The first real check is a sandbox order from the
   deployed admin. `LALAMOVE_ENV=production` charges the Lalamove wallet.
-- Public routes are multiplexed: `api/public.js?action=availability|verify-renter|track|return-details|me|claim`
+- Public routes are multiplexed: `api/public.js?action=availability|verify-renter|track|return-details|me|claim|privacy-request`
   (handlers in `lib/public/`).
 
 ### Member tiers — S&R Rewards (Oct 2026)
@@ -149,6 +149,26 @@ split describes the legacy mode and the historical data.
 - Routes (no new function): `api/public.js?action=me|claim`,
   `api/catalog.js` (`GET` now includes `tiers`; owner `?action=members`,
   `PATCH ?action=tiers`).
+
+### Admin login, data privacy, DTI (Oct 2026)
+
+- **Admin login** uses scrypt password hashes from env vars and signed JWT
+  sessions that expire after 12 h (`lib/password.js`, `lib/session.js`,
+  `lib/auth.js`). The API's Vercel project needs `AUTH_SECRET`,
+  `OWNER_PASSWORD_HASH` and `ADMIN_PASSWORD_HASH` (usernames
+  `OWNER_USERNAME` / `ADMIN_USERNAME`, default `owner` / `admin`) — without
+  them login answers 503. Make them with `node scripts/hash-password.js`.
+  No password lives in the code; the old ones are in this public repo's
+  history, so never reuse them.
+- **RA 10173:** `/privacy` on the public site (policy + request form for a
+  copy / correction / deletion, proven by reference code + contact number);
+  the owner handles requests on the admin's **Privacy** page (top right).
+  "Erase personal data" keeps the rental for the books but deletes the IDs,
+  signature and contact details. Google Analytics loads only after the
+  visitor accepts the cookie banner. Details: `docs/ENGINEERING-NOTES.md` §0.
+- **RA 11967:** every public page has a footer with the DTI Business Name
+  Reg. No. (`BUSINESS.dtiNumber` in `snr-client/src/data/content.js`) and a
+  Privacy Policy link.
 
 ### Public booking form steps (Oct 2026)
 

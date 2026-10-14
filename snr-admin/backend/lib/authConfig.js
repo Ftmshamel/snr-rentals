@@ -1,20 +1,15 @@
-const AUTH_TOKEN = "snr-rentals-session-2026-07-07";
-// Owners get their own token so owner-only writes (the camera catalogue) can
-// be enforced on the server, not just hidden in the UI. Set OWNER_TOKEN in the
-// environment; the fallback only keeps local development working.
-const OWNER_TOKEN = process.env.OWNER_TOKEN || `${AUTH_TOKEN}-owner`;
+// Admin panel accounts. Usernames and password HASHES come from the
+// environment — no password is in the code. Generate a hash with
+//   node scripts/hash-password.js
+// and set, on the API's Vercel project:
+//   AUTH_SECRET            random, 32+ characters (signs session tokens)
+//   OWNER_USERNAME         OWNER_PASSWORD_HASH   (catalogue, prices, tiers, privacy erasure)
+//   ADMIN_USERNAME         ADMIN_PASSWORD_HASH   (staff)
+function adminUsers() {
+  return [
+    { username: process.env.OWNER_USERNAME || "owner", passwordHash: process.env.OWNER_PASSWORD_HASH || "", role: "owner" },
+    { username: process.env.ADMIN_USERNAME || "admin", passwordHash: process.env.ADMIN_PASSWORD_HASH || "", role: "admin" },
+  ].filter((u) => u.passwordHash);
+}
 
-const AUTH_USERS = [
-  {
-    username: process.env.ADMIN_USERNAME || "admin",
-    password: "admin123",
-    role: "admin",
-  },
-  {
-    username: process.env.OWNER_USERNAME || "owner",
-    password: "owner4831",
-    role: "owner",
-  },
-];
-
-module.exports = { AUTH_TOKEN, OWNER_TOKEN, AUTH_USERS };
+module.exports = { adminUsers };

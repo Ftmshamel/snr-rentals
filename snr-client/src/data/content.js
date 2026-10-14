@@ -14,6 +14,12 @@ export const CONTACT = {
   tiktokUrl: "https://www.tiktok.com/@snr_rentals",
 };
 
+// Shown in the footer of every page (RA 11967 — Internet Transactions Act).
+export const BUSINESS = {
+  name: "S&R Rentals",
+  dtiNumber: "8546908",
+};
+
 // Cameras, prices, add-ons and inclusions are no longer here — they come from
 // the booking API (Firestore), edited on the admin Catalog page. See
 // data/catalog.js.

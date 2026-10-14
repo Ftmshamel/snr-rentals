@@ -594,6 +594,93 @@ async function deleteBookingByResponseId(responseId) {
   return true;
 }
 
+// ── Data privacy (RA 10173) ─────────────────────────────────────────────────
+//   privacy_requests/{id}  { type: access|correction|deletion, ref, refs[],
+//                            details, status: open|done|declined, createdAt,
+//                            resolvedAt, resolution }
+// A renter files a request from the public Privacy page (reference code +
+// contact number as proof); the owner handles it on the admin's /privacy.
+
+const ERASABLE = new Set(["completed", "cancelled", "rejected"]);
+const ERASED_TEXT = "[erased]";
+
+async function createPrivacyRequest({ type, ref, refs, details }) {
+  const now = new Date().toISOString();
+  const doc = await db().collection("privacy_requests").add({
+    type, ref, refs, details: String(details || "").slice(0, 2000), status: "open", createdAt: now,
+  });
+  return { id: doc.id };
+}
+
+async function listPrivacyRequests() {
+  const snap = await db().collection("privacy_requests").get();
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+async function updatePrivacyRequest(id, { status, resolution }) {
+  if (!["open", "done", "declined"].includes(status)) throw new LifecycleError("Unknown status.");
+  const ref = db().collection("privacy_requests").doc(String(id || ""));
+  const snap = await ref.get();
+  if (!snap.exists) return null;
+  const fields = { status, resolution: String(resolution || "").slice(0, 1000) };
+  fields.resolvedAt = status === "open" ? null : new Date().toISOString();
+  await ref.update(fields);
+  return { id: ref.id, ...snap.data(), ...fields };
+}
+
+/**
+ * "Right to be forgotten": remove a renter's personal data from a finished
+ * booking — the uploaded IDs and signature, name, contact, address, Facebook,
+ * delivery pins and rider route — while keeping what the business must keep
+ * for its books (dates, camera, unit serial, fees, status). Refused while the
+ * rental is still active.
+ */
+async function erasePersonalData(responseId) {
+  const id = bookingDocId(decodeId(responseId));
+  const ref = bookingsCol().doc(id);
+  const snap = await ref.get();
+  if (!snap.exists) return null;
+  const b = snap.data();
+  if (b.ERASED_AT) return partial(b);
+  if (!ERASABLE.has(String(b.status || "").toLowerCase())) {
+    throw new LifecycleError("Finish, cancel or decline this booking before erasing the renter's data.");
+  }
+  const now = new Date().toISOString();
+  const scrubOrder = (o) => (o ? { ...o, route: null, driver: o.driver ? { name: ERASED_TEXT } : null, shareLink: null } : o);
+  const fields = {
+    FULL_NAME: ERASED_TEXT,
+    FACEBOOK_ACCOUNT_NAME: ERASED_TEXT,
+    FACEBOOK_PROFILE_LINK: "",
+    CONTACT_NUMBER: "",
+    COMPLETE_ADDRESS: ERASED_TEXT,
+    SPECIFIC_DESTINATION: "",
+    TYPE_OF_TRIP: "",
+    NOTES: "",
+    RETURN_NOTES: "",
+    DELIVERY_DETAILS: null,
+    RETURN_DETAILS: null,
+    LALAMOVE_DELIVERY_LINK: null,
+    LALAMOVE_RETURN_LINK: null,
+    LALAMOVE_DELIVERY_ORDER: scrubOrder(b.LALAMOVE_DELIVERY_ORDER) ?? null,
+    LALAMOVE_RETURN_ORDER: scrubOrder(b.LALAMOVE_RETURN_ORDER) ?? null,
+    E_SIGNATURE_DATE: b.E_SIGNATURE_DATE || null,
+    RENTER_UID: null,
+    MEMBER: b.MEMBER ? { ...b.MEMBER, email: "", uid: "" } : null,
+    REPEAT_REF: null,
+    ERASED_AT: now,
+    TIMELINE: [...(b.TIMELINE || []), { at: now, event: "personal_data_erased", note: "Renter's personal data erased on request (RA 10173)" }],
+    _lastUpdatedAt: now,
+  };
+  const docs = await ref.collection("documents").get();
+  const batch = db().batch();
+  docs.forEach((d) => batch.delete(d.ref));
+  batch.update(ref, fields);
+  await batch.commit();
+  return partial({ ...b, ...fields });
+}
+
 // ── Expenses ─────────────────────────────────────────────────────────────────
 
 function expenseOut(doc) {
@@ -890,6 +977,11 @@ module.exports = {
   deleteBookingByResponseId,
   upsertSubmittedBooking,
   findBookingsByOrder,
+  // data privacy
+  createPrivacyRequest,
+  listPrivacyRequests,
+  updatePrivacyRequest,
+  erasePersonalData,
   // expenses + notes
   listExpenses,
   createExpense,

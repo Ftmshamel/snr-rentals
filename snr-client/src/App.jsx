@@ -13,9 +13,11 @@ import TrackBooking from "./pages/TrackBooking.jsx";
 import Account, { RewardsPage } from "./pages/Account.jsx";
 import Rewards from "./components/Rewards.jsx";
 import MemberHome from "./pages/MemberHome.jsx";
+import PrivacyPolicy from "./pages/PrivacyPolicy.jsx";
 import MemberShell from "./components/MemberShell.jsx";
 import { looksSignedIn, useMember } from "./hooks/useMember.js";
 import SignInModal from "./components/SignInModal.jsx";
+import CookieConsent from "./components/CookieConsent.jsx";
 import "./booking.css";
 import "./members.css";
 
@@ -25,6 +27,7 @@ export default function App() {
     <>
       <Page />
       <SignInModal />
+      <CookieConsent />
     </>
   );
 }
@@ -35,6 +38,7 @@ function Page() {
   if (path.startsWith("/account")) return <AppPage><Account /></AppPage>;
   if (path.startsWith("/rewards")) return <AppPage><RewardsPage /></AppPage>;
   if (path.startsWith("/book")) return <AppPage withShell><PublicBooking /></AppPage>;
+  if (path.startsWith("/privacy")) return <AppPage withShell><PrivacyPolicy /></AppPage>;
   return <Home />;
 }
 
@@ -47,6 +51,7 @@ function AppPage({ withShell = false, children }) {
     <div className="booking-app">
       <div className="grain" aria-hidden="true" />
       {shell ? <MemberShell member={member}>{children}</MemberShell> : children}
+      <Footer compact />
     </div>
   );
 }
@@ -61,6 +66,7 @@ function Home() {
       <div className="booking-app">
         <div className="grain" aria-hidden="true" />
         <MemberHome member={member} />
+        <Footer compact />
       </div>
     );
   }

@@ -41,7 +41,7 @@ Admin Panel (React/Vite) ──(Bearer token)──► /api/* ──► dataSour
 
 - **Data-source switch:** `backend/lib/dataSource.js` exports either `supabaseQueries` (when `DATASOURCE=supabase`) or `bookingQueries` (MongoDB, the default). All read/update/delete routes go through this indirection.
 - **Field shape:** Supabase rows are snake_case; `supabaseQueries.toMongoFormat()` converts them back to the SCREAMING_SNAKE_CASE shape the frontend expects, and `FIELD_MAP` maps frontend field names → Supabase columns for PATCH updates.
-- **Auth:** `/api/auth/login` checks username/password against env-configured **admin** and **owner** users and returns a shared `ADMIN_TOKEN` plus a `role`. The frontend stores `auth_token` + `auth_role` in `localStorage`; `lib/auth.js` `requireAuth` validates the Bearer token on protected routes.
+- **Auth:** `/api/auth/login` checks the password against scrypt hashes in the environment (**admin** and **owner** users) and returns a signed JWT session (12 h) plus a `role`. The frontend stores `auth_token` + `auth_role` in `localStorage`; `lib/auth.js` `requireAuth` / `requireOwner` verify the token's signature, expiry and role on protected routes. See `docs/ENGINEERING-NOTES.md` §0.
 
 ---
 
@@ -187,9 +187,9 @@ Bookings carry a `source` (frontend: `_source`). App-created records use `google
 | `SUPABASE_URL`                                        | Project URL — **no** `/rest/v1` suffix            |
 | `SUPABASE_SERVICE_KEY`                                | Service-role key                                  |
 | `DATASOURCE`                                          | `supabase` (live) or `mongodb`                    |
-| `ADMIN_TOKEN`                                         | Shared bearer token returned on login             |
-| `ADMIN_USERNAME` / `ADMIN_PASSWORD`                   | Admin login                                       |
-| `OWNER_USERNAME` / `OWNER_PASSWORD`                   | Owner login (unlocks Rentals/Analytics/Expenses)  |
+| `AUTH_SECRET`                                         | Signs admin session tokens (32+ chars; `node scripts/hash-password.js --secret`) |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD_HASH`              | Staff login (hash from `node scripts/hash-password.js`) |
+| `OWNER_USERNAME` / `OWNER_PASSWORD_HASH`              | Owner login (unlocks Rentals/Analytics/Expenses/Catalog/Rewards/Privacy) |
 
 **Frontend** (`frontend/.env`):
 

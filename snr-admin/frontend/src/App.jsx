@@ -14,6 +14,7 @@ import Expenses from "./pages/Expenses.jsx";
 import Catalog from "./pages/Catalog.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Rewards from "./pages/Rewards.jsx";
+import Privacy from "./pages/Privacy.jsx";
 
 export default function App() {
   const [authed, setAuthed] = useState(() =>
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/expenses" element={isOwner ? <Expenses /> : <Navigate to="/" replace />} />
         <Route path="/catalog" element={isOwner ? <Catalog /> : <Navigate to="/" replace />} />
         <Route path="/rewards" element={isOwner ? <Rewards /> : <Navigate to="/" replace />} />
+        <Route path="/privacy" element={isOwner ? <Privacy /> : <Navigate to="/" replace />} />
       </Routes>
     </div>
   );

@@ -1,7 +1,25 @@
-import { CONTACT } from "../data/content.js";
+import { BUSINESS, CONTACT } from "../data/content.js";
 import Logo from "./Logo.jsx";
 
-export default function Footer() {
+// `compact`: the slim legal footer under the booking, track and member pages.
+export default function Footer({ compact = false }) {
+  const legal = (
+    <p className="footer__legal">
+      {BUSINESS.name} · DTI Business Name Reg. No. {BUSINESS.dtiNumber} · <a href={CONTACT.phoneHref}>{CONTACT.phone}</a>
+      <span aria-hidden="true"> · </span>
+      <a href="/privacy">Privacy Policy</a>
+    </p>
+  );
+  if (compact) {
+    return (
+      <footer className="footer footer--compact">
+        <div className="footer__inner">
+          {legal}
+          <p className="footer__copy">© {new Date().getFullYear()} {BUSINESS.name}</p>
+        </div>
+      </footer>
+    );
+  }
   return (
     <footer className="footer">
       <div className="footer__inner">
@@ -24,8 +42,9 @@ export default function Footer() {
             {CONTACT.tiktokHandle}
           </a>
         </p>
+        {legal}
         <p className="footer__copy">
-          © {new Date().getFullYear()} S&amp;R Rentals — Capture every moment.
+          © {new Date().getFullYear()} {BUSINESS.name} — Capture every moment.
         </p>
       </div>
     </footer>

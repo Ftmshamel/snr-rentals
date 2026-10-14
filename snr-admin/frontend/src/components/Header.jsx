@@ -89,6 +89,16 @@ export default function Header({
                 </button>
               </>
             ) : null}
+            {role === "owner" && (
+              <Link
+                to="/privacy"
+                aria-current={location.pathname === "/privacy" ? "page" : undefined}
+                className={`ui-btn ui-btn--sm ${location.pathname === "/privacy" ? "ui-btn--solid" : ""}`}
+                title="Data privacy requests (RA 10173)"
+              >
+                Privacy
+              </Link>
+            )}
             <button
               type="button"
               onClick={() => {

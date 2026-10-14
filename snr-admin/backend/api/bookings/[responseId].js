@@ -1,5 +1,5 @@
 const { setCorsJson } = require("../../lib/cors");
-const { requireAuth } = require("../../lib/auth");
+const { requireAuth, requireOwner } = require("../../lib/auth");
 const {
   findBookingByResponseId,
   updateBookingByResponseId,
@@ -46,6 +46,22 @@ module.exports = async (req, res) => {
       }
       console.error("[api/bookings/:responseId PATCH]", err);
       return res.status(500).json({ ok: false, error: err.message || "Server error" });
+    }
+  }
+
+  // DELETE ?mode=erase — RA 10173 erasure: keep the booking for the books,
+  // remove the renter's personal data (owner only; see erasePersonalData).
+  if (req.method === "DELETE" && req.query && req.query.mode === "erase") {
+    if (!requireOwner(req, res, "Only the owner can erase a renter's data.")) return;
+    try {
+      const { erasePersonalData } = require("../../lib/firestoreQueries");
+      const booking = await erasePersonalData(responseId || "");
+      if (!booking) return res.status(404).json({ ok: false, error: "Not found" });
+      return res.status(200).json({ ok: true, booking });
+    } catch (err) {
+      if (err instanceof LifecycleError) return res.status(400).json({ ok: false, error: err.message });
+      console.error("[api/bookings/:responseId erase]", err);
+      return res.status(500).json({ ok: false, error: "Server error" });
     }
   }
 
