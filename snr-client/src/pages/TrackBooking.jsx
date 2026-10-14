@@ -174,6 +174,12 @@ function Result({ booking, onUpdated }) {
             {booking.mode === "delivery" ? "Delivery" : "Pick-up"} {formatDate(booking.pickUpDate, booking.pickUpTime)} → return{" "}
             {formatDate(booking.returnDate, booking.returnTime)}
           </p>
+          {booking.unitSerial && (
+            <p className="unit-serial">
+              <span>Your unit · serial no.</span>
+              <strong>{booking.unitSerial}</strong>
+            </p>
+          )}
         </div>
         <span className={`bk-track__stage bk-track__stage--${booking.stage.key}`}>{booking.stage.label}</span>
       </div>

@@ -99,6 +99,12 @@ function RentalCard({ booking, cameras }) {
           <strong>{shortDate(booking.returnDate, true)}</strong> {time12(booking.returnTime)} ·{" "}
           {booking.mode === "delivery" ? "Lalamove delivery" : "Pick-up"}
         </p>
+        {booking.unitSerial && (
+          <p className="unit-serial unit-serial--sm">
+            <span>Your unit · serial no.</span>
+            <strong>{booking.unitSerial}</strong>
+          </p>
+        )}
         {!ended && step != null && (
           <ol className="mp-steps" aria-label="Progress">
             {STEPS.map((label, i) => (

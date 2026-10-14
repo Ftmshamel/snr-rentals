@@ -18,6 +18,7 @@ function bookingCard(b, publicStage) {
   return {
     ref: b.responseId,
     camera: b.PREFERRED_CAMERA,
+    unitSerial: RELEASED.has(b.FULFILLMENT_STATUS) ? b.UNIT_SERIAL || null : null,
     pickUpDate: b.PICK_UP_DATE,
     pickUpTime: b.PICK_UP_TIME || null,
     returnDate: b.RETURN_DATE,

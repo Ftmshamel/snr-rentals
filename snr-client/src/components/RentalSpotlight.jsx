@@ -84,6 +84,12 @@ export default function RentalSpotlight({ booking }) {
         <span className="dash-upnext__badge">{booking.stage?.label}</span>
       </div>
       <h2 className="dash-upnext__title">{booking.camera}</h2>
+      {booking.unitSerial && (
+        <p className="unit-serial unit-serial--dark">
+          <span>Your unit · serial no.</span>
+          <strong>{booking.unitSerial}</strong>
+        </p>
+      )}
       <div className="dash-upnext__dates">
         <div>
           <span>{booking.mode === "delivery" ? "Delivery" : "Pick-up"}</span>
