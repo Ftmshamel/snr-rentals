@@ -2697,7 +2697,8 @@ export default function PublicBooking() {
         <span>
           <strong>Data Privacy Act consent.</strong> I understand that my
           information and uploaded requirements will be used by S&R Rentals to
-          check, process, and document this booking.
+          check, process, and document this booking, as explained in the{" "}
+          <a href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
         </span>
       </label>
     );

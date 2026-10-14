@@ -3304,3 +3304,23 @@ select.bk-input {
   margin: 0.4rem 0 0.2rem;
 }
 .bk-quote__rental-total .bk-num, .bk-quote__deposit .bk-num, .bk-quote__total .bk-num, .bk-quote__dp .bk-num { white-space: nowrap; }
+
+/* Privacy Policy page */
+.pp-doc h2 {
+  font-size: 1.05rem;
+  margin: 1.4rem 0 0.4rem;
+}
+.pp-doc h2:first-child { margin-top: 0; }
+.pp-doc p,
+.pp-doc li {
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+.pp-doc ul { padding-left: 1.2rem; margin: 0.3rem 0 0.6rem; }
+.pp-doc a { color: var(--color-ink); text-decoration: underline; }
+.pp-request { margin-top: 1.4rem; }
+.pp-form { display: grid; gap: 0.9rem; margin-top: 0.8rem; }
+.pp-textarea { min-height: 90px; resize: vertical; }
+.pp-note { font-size: 0.85rem; margin: 0; color: #4a4a4a; }
+.pp-done { padding: 1rem 1.1rem; border: 3px solid var(--color-ink); border-radius: 14px; background: #fff; }
+.pp-request .bk-sub { text-align: left; margin: 0.2rem 0 0; max-width: none; }

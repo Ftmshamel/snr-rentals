@@ -31,6 +31,8 @@ async function verifyRepeatRenter(ref) {
   }
 
   if (!booking) return { verified: false };
+  // Erased on request: the IDs are gone, so nothing can be reused.
+  if (booking.ERASED_AT) return { verified: false, reason: "erased" };
   const status = normalizeBookingStatus(booking.status);
   const fulfillment = String(booking.FULFILLMENT_STATUS || "")
     .trim()

@@ -10,6 +10,7 @@ const { setCorsJson } = require("../lib/cors");
 //   POST ?action=return-details          renter updates where the return is collected
 //   GET  ?action=me                      signed-in renter: tier, perks, bookings
 //   POST ?action=claim                   signed-in renter: link a past booking
+//   POST ?action=privacy-request         RA 10173 request: access / correction / deletion
 const HANDLERS = {
   availability: require("../lib/public/availability"),
   "verify-renter": require("../lib/public/verifyRenter"),
@@ -17,6 +18,7 @@ const HANDLERS = {
   "return-details": require("../lib/public/returnDetails"),
   me: require("../lib/public/member"),
   claim: require("../lib/public/member"),
+  "privacy-request": require("../lib/public/privacyRequest"),
 };
 
 function getQuery(req) {
