@@ -118,7 +118,7 @@ export default function PrivacyPolicy() {
         <h2>4. Who we share it with</h2>
         <ul>
           <li><strong>Lalamove</strong>, for deliveries only: the recipient's name, number, address and map pin, so the rider can find you.</li>
-          <li><strong>Our service providers</strong>, who store and run the system for us under their own security safeguards: Google Firebase (database and sign-in) and Vercel (website hosting).</li>
+          <li><strong>Our service providers</strong>, who store and run the system for us under their own security safeguards: Google Firebase (database and sign-in), Vercel (website hosting), and Google Analytics (visit statistics, only if you accept cookies).</li>
         </ul>
         <p>We never sell your data or share it for advertising.</p>
 
@@ -136,11 +136,13 @@ export default function PrivacyPolicy() {
           rental's dates, camera and amounts are kept for accounting and tax purposes, without your personal details.
         </p>
 
-        <h2>7. Your browser</h2>
+        <h2>7. Cookies and your browser</h2>
         <p>
-          We don't use advertising or tracking cookies. The booking form saves your unfinished booking in your own
-          browser so you don't lose your progress; “Start Over” clears it. If you sign in, your browser remembers your
-          session until you sign out.
+          If you accept cookies, we use Google Analytics to count visits and see which pages are used, so we can
+          improve the site; Google receives your browser's usage data for this. If you decline, Google Analytics is
+          not loaded at all and booking works the same. We don't use advertising cookies. The booking form also saves
+          your unfinished booking in your own browser so you don't lose your progress (“Start Over” clears it), and if
+          you sign in, your browser remembers your session until you sign out.
         </p>
 
         <h2>8. Your rights</h2>

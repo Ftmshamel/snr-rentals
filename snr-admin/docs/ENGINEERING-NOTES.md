@@ -90,6 +90,12 @@ the §1 problem cannot happen: `/api/bookings/by?type=unmirrored` returns `[]`.
   camera, serial, fees and status for the books; stamps `ERASED_AT` and a
   `personal_data_erased` timeline event. An erased booking can no longer
   verify a repeat renter. A plain `DELETE` still deletes the whole booking.
+- **Google Analytics is consent-gated.** The public site's `index.html` no
+  longer loads gtag directly: it defines `window.snrLoadAnalytics()`, which
+  runs only once the visitor accepts the cookie banner
+  (`components/CookieConsent.jsx`, choice kept in `localStorage`
+  `snr-cookie-consent`). Declining means GA never loads. Don't add another
+  tracker without putting it behind the same consent and in the policy.
 - **Rental lifecycle is enforced server-side.** `applyLifecycle` validates
   every `status` / `FULFILLMENT_STATUS` change (see `CLAUDE.md` → "Rental
   lifecycle and serial numbers") and appends to `TIMELINE`. A PATCH that jumps

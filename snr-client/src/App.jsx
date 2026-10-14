@@ -17,6 +17,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy.jsx";
 import MemberShell from "./components/MemberShell.jsx";
 import { looksSignedIn, useMember } from "./hooks/useMember.js";
 import SignInModal from "./components/SignInModal.jsx";
+import CookieConsent from "./components/CookieConsent.jsx";
 import "./booking.css";
 import "./members.css";
 
@@ -26,6 +27,7 @@ export default function App() {
     <>
       <Page />
       <SignInModal />
+      <CookieConsent />
     </>
   );
 }

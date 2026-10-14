@@ -164,7 +164,8 @@ split describes the legacy mode and the historical data.
   copy / correction / deletion, proven by reference code + contact number);
   the owner handles requests on the admin's **Privacy** page (top right).
   "Erase personal data" keeps the rental for the books but deletes the IDs,
-  signature and contact details. Details: `docs/ENGINEERING-NOTES.md` §0.
+  signature and contact details. Google Analytics loads only after the
+  visitor accepts the cookie banner. Details: `docs/ENGINEERING-NOTES.md` §0.
 - **RA 11967:** every public page has a footer with the DTI Business Name
   Reg. No. (`BUSINESS.dtiNumber` in `snr-client/src/data/content.js`) and a
   Privacy Policy link.
