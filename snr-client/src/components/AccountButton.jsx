@@ -1,12 +1,10 @@
-import { useState } from "react";
-import { signIn, signedIn, useMember, wasSignedIn } from "../hooks/useMember.js";
+import { openSignIn, useMember, wasSignedIn } from "../hooks/useMember.js";
 import { TIER_ICONS } from "../utils/loyalty.js";
 
 // Header control: "Sign in" for guests, the renter's avatar + tier for
 // members (links to /account). Hidden when sign-in isn't configured.
 export default function AccountButton({ onNavigate, className = "" }) {
   const member = useMember();
-  const [busy, setBusy] = useState(false);
   if (member.status === "off") return null;
   if (member.status === "loading" && wasSignedIn()) {
     return <span className={`account-btn account-btn--ghost ${className}`} aria-hidden="true" />;
@@ -31,22 +29,13 @@ export default function AccountButton({ onNavigate, className = "" }) {
   return (
     <button
       type="button"
-      disabled={busy}
       className={`account-btn account-btn--signin ${className}`}
-      onClick={async () => {
-        setBusy(true);
-        try {
-          await signIn();
-          // Members land on their dashboard.
-          if (await signedIn()) window.location.assign("/account");
-        } catch (err) {
-          window.alert(err.message || "Sign-in failed. Please try again.");
-        } finally {
-          setBusy(false);
-        }
+      onClick={() => {
+        onNavigate?.();
+        openSignIn();
       }}
     >
-      <GoogleMark /> {busy ? "Signing in…" : "Sign in"}
+      <span aria-hidden="true">👤</span> Sign in
     </button>
   );
 }

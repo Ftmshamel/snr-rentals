@@ -1,9 +1,7 @@
-import { useState } from "react";
 import { useCatalog } from "../data/catalog.js";
-import { signIn, signedIn, useMember } from "../hooks/useMember.js";
+import { openSignIn, useMember } from "../hooks/useMember.js";
 import useReveal from "../hooks/useReveal.js";
 import TierLadder from "./TierLadder.jsx";
-import { GoogleMark } from "./AccountButton.jsx";
 
 // Landing-page section: the member tiers and how to join.
 export default function Rewards() {
@@ -11,7 +9,6 @@ export default function Rewards() {
   // Re-scan once the tiers arrive — the section renders nothing until then.
   const ref = useReveal(tiers?.length || 0);
   const member = useMember();
-  const [busy, setBusy] = useState(false);
   if (!tiers?.length) return null;
 
   return (
@@ -37,21 +34,8 @@ export default function Rewards() {
             Book now
           </a>
         ) : (
-          <button
-            type="button"
-            className="btn btn--solid rewards__signin"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                await signIn();
-                if (await signedIn()) window.location.assign("/account");
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            <GoogleMark /> {busy ? "Signing in…" : "Join free with Google"}
+          <button type="button" className="btn btn--solid rewards__signin" onClick={openSignIn}>
+            Join free — sign in
           </button>
         )}
         <p className="rewards__note">Optional — you can always book as a guest.</p>

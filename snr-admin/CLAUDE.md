@@ -110,8 +110,13 @@ split describes the legacy mode and the historical data.
 
 ### Member tiers — S&R Rewards (Oct 2026)
 
-- Optional **Google sign-in** on the public site (Firebase Authentication;
-  `snr-client/src/auth/firebase.js`, `hooks/useMember.js`). Signed-in
+- Optional **sign-in** on the public site (Firebase Authentication;
+  `snr-client/src/auth/firebase.js`, `hooks/useMember.js`) through one
+  sign-in window (`components/SignInModal.jsx`, `openSignIn()`): Google,
+  Facebook and email + password, as listed in `VITE_AUTH_PROVIDERS`
+  (default `google,email`) and enabled in Firebase. `status` stays
+  `loading` until the account (`me`) has arrived, and pages show skeletons
+  meanwhile, so the switch to the member view happens once. Signed-in
   renters get `/account` — a full-width **member dashboard** (tier card,
   stats, their current rental with its progress, bookings in Active/History
   tabs, perks, next-tier unlocks, link a past booking by reference code);

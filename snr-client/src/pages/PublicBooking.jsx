@@ -8,9 +8,8 @@ import { apiGetJson, apiPostJson } from "../utils/api.js";
 import Logo from "../components/Logo.jsx";
 import GearGrid, { GearImage } from "../components/GearGrid.jsx";
 import useLockBodyScroll from "../hooks/useLockBodyScroll.js";
-import { getIdToken, refreshMe, signIn, useMember } from "../hooks/useMember.js";
+import { getIdToken, looksSignedIn, openSignIn, refreshMe, useMember, wasSignedIn } from "../hooks/useMember.js";
 import { TIER_ICONS, memberPerks } from "../utils/loyalty.js";
-import { GoogleMark } from "../components/AccountButton.jsx";
 import DeliveryDetailsForm, {
   EMPTY_DELIVERY,
   deliveryMissing,
@@ -1286,8 +1285,11 @@ function CopyButton({ text }) {
 // Optional sign-in at the top of the form: members see their tier and that
 // the member price is applied; guests get a one-tap Google sign-in.
 function MemberStrip({ member }) {
-  const [busy, setBusy] = useState(false);
-  if (member.status === "off" || member.status === "loading") return null;
+  if (member.status === "off") return null;
+  if (member.status === "loading") {
+    // Same footprint as the final strip, so the form doesn't jump.
+    return wasSignedIn() ? <div className="bk-member bk-member--skeleton" aria-hidden="true" /> : null;
+  }
   if (member.status === "member") {
     const tier = member.me?.tier;
     if (!tier) return null;
@@ -1300,41 +1302,24 @@ function MemberStrip({ member }) {
       <div className={`bk-member bk-member--member tier--${tier.key}`}>
         {member.user?.photo && <img src={member.user.photo} alt="" className="bk-member__avatar" referrerPolicy="no-referrer" />}
         <p className="bk-member__text">
-          Hi {(member.user?.name || "").split(" ")[0] || "there"}! You're a{" "}
+          Hi {(member.me?.renter?.name || member.user?.name || "").split(" ")[0] || "there"}! You're a{" "}
           <strong>
             {TIER_ICONS[tier.key]} {tier.name}
           </strong>{" "}
           member
           {perks.length ? ` — ${perks.join(" + ")} applied to this booking.` : " — your details are filled in for you."}
         </p>
-        <a href="/account" className="bk-member__link">
-          My rewards →
-        </a>
       </div>
     );
   }
   return (
     <div className="bk-member">
       <p className="bk-member__text">
-        <strong>Have a Google account?</strong> Sign in to fill in your details, skip re-uploading IDs, and earn
+        <strong>Rented with us before?</strong> Sign in to fill in your details, skip re-uploading IDs, and earn
         member discounts. Optional.
       </p>
-      <button
-        type="button"
-        className="btn btn--outline"
-        disabled={busy}
-        onClick={async () => {
-          setBusy(true);
-          try {
-            await signIn();
-          } catch (err) {
-            window.alert(err.message || "Sign-in failed. Please try again.");
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        <GoogleMark /> {busy ? "Signing in…" : "Sign in"}
+      <button type="button" className="btn btn--outline" onClick={openSignIn}>
+        Sign in
       </button>
     </div>
   );
@@ -1348,8 +1333,8 @@ export function BookingTopBar() {
       <a href="/" className="bk-top__brand" aria-label="Back to S&R Rentals home">
         <Logo size="sm" withTagline={false} />
       </a>
-      {member.status === "member" ? (
-        <a href="/" className={`dash-top__tier tier--${tier?.key || "bronze"}`}>
+      {looksSignedIn(member) ? (
+        <a href="/" className={`dash-top__tier tier--${tier?.key || "bronze"} ${tier ? "" : "is-skeleton"}`}>
           ← {tier ? `${TIER_ICONS[tier.key]} ${tier.name} · ` : ""}My home
         </a>
       ) : (

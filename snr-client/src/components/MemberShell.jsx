@@ -1,5 +1,5 @@
 import Logo from "./Logo.jsx";
-import { signOut } from "../hooks/useMember.js";
+import { looksSignedIn, signOut } from "../hooks/useMember.js";
 import { TIER_ICONS } from "../utils/loyalty.js";
 
 // The signed-in side of the site: an app-style top bar (and a bottom tab bar
@@ -19,7 +19,7 @@ function isActive(href) {
 }
 
 export default function MemberShell({ member, children }) {
-  const signedIn = member?.status === "member";
+  const signedIn = member ? looksSignedIn(member) : false;
   const tier = member?.me?.tier;
   return (
     <main className={`dash-page ${signedIn ? "has-tabbar" : ""}`}>
@@ -40,7 +40,11 @@ export default function MemberShell({ member, children }) {
           </a>
           {signedIn && (
             <div className="dash-top__me">
-              <a href="/account" className={`dash-top__tier tier--${tier?.key || "bronze"}`} title="My rentals & rewards">
+              <a
+                href="/account"
+                className={`dash-top__tier tier--${tier?.key || "bronze"} ${tier ? "" : "is-skeleton"}`}
+                title="My rentals & rewards"
+              >
                 {member.user?.photo ? (
                   <img src={member.user.photo} alt="" referrerPolicy="no-referrer" />
                 ) : (
