@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useCatalog } from "../data/catalog.js";
-import { signIn, useMember } from "../hooks/useMember.js";
+import { signIn, signedIn, useMember } from "../hooks/useMember.js";
 import useReveal from "../hooks/useReveal.js";
 import TierLadder from "./TierLadder.jsx";
 import { GoogleMark } from "./AccountButton.jsx";
@@ -45,6 +45,7 @@ export default function Rewards() {
               setBusy(true);
               try {
                 await signIn();
+                if (await signedIn()) window.location.assign("/account");
               } finally {
                 setBusy(false);
               }

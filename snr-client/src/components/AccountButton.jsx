@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { signIn, useMember, wasSignedIn } from "../hooks/useMember.js";
+import { signIn, signedIn, useMember, wasSignedIn } from "../hooks/useMember.js";
 import { TIER_ICONS } from "../utils/loyalty.js";
 
 // Header control: "Sign in" for guests, the renter's avatar + tier for
@@ -37,6 +37,8 @@ export default function AccountButton({ onNavigate, className = "" }) {
         setBusy(true);
         try {
           await signIn();
+          // Members land on their dashboard.
+          if (await signedIn()) window.location.assign("/account");
         } catch (err) {
           window.alert(err.message || "Sign-in failed. Please try again.");
         } finally {

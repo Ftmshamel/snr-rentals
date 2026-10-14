@@ -20,9 +20,9 @@ export default function TierLadder({ tiers, current = null, compact = false }) {
                 {TIER_ICONS[t.key]}
               </span>
               <span className="tier-card__name">{t.name}</span>
-              {here && <span className="tier-card__here">You're here</span>}
             </div>
             <div className="tier-card__body">
+              {here && <span className="tier-card__here">✓ Your tier</span>}
               <p className="tier-card__req">{requirementLabel(t)}</p>
               <ul className="tier-card__perks">
                 {perkLines(t).map((line) => (
