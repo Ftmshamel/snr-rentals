@@ -1,5 +1,5 @@
 const { setCorsJson } = require("../../lib/cors");
-const { adminUsers } = require("../../lib/authConfig");
+const { adminUsers, hashProblems } = require("../../lib/authConfig");
 const { verifyPassword } = require("../../lib/password");
 const { signSession, SESSION_HOURS } = require("../../lib/session");
 const { isRateLimited } = require("../../lib/public/rateLimit");
@@ -37,7 +37,17 @@ module.exports = async (req, res) => {
     return res.status(503).json({ ok: false, error: "Admin login isn't set up yet on the server." });
   }
 
-  const match = users.find((u) => u.username === String(username || ""));
+  // A set-but-broken hash would only ever say "Invalid credentials" — name it.
+  const broken = hashProblems(users);
+  if (broken.length) {
+    console.error("[api/auth/login] not a valid scrypt hash:", broken.join(", "));
+    return res.status(503).json({
+      ok: false,
+      error: `Admin login is set up wrong on the server: ${broken.join(" and ")} must be only the value that starts with "scrypt:".`,
+    });
+  }
+
+  const match = users.find((u) => u.username === String(username || "").trim().toLowerCase());
   // Hash even for an unknown username so both cases take the same time.
   const ok = verifyPassword(String(password || ""), match ? match.passwordHash : users[0].passwordHash) && Boolean(match);
   if (!ok) return res.status(401).json({ ok: false, error: "Invalid credentials" });
