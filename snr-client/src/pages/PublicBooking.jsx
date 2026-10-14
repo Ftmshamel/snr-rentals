@@ -1327,21 +1327,16 @@ function MemberStrip({ member }) {
 
 export function BookingTopBar() {
   const member = useMember();
-  const tier = member.me?.tier;
+  // Members see the member navigation (MemberShell, added in App) instead.
+  if (looksSignedIn(member)) return null;
   return (
     <div className="bk-top">
       <a href="/" className="bk-top__brand" aria-label="Back to S&R Rentals home">
         <Logo size="sm" withTagline={false} />
       </a>
-      {looksSignedIn(member) ? (
-        <a href="/" className={`dash-top__tier tier--${tier?.key || "bronze"} ${tier ? "" : "is-skeleton"}`}>
-          ← {tier ? `${TIER_ICONS[tier.key]} ${tier.name} · ` : ""}My home
-        </a>
-      ) : (
-        <a href="/" className="bk-top__back">
-          ← Back to site
-        </a>
-      )}
+      <a href="/" className="bk-top__back">
+        ← Back to site
+      </a>
     </div>
   );
 }
