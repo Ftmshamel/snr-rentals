@@ -88,6 +88,11 @@ export async function signIn() {
   }
 }
 
+/** True once a sign-in has completed in this tab. */
+export async function signedIn() {
+  return Boolean(await getIdToken());
+}
+
 export async function signOut() {
   const { auth, mod } = await loadAuth();
   await mod.signOut(auth);

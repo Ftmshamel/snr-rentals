@@ -1,60 +1,253 @@
 import { useState } from "react";
-import { BookingTopBar } from "./PublicBooking.jsx";
+import Logo from "../components/Logo.jsx";
 import MemberCard from "../components/MemberCard.jsx";
 import TierLadder from "../components/TierLadder.jsx";
 import { GoogleMark } from "../components/AccountButton.jsx";
 import { useCatalog } from "../data/catalog.js";
 import { claimBooking, refreshMe, signIn, signOut, useMember } from "../hooks/useMember.js";
-import { perkLines } from "../utils/loyalty.js";
+import { TIER_ICONS, perkLines } from "../utils/loyalty.js";
 
-// /account — a renter's rewards: tier card, perks, bookings, and linking a
-// booking they made before signing in.
+// /account — the member dashboard. Guests get a sign-in page that sells the
+// tiers; members get their own space: tier card, stats, what's happening
+// with their current rental, every booking, perks and the tier ladder.
 
-function shortDate(iso) {
+const ACTIVE = new Set(["pending", "reserved", "out_for_delivery", "with_renter", "for_return", "overdue"]);
+const JOURNEY = [
+  { key: "pending", label: "Requested" },
+  { key: "reserved", label: "Approved" },
+  { key: "out", label: "With you" },
+  { key: "returned", label: "Returned" },
+];
+const JOURNEY_INDEX = {
+  pending: 0,
+  reserved: 1,
+  out_for_delivery: 1,
+  with_renter: 2,
+  for_return: 2,
+  overdue: 2,
+  returned: 3,
+  completed: 3,
+};
+
+function shortDate(iso, withYear = false) {
   if (!iso) return "";
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(withYear ? { year: "numeric" } : {}),
+  });
+}
+
+function weekday(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "long" });
+}
+
+function time12(hhmm) {
+  if (!hhmm) return "";
+  const [h, m] = hhmm.split(":").map(Number);
+  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
 }
 
 function peso(n) {
   return `₱${Number(n || 0).toLocaleString()}`;
 }
 
-function SignInPanel({ tiers }) {
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+}
+
+function DashTopBar({ member }) {
+  return (
+    <header className="dash-top">
+      <a href="/" className="dash-top__brand" aria-label="S&R Rentals home">
+        <Logo size="sm" withTagline={false} />
+      </a>
+      <nav className="dash-top__nav">
+        <a href="/">Home</a>
+        <a href="/track">Track</a>
+        <a href="/book" className="btn btn--solid btn--sm">
+          Book a camera
+        </a>
+        {member?.status === "member" && (
+          <button type="button" className="dash-top__out" onClick={() => signOut()}>
+            Sign out
+          </button>
+        )}
+      </nav>
+    </header>
+  );
+}
+
+function SignInPage({ tiers }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   return (
-    <>
-      <section className="acct-signin">
-        <p className="bk-kicker">S&amp;R Rewards ✦</p>
-        <h1 className="bk-title">Your account</h1>
-        <p className="bk-sub">
-          Sign in with Google to see your tier, keep all your bookings in one place, and get your member price
-          automatically when you book.
-        </p>
-        <button
-          type="button"
-          className="btn btn--solid acct-google"
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            setError(null);
-            try {
-              await signIn();
-            } catch (err) {
-              setError(err.message || "Sign-in failed. Please try again.");
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          <GoogleMark /> {busy ? "Signing in…" : "Continue with Google"}
-        </button>
-        {error && <p className="bk-error">✕ {error}</p>}
-        <p className="acct-fine">We only use your name and email. You can still book as a guest anytime.</p>
+    <div className="dash">
+      <section className="dash-join">
+        <div className="dash-join__copy">
+          <p className="bk-kicker">S&amp;R Rewards ✦</p>
+          <h1 className="dash-join__title">Rent more. Pay less.</h1>
+          <p className="dash-join__lead">
+            Sign in with Google and every completed rental moves you up a tier — Silver, Gold, then Platinum. Your
+            discount and free add-ons apply to the price automatically when you book.
+          </p>
+          <ul className="dash-join__points">
+            <li>Your details filled in for you — no retyping</li>
+            <li>Skip re-uploading IDs after your first rental</li>
+            <li>All your bookings and live tracking in one place</li>
+          </ul>
+          <button
+            type="button"
+            className="btn btn--solid dash-join__google"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              setError(null);
+              try {
+                await signIn();
+              } catch (err) {
+                setError(err.message || "Sign-in failed. Please try again.");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <GoogleMark /> {busy ? "Signing in…" : "Continue with Google"}
+          </button>
+          {error && <p className="bk-error">✕ {error}</p>}
+          <p className="dash-join__fine">Free. We only use your name and email. You can always book as a guest.</p>
+        </div>
+        <div className="dash-join__ladder">
+          <TierLadder tiers={tiers} />
+        </div>
       </section>
-      <TierLadder tiers={tiers} compact />
-    </>
+    </div>
+  );
+}
+
+function Stat({ label, value, sub }) {
+  return (
+    <div className="dash-stat">
+      <span className="dash-stat__label">{label}</span>
+      <span className="dash-stat__value">{value}</span>
+      {sub && <span className="dash-stat__sub">{sub}</span>}
+    </div>
+  );
+}
+
+function UpNext({ booking }) {
+  if (!booking) {
+    return (
+      <section className="dash-panel dash-upnext dash-upnext--empty">
+        <span className="dash-panel__kicker">Up next</span>
+        <h2 className="dash-upnext__title">No rental lined up</h2>
+        <p className="dash-muted">Planning a trip? Your next booking will show its status right here.</p>
+        <a href="/book" className="btn btn--solid">
+          Book a camera
+        </a>
+      </section>
+    );
+  }
+  const step = JOURNEY_INDEX[booking.stage?.key] ?? 0;
+  const urgent = booking.stage?.key === "overdue";
+  return (
+    <section className={`dash-panel dash-upnext ${urgent ? "is-urgent" : ""}`}>
+      <div className="dash-upnext__head">
+        <span className="dash-panel__kicker">{booking.stage?.key === "pending" ? "Waiting for approval" : "Your current rental"}</span>
+        <span className="dash-upnext__badge">{booking.stage?.label}</span>
+      </div>
+      <h2 className="dash-upnext__title">{booking.camera}</h2>
+      <div className="dash-upnext__dates">
+        <div>
+          <span>{booking.mode === "delivery" ? "Delivery" : "Pick-up"}</span>
+          <strong>
+            {weekday(booking.pickUpDate)}, {shortDate(booking.pickUpDate)}
+          </strong>
+          <em>{time12(booking.pickUpTime)}</em>
+        </div>
+        <span className="dash-upnext__arrow" aria-hidden="true">
+          →
+        </span>
+        <div>
+          <span>Return</span>
+          <strong>
+            {weekday(booking.returnDate)}, {shortDate(booking.returnDate)}
+          </strong>
+          <em>{time12(booking.returnTime)}</em>
+        </div>
+      </div>
+      <ol className="dash-journey" aria-label="Rental progress">
+        {JOURNEY.map((s, i) => (
+          <li key={s.key} className={i < step ? "is-done" : i === step ? "is-now" : ""}>
+            <span className="dash-journey__dot">{i < step ? "✓" : i + 1}</span>
+            <span className="dash-journey__label">{s.label}</span>
+          </li>
+        ))}
+      </ol>
+      <div className="dash-upnext__foot">
+        <span className="dash-muted">
+          Ref <strong>{booking.ref}</strong>
+          {booking.fee != null && ` · ${peso(booking.fee)}`}
+          {booking.savings > 0 && <em className="dash-saved"> · saved {peso(booking.savings)}</em>}
+        </span>
+        <a href={`/track?ref=${encodeURIComponent(booking.ref)}`} className="btn btn--solid btn--sm">
+          Track live →
+        </a>
+      </div>
+    </section>
+  );
+}
+
+function BookingsPanel({ bookings }) {
+  const [tab, setTab] = useState("active");
+  const active = bookings.filter((b) => ACTIVE.has(b.stage?.key));
+  const past = bookings.filter((b) => !ACTIVE.has(b.stage?.key));
+  const list = tab === "active" ? active : past;
+  return (
+    <section className="dash-panel">
+      <div className="dash-panel__head">
+        <h2 className="dash-panel__title">My bookings</h2>
+        <div className="dash-tabs" role="tablist">
+          <button type="button" role="tab" aria-selected={tab === "active"} className={tab === "active" ? "is-on" : ""} onClick={() => setTab("active")}>
+            Active <span>{active.length}</span>
+          </button>
+          <button type="button" role="tab" aria-selected={tab === "past"} className={tab === "past" ? "is-on" : ""} onClick={() => setTab("past")}>
+            History <span>{past.length}</span>
+          </button>
+        </div>
+      </div>
+      {list.length === 0 ? (
+        <p className="dash-muted dash-empty">{tab === "active" ? "Nothing active right now." : "No past rentals yet."}</p>
+      ) : (
+        <ul className="dash-bookings">
+          {list.map((b) => (
+            <li key={b.ref}>
+              <a href={`/track?ref=${encodeURIComponent(b.ref)}`} className="dash-booking">
+                <span className="dash-booking__date">
+                  <strong>{shortDate(b.pickUpDate).split(" ")[1]}</strong>
+                  <span>{shortDate(b.pickUpDate).split(" ")[0]}</span>
+                </span>
+                <span className="dash-booking__main">
+                  <strong>{b.camera}</strong>
+                  <span>
+                    {shortDate(b.pickUpDate)} → {shortDate(b.returnDate, true)} · {b.mode === "delivery" ? "Delivery" : "Pick-up"}
+                  </span>
+                </span>
+                <span className="dash-booking__money">
+                  {b.fee != null && <strong>{peso(b.fee)}</strong>}
+                  {b.savings > 0 && <em>saved {peso(b.savings)}</em>}
+                </span>
+                <span className={`dash-stage dash-stage--${b.stage?.key}`}>{b.stage?.label}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -63,152 +256,153 @@ function ClaimForm() {
   const [state, setState] = useState({ busy: false, error: null, done: null });
   return (
     <form
-      className="acct-claim"
+      className="dash-claim"
       onSubmit={async (e) => {
         e.preventDefault();
         if (!ref.trim()) return;
         setState({ busy: true, error: null, done: null });
         try {
           await claimBooking(ref.trim());
-          setState({ busy: false, error: null, done: `Added ${ref.trim().toUpperCase()} to your account.` });
+          setState({ busy: false, error: null, done: `Added ${ref.trim().toUpperCase()}.` });
           setRef("");
         } catch (err) {
           setState({ busy: false, error: err.message, done: null });
         }
       }}
     >
-      <label htmlFor="claim-ref" className="acct-claim__label">
-        Booked before you signed in? Add it with its reference code — it counts toward your tier once completed.
-      </label>
-      <div className="acct-claim__row">
-        <input
-          id="claim-ref"
-          value={ref}
-          onChange={(e) => setRef(e.target.value)}
-          placeholder="PUBLIC-…"
-          className="bk-input"
-          autoComplete="off"
-        />
-        <button type="submit" className="btn btn--outline" disabled={state.busy || !ref.trim()}>
+      <label htmlFor="claim-ref">Booked before you signed in? Add it with its reference code — it counts toward your tier.</label>
+      <div className="dash-claim__row">
+        <input id="claim-ref" value={ref} onChange={(e) => setRef(e.target.value)} placeholder="PUBLIC-…" className="bk-input" autoComplete="off" />
+        <button type="submit" className="btn btn--outline btn--sm" disabled={state.busy || !ref.trim()}>
           {state.busy ? "Adding…" : "Add"}
         </button>
       </div>
       {state.error && <p className="bk-error">✕ {state.error}</p>}
-      {state.done && <p className="acct-ok">✓ {state.done}</p>}
+      {state.done && <p className="dash-ok">✓ {state.done}</p>}
     </form>
+  );
+}
+
+function Dashboard({ me, user }) {
+  const name = (me.renter?.name || user?.name || "there").split(" ")[0];
+  const active = me.bookings.filter((b) => ACTIVE.has(b.stage?.key));
+  // The rental that matters now: one that's out (soonest return), else the next pick-up.
+  const out = active.filter((b) => ["with_renter", "for_return", "overdue", "out_for_delivery"].includes(b.stage?.key));
+  const upNext =
+    out.sort((a, b) => String(a.returnDate).localeCompare(String(b.returnDate)))[0] ||
+    [...active].sort((a, b) => String(a.pickUpDate).localeCompare(String(b.pickUpDate)))[0] ||
+    null;
+  const saved = me.bookings.reduce((s, b) => s + (b.savings || 0), 0);
+  const current = perkLines(me.tier);
+  const unlock = me.next ? perkLines(me.next).filter((line) => !current.includes(line)) : [];
+
+  return (
+    <div className="dash">
+      <section className="dash-hero">
+        <div className="dash-hero__left">
+          <p className="dash-hero__hello">
+            {greeting()}, {name} <span aria-hidden="true">👋</span>
+          </p>
+          <h1 className="dash-hero__title">Your dashboard</h1>
+          <MemberCard me={me} user={user} />
+        </div>
+        <div className="dash-stats">
+          <Stat label="Tier" value={`${TIER_ICONS[me.tier.key]} ${me.tier.name}`} sub={me.next ? `${me.toNext} to ${me.next.name}` : "Top tier"} />
+          <Stat label="Completed rentals" value={me.completed} sub="count toward your tier" />
+          <Stat label="Active bookings" value={active.length} sub={active.length ? "see below" : "none right now"} />
+          <Stat label="Saved as a member" value={peso(saved)} sub={me.tier.discountPercent ? `${me.tier.discountPercent}% off every rental` : "discounts start at Silver"} />
+        </div>
+      </section>
+
+      <div className="dash-main">
+        <div className="dash-col">
+          <UpNext booking={upNext} />
+          <BookingsPanel bookings={me.bookings} />
+        </div>
+        <aside className="dash-col">
+          <section className={`dash-panel dash-perks tier--${me.tier.key}`}>
+            <span className="dash-panel__kicker">Your {me.tier.name} perks</span>
+            {current.length ? (
+              <ul className="dash-perks__list">
+                {current.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            ) : (
+              <p>Complete rentals to unlock discounts.</p>
+            )}
+            <p className="dash-perks__auto">Applied automatically when you book signed in.</p>
+          </section>
+          {me.next && (
+            <section className="dash-panel dash-unlock">
+              <span className="dash-panel__kicker">
+                Next: {TIER_ICONS[me.next.key]} {me.next.name}
+              </span>
+              <p className="dash-unlock__count">
+                <strong>{me.toNext}</strong> more completed rental{me.toNext === 1 ? "" : "s"}
+              </p>
+              {unlock.length > 0 && (
+                <ul>
+                  {unlock.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+          <section className="dash-panel">
+            <span className="dash-panel__kicker">Link a past booking</span>
+            <ClaimForm />
+          </section>
+        </aside>
+      </div>
+
+      <section className="dash-tiers">
+        <h2 className="dash-panel__title">All tiers</h2>
+        <TierLadder tiers={me.tiers} current={me.tier.key} />
+      </section>
+
+      <p className="dash-signedin">Signed in as {me.renter?.email || user?.email}</p>
+    </div>
   );
 }
 
 export default function Account() {
   const member = useMember();
   const { tiers } = useCatalog();
-  const me = member.me;
 
   let body;
   if (member.status === "off") {
     body = (
-      <section className="acct-signin">
-        <h1 className="bk-title">Accounts are coming soon</h1>
-        <p className="bk-sub">
+      <div className="dash dash-center">
+        <h1 className="dash-join__title">Accounts are coming soon</h1>
+        <p className="dash-muted">
           You can still book and <a href="/track">track your booking</a> with your reference code.
         </p>
-      </section>
+      </div>
     );
   } else if (member.status === "guest") {
-    body = <SignInPanel tiers={tiers} />;
-  } else if (member.status === "loading" || !me) {
+    body = <SignInPage tiers={tiers} />;
+  } else if (member.status === "loading" || !member.me) {
     body = member.error ? (
-      <section className="acct-signin">
+      <div className="dash dash-center">
         <p className="bk-error">✕ {member.error}</p>
         <button type="button" className="btn btn--outline" onClick={refreshMe}>
           Try again
         </button>
-      </section>
+      </div>
     ) : (
-      <div className="acct-skeleton" aria-busy="true">
-        Loading your account…
+      <div className="dash dash-center dash-loading" aria-busy="true">
+        Loading your dashboard…
       </div>
     );
   } else {
-    const current = perkLines(me.tier);
-    const unlock = me.next ? perkLines(me.next).filter((line) => !current.includes(line)) : [];
-    body = (
-      <>
-        <MemberCard me={me} user={member.user} />
-
-        <section className="acct-section">
-          <h2 className="acct-section__title">Your perks</h2>
-          {current.length ? (
-            <ul className="acct-perks">
-              {current.map((line) => (
-                <li key={line}>✓ {line}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="acct-muted">Complete rentals to unlock discounts.</p>
-          )}
-          {me.next && unlock.length > 0 && (
-            <div className="acct-unlock">
-              <span>{me.next.name} unlocks</span>
-              <ul>
-                {unlock.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <p className="acct-muted">Applied automatically when you book while signed in.</p>
-        </section>
-
-        <section className="acct-section">
-          <div className="acct-section__head">
-            <h2 className="acct-section__title">Your bookings</h2>
-            <a href="/book" className="btn btn--solid btn--sm">
-              Book a camera
-            </a>
-          </div>
-          {me.bookings.length === 0 ? (
-            <p className="acct-muted">No bookings yet. Your next one will show up here.</p>
-          ) : (
-            <ul className="acct-bookings">
-              {me.bookings.map((b) => (
-                <li key={b.ref}>
-                  <a href={`/track?ref=${encodeURIComponent(b.ref)}`} className="acct-booking">
-                    <div className="acct-booking__main">
-                      <strong>{b.camera}</strong>
-                      <span>
-                        {shortDate(b.pickUpDate)} → {shortDate(b.returnDate)}
-                        {b.fee != null && ` · ${peso(b.fee)}`}
-                        {b.savings > 0 && <em> · saved {peso(b.savings)}</em>}
-                      </span>
-                    </div>
-                    <span className={`acct-stage acct-stage--${b.stage?.key}`}>{b.stage?.label}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-          <ClaimForm />
-        </section>
-
-        <section className="acct-section">
-          <h2 className="acct-section__title">All tiers</h2>
-          <TierLadder tiers={me.tiers} current={me.tier.key} compact />
-        </section>
-
-        <div className="acct-foot">
-          <span className="acct-muted">Signed in as {me.renter?.email || member.user?.email}</span>
-          <button type="button" className="btn btn--outline btn--sm" onClick={() => signOut()}>
-            Sign out
-          </button>
-        </div>
-      </>
-    );
+    body = <Dashboard me={member.me} user={member.user} />;
   }
 
   return (
-    <main className="bk-page acct-page">
-      <BookingTopBar />
+    <main className="dash-page">
+      <DashTopBar member={member} />
       {body}
     </main>
   );

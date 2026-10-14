@@ -112,8 +112,10 @@ split describes the legacy mode and the historical data.
 
 - Optional **Google sign-in** on the public site (Firebase Authentication;
   `snr-client/src/auth/firebase.js`, `hooks/useMember.js`). Signed-in
-  renters get `/account` (tier card, perks, bookings, link a past booking by
-  reference code), a member strip and member price on `/book`, and the
+  renters get `/account` — a full-width **member dashboard** (tier card,
+  stats, their current rental with its progress, bookings in Active/History
+  tabs, perks, next-tier unlocks, link a past booking by reference code);
+  signing in from the header or landing page lands them there, a member strip and member price on `/book`, and the
   landing page's Rewards section. Guests book exactly as before.
 - Tier = completed rentals linked to their account (`RENTER_UID`). Tiers
   and perks are owner-editable on the admin's **`/rewards`** page, which
