@@ -225,7 +225,8 @@ const STEPS = [
   "Privacy & Terms",
   "Renter Details",
   "Requirements",
-  "Review",
+  "Review & Sign",
+  "Downpayment",
 ];
 
 function initialCameraName() {
@@ -2238,11 +2239,18 @@ export default function PublicBooking() {
           (field) => field.stateKey === "proofOfDownpayment",
         )
       : REQUIREMENT_FILES;
+  // Step 4 collects the ID documents; the proof of downpayment comes last,
+  // after the renter has reviewed and signed the contract.
+  const idRequirementFiles = activeRequirementFiles.filter(
+    (field) => field.stateKey !== "proofOfDownpayment",
+  );
+  const paymentFile = REQUIREMENT_FILES.find((field) => field.stateKey === "proofOfDownpayment");
   const requirementsStepComplete =
     (form.repeatRenter !== "yes" || isRepeatVerified) &&
-    activeRequirementFiles.every((field) =>
+    idRequirementFiles.every((field) =>
       hasRequirementUpload(files[field.stateKey]),
     );
+  const paymentStepComplete = hasRequirementUpload(files[paymentFile.stateKey]);
   const hasProcessingFile = Object.values(processingFiles).some(Boolean);
   const reviewStepComplete = hasSignature(form.signatureDataUrl);
   const stepComplete = [
@@ -2251,6 +2259,7 @@ export default function PublicBooking() {
     renterAndDeliveryComplete,
     requirementsStepComplete,
     reviewStepComplete,
+    paymentStepComplete,
   ];
   const showCurrentStepErrors = validatedSteps.has(currentStep);
 
@@ -2294,14 +2303,18 @@ export default function PublicBooking() {
       if (form.repeatRenter === "yes" && !isRepeatVerified) {
         return "Please verify your previous booking first, or switch to first-time renter.";
       }
-      if (hasProcessingFile) {
+      if (idRequirementFiles.some((field) => processingFiles[field.stateKey])) {
         return "Please wait for requirement uploads to finish.";
       }
-      const missingFile = getMissingRequirement();
+      const missingFile = idRequirementFiles.find((field) => !hasRequirementUpload(files[field.stateKey]));
       if (missingFile) return `${missingFile.label} upload is required.`;
     }
     if (step === 4 && !reviewStepComplete) {
       return "Renter e-signature is required on the contract.";
+    }
+    if (step === 5) {
+      if (processingFiles[paymentFile.stateKey]) return "Please wait for the upload to finish.";
+      if (!paymentStepComplete) return "Proof of downpayment upload is required.";
     }
     return null;
   }
@@ -3227,6 +3240,20 @@ export default function PublicBooking() {
     );
   }
 
+  function renderRequirementInput(field) {
+    return (
+      <RequirementFileInput
+        key={`${field.stateKey}-${fileResetKey}`}
+        id={`${field.stateKey}-${fileResetKey}`}
+        label={field.label}
+        file={files[field.stateKey]}
+        isProcessing={Boolean(processingFiles[field.stateKey])}
+        invalid={showCurrentStepErrors && !hasRequirementUpload(files[field.stateKey])}
+        onChange={(file) => updateFile(field, file)}
+      />
+    );
+  }
+
   function renderStepContent() {
     if (currentStep === 0) {
       return (
@@ -3335,7 +3362,7 @@ export default function PublicBooking() {
                   <strong>{form.repeatVerifiedName}</strong>! Your details are
                   on file, so just set your trip type and destination below.
                   You'll also skip the ID uploads later — only the proof of
-                  downpayment is needed.
+                  downpayment is needed, in the last step.
                 </div>
               ) : (
                 <div className="bk-repeat__check">
@@ -3516,6 +3543,27 @@ export default function PublicBooking() {
     if (currentStep === 3) {
       return (
         <div className="bk-stack">
+          {isRepeatVerified ? (
+            <div className="bk-repeat__verified bk-repeat__verified--standalone">
+              ✓ Verified repeat renter — we'll reuse the IDs on your record.
+              Nothing to upload here; tap Next.
+            </div>
+          ) : (
+            <p className="bk-sub bk-sub--small">
+              Upload clear photos. You'll pay the downpayment in the last step,
+              after you've reviewed and signed the contract.
+            </p>
+          )}
+          <div className="bk-grid-2">
+            {idRequirementFiles.map((field) => renderRequirementInput(field))}
+          </div>
+        </div>
+      );
+    }
+
+    if (currentStep === 5) {
+      return (
+        <div className="bk-stack">
           {order.rentalTotal > 0 ? (
             renderQuotation({ payment: true })
           ) : (
@@ -3526,25 +3574,7 @@ export default function PublicBooking() {
             </div>
           )}
           <PaymentQrBlock />
-          {isRepeatVerified && (
-            <div className="bk-repeat__verified bk-repeat__verified--standalone">
-              ✓ Verified repeat renter — we'll reuse the IDs on your record.
-              Only the proof of downpayment is needed below.
-            </div>
-          )}
-          <div className="bk-grid-2">
-            {activeRequirementFiles.map((field) => (
-              <RequirementFileInput
-                key={`${field.stateKey}-${fileResetKey}`}
-                id={`${field.stateKey}-${fileResetKey}`}
-                label={field.label}
-                file={files[field.stateKey]}
-                isProcessing={Boolean(processingFiles[field.stateKey])}
-                invalid={showCurrentStepErrors && !hasRequirementUpload(files[field.stateKey])}
-                onChange={(file) => updateFile(field, file)}
-              />
-            ))}
-          </div>
+          <div className="bk-grid-2">{renderRequirementInput(paymentFile)}</div>
         </div>
       );
     }
