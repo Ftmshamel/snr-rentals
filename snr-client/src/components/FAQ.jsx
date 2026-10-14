@@ -30,7 +30,7 @@ export default function FAQ() {
   return (
     <section id="faqs" className="section" ref={ref}>
       <div className="section__head reveal">
-        <p className="section__kicker">Good to Know ✦</p>
+        <p className="section__kicker">Good to know</p>
         <h2 className="section__title section__title--md">FAQs</h2>
       </div>
 

@@ -101,7 +101,7 @@ export default function LalamoveBox({ booking, kind, link, onLinkChange, onSaveL
   const savedLink = kind === "delivery" ? booking.LALAMOVE_DELIVERY_LINK : booking.LALAMOVE_RETURN_LINK;
 
   const shop = {
-    title: "🏠 S&R Rentals (shop)",
+    title: "S&R Rentals (shop)",
     rows: [
       { label: "Address", value: SHOP.address },
       { label: "Pin (lat, lng)", value: `${SHOP.lat}, ${SHOP.lng}` },
@@ -111,7 +111,7 @@ export default function LalamoveBox({ booking, kind, link, onLinkChange, onSaveL
     ],
   };
   const renter = {
-    title: kind === "delivery" ? "📍 Renter (drop-off)" : "📍 Renter (pick-up)",
+    title: kind === "delivery" ? "Renter (drop-off)" : "Renter (pick-up)",
     rows: [
       { label: "Address", value: stop.address },
       hasPin && { label: "Pin (lat, lng)", value: `${stop.lat}, ${stop.lng}` },
@@ -126,7 +126,7 @@ export default function LalamoveBox({ booking, kind, link, onLinkChange, onSaveL
   return (
     <div className="space-y-2 rounded-[14px] border-2 border-[rgba(58,58,58,0.25)] bg-white/70 p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="ui-kicker text-[0.6rem]">🛵 Lalamove {kind === "delivery" ? "delivery" : "return pickup"}</span>
+        <span className="ui-kicker text-[0.6rem]">Lalamove {kind === "delivery" ? "delivery" : "return pickup"}</span>
         {savedLink ? (
           <span className="rounded-full bg-green-600 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-white">Booked</span>
         ) : (

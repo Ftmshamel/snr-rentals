@@ -14,7 +14,7 @@ export default function Terms() {
   return (
     <section id="terms" className="section" ref={ref}>
       <div className="section__head reveal">
-        <p className="section__kicker">Read Before Booking ✦</p>
+        <p className="section__kicker">Read before booking</p>
         <h2 className="section__title section__title--md">
           Terms &amp; Conditions
         </h2>

@@ -7,7 +7,7 @@ export default function HowToRent() {
   return (
     <section id="how-to-rent" className="section" ref={ref}>
       <div className="section__head reveal">
-        <p className="section__kicker">Simple Process ✦</p>
+        <p className="section__kicker">Simple process</p>
         <h2 className="section__title">How to Rent?</h2>
       </div>
 
@@ -31,7 +31,7 @@ export default function HowToRent() {
                   ))}
                 </ul>
               )}
-              <p className="step__note">✦ {step.note}</p>
+              <p className="step__note">{step.note}</p>
             </div>
           </li>
         ))}

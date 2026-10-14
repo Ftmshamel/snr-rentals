@@ -3,7 +3,7 @@ import RentalSpotlight, { greeting, peso, spotlightBooking } from "../components
 import { useCatalog } from "../data/catalog.js";
 import { getCameraAssets } from "../data/assets.js";
 import { CONTACT } from "../data/content.js";
-import { TIER_ICONS, memberPerks } from "../utils/loyalty.js";
+import { memberPerks } from "../utils/loyalty.js";
 
 // "/" for a signed-in renter: their own home instead of the marketing page —
 // greeting and tier, the rental that's happening now, and the cameras with
@@ -66,11 +66,12 @@ export default function MemberHome({ member }) {
       <div className="dash mh-in">
         <section className={`mh-hero tier--${tier?.key || "bronze"}`}>
           <div className="mh-hero__text">
-            <p className="mh-hero__hello">{greeting()},</p>
-            <h1 className="mh-hero__name">{name}!</h1>
+            <h1 className="mh-hero__name">
+              {greeting()}, {name}.
+            </h1>
             {tier ? (
               <p className="mh-hero__tier">
-                {TIER_ICONS[tier.key]} {tier.name} member
+                {tier.name} member
                 {tier.discountPercent ? ` · ${tier.discountPercent}% off every rental` : ""}
                 {tier.freeAddons ? ` · ${tier.freeAddons} free add-on` : ""}
               </p>
@@ -94,7 +95,7 @@ export default function MemberHome({ member }) {
               </div>
               <span className="mh-hero__count">
                 <strong>{me.completed}</strong> completed
-                {me.next ? ` · ${me.toNext} more to ${TIER_ICONS[me.next.key]} ${me.next.name}` : ""}
+                {me.next ? ` · ${me.toNext} more to ${me.next.name}` : ""}
               </span>
             </div>
           )}
@@ -105,19 +106,19 @@ export default function MemberHome({ member }) {
           <section className="dash-panel mh-help">
             <span className="dash-panel__kicker">Quick actions</span>
             <a href="/track" className="mh-action">
-              <span>⌖</span> Track a booking
+              Track a booking
             </a>
             <a href="/account" className="mh-action">
-              <span>▤</span> All my bookings
+              All my bookings
             </a>
             <a href="/rewards" className="mh-action">
-              <span>★</span> My rewards &amp; perks
+              My rewards &amp; perks
             </a>
             <a href={CONTACT.facebookUrl} target="_blank" rel="noreferrer" className="mh-action">
-              <span>✉</span> Message us on Facebook
+              Message us on Facebook
             </a>
             <a href={CONTACT.phoneHref} className="mh-action">
-              <span>☎</span> Call {CONTACT.phone}
+              Call {CONTACT.phone}
             </a>
           </section>
         </div>

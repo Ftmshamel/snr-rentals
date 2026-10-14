@@ -15,11 +15,11 @@ export default function Footer() {
           <a href={CONTACT.facebookUrl} target="_blank" rel="noreferrer">
             {CONTACT.facebookName}
           </a>
-          <span aria-hidden="true"> ✦ </span>
+          <span aria-hidden="true"> · </span>
           <a href={CONTACT.instagramUrl} target="_blank" rel="noreferrer">
             {CONTACT.instagramHandle}
           </a>
-          <span aria-hidden="true"> ✦ </span>
+          <span aria-hidden="true"> · </span>
           <a href={CONTACT.tiktokUrl} target="_blank" rel="noreferrer">
             {CONTACT.tiktokHandle}
           </a>

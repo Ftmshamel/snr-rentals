@@ -1,5 +1,4 @@
 import { openSignIn, useMember, wasSignedIn } from "../hooks/useMember.js";
-import { TIER_ICONS } from "../utils/loyalty.js";
 
 // Header control: "Sign in" for guests, the renter's avatar + tier for
 // members (links to /account). Hidden when sign-in isn't configured.
@@ -21,7 +20,7 @@ export default function AccountButton({ onNavigate, className = "" }) {
           </span>
         )}
         <span className={`account-btn__tier ${tier ? `account-btn__tier--${tier.key}` : ""}`}>
-          {tier ? `${TIER_ICONS[tier.key]} ${tier.name}` : "My account"}
+          {tier ? `${tier.name}` : "My account"}
         </span>
       </a>
     );

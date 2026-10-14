@@ -140,7 +140,7 @@ function ReturnPickup({ booking, onSaved }) {
 function RiderLine({ label, info }) {
   return (
     <p className="bk-track__text bk-track__rider">
-      🛵 <strong>{label}:</strong> {info.status}
+      <strong>{label}:</strong> {info.status}
       {info.rider && (
         <>
           {" "}
@@ -204,12 +204,12 @@ function Result({ booking, onUpdated }) {
         <div className="bk-track__links">
           {showDeliveryLink && (
             <a href={booking.lalamove.deliveryLink} target="_blank" rel="noreferrer" className="btn btn--solid">
-              🛵 Track your Lalamove rider
+              Track your Lalamove rider
             </a>
           )}
           {booking.lalamove.returnLink && !["returned", "completed"].includes(booking.stage.key) && (
             <a href={booking.lalamove.returnLink} target="_blank" rel="noreferrer" className="btn btn--solid">
-              🛵 Track the return rider
+              Track the return rider
             </a>
           )}
         </div>
@@ -300,7 +300,7 @@ export default function TrackBooking() {
     <main className="bk-page">
       <BookingTopBar />
       <header className="bk-head">
-        <p className="bk-kicker">Track Booking ✦</p>
+        <p className="bk-kicker">Track booking</p>
         <h1 className="bk-title">Where's my camera?</h1>
         <p className="bk-sub bk-sub--small">
           {picks.length

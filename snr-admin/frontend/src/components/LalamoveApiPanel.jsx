@@ -50,7 +50,7 @@ export default function LalamoveApiPanel({ booking, kind, serial, needsSerial, e
   return (
     <div className="space-y-2 rounded-[14px] border-2 border-[color:var(--color-ink)] bg-white/80 p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="ui-kicker text-[0.6rem]">🛵 Lalamove {kind === "delivery" ? "delivery" : "return pickup"} · API</span>
+        <span className="ui-kicker text-[0.6rem]">Lalamove {kind === "delivery" ? "delivery" : "return pickup"} · API</span>
         {sandbox && (
           <span className="rounded-full border-2 border-amber-500 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-amber-700">
             Sandbox · test only
@@ -94,7 +94,7 @@ export default function LalamoveApiPanel({ booking, kind, serial, needsSerial, e
               rel="noreferrer"
               className="font-mono text-[10px] font-bold underline"
             >
-              📍 Rider location — open in Google Maps
+              Rider location — open in Google Maps
             </a>
           )}
           {kind === "return" && order.status === "COMPLETED" && (

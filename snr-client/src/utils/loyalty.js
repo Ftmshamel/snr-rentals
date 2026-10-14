@@ -2,7 +2,8 @@
 // perks (snr-admin backend/lib/loyalty.js); this only displays them and
 // previews the member price. Keep `memberPerks` identical to the backend's.
 
-export const TIER_ICONS = { bronze: "◆", silver: "✦", gold: "★", platinum: "♛" };
+// Tiers are shown by name and colour only.
+export const TIER_ICONS = { bronze: "", silver: "", gold: "", platinum: "" };
 
 export function memberPerks(member, cameraFee, addons) {
   if (!member) return { discount: 0, freeAddons: [], freeAmount: 0, savings: 0 };
@@ -20,7 +21,7 @@ export function perkLines(tier) {
   const lines = [];
   if (tier.discountPercent) lines.push(`${tier.discountPercent}% off every camera rental`);
   if (tier.freeAddons) lines.push(`${tier.freeAddons} free add-on${tier.freeAddons > 1 ? "s" : ""} per rental`);
-  if (tier.priority) lines.push("Priority — your requests are reviewed first");
+  if (tier.priority) lines.push("Priority review of your requests");
   return [...lines, ...(tier.perks || [])];
 }
 

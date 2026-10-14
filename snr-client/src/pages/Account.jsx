@@ -7,7 +7,7 @@ import { findCamera, useCatalog } from "../data/catalog.js";
 import { getCameraAssets } from "../data/assets.js";
 import { CONTACT } from "../data/content.js";
 import { claimBooking, openSignIn, refreshMe, signOut, useMember } from "../hooks/useMember.js";
-import { TIER_ICONS, perkLines } from "../utils/loyalty.js";
+import { perkLines } from "../utils/loyalty.js";
 
 // Member pages, each with one job:
 //   /account   My rentals — every booking, with its progress and a Track link
@@ -31,14 +31,14 @@ function SignInPage({ tiers }) {
     <div className="dash mh-in">
       <section className="dash-join">
         <div className="dash-join__copy">
-          <p className="bk-kicker">S&amp;R Rewards ✦</p>
-          <h1 className="dash-join__title">Rent more. Pay less.</h1>
+          <p className="bk-kicker">S&amp;R Rewards</p>
+          <h1 className="dash-join__title">Your rentals, in one place.</h1>
           <p className="dash-join__lead">
-            Sign in and every completed rental moves you up a tier — Silver, Gold, then Platinum. Your discount and
+            Sign in and every completed rental moves you up a tier: Silver, Gold, then Platinum. Your discount and
             free add-ons apply to the price automatically when you book.
           </p>
           <ul className="dash-join__points">
-            <li>Your details filled in for you — no retyping</li>
+            <li>Your details filled in for you</li>
             <li>Skip re-uploading IDs after your first rental</li>
             <li>All your bookings and live tracking in one place</li>
           </ul>
@@ -148,7 +148,7 @@ function ClaimForm() {
         }
       }}
     >
-      <label htmlFor="claim-ref">Booked before you signed in? Add it with its reference code — it counts toward your tier.</label>
+      <label htmlFor="claim-ref">Booked before you signed in? Add it with its reference code and it counts toward your tier.</label>
       <div className="dash-claim__row">
         <input id="claim-ref" value={ref} onChange={(e) => setRef(e.target.value)} placeholder="PUBLIC-…" className="bk-input" autoComplete="off" />
         <button type="submit" className="btn btn--outline btn--sm" disabled={state.busy || !ref.trim()}>
@@ -257,7 +257,7 @@ function Rewards({ me, user }) {
       <div className="rw-perks">
         <section className={`dash-panel dash-perks tier--${me.tier.key}`}>
           <span className="dash-panel__kicker">
-            Your {TIER_ICONS[me.tier.key]} {me.tier.name} perks
+            Your {me.tier.name} perks
           </span>
           <ul className="dash-perks__list">
             {current.map((line) => (
@@ -269,7 +269,7 @@ function Rewards({ me, user }) {
         {me.next ? (
           <section className="dash-panel dash-unlock">
             <span className="dash-panel__kicker">
-              Unlock at {TIER_ICONS[me.next.key]} {me.next.name}
+              Unlock at {me.next.name}
             </span>
             <p className="dash-unlock__count">
               <strong>{me.toNext}</strong> more completed rental{me.toNext === 1 ? "" : "s"}

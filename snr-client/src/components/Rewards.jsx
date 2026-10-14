@@ -14,10 +14,10 @@ export default function Rewards() {
   return (
     <section id="rewards" className="section" ref={ref}>
       <div className="section__head reveal">
-        <p className="section__kicker">Rent More, Save More ✦</p>
+        <p className="section__kicker">Member rewards</p>
         <h2 className="section__title">S&amp;R Rewards</h2>
         <p className="rewards__lead">
-          Sign in with Google when you book. Every completed rental moves you up — and your perks apply to the price
+          Sign in when you book. Each completed rental moves you up a tier, and your discount comes off the price
           automatically.
         </p>
       </div>
@@ -35,10 +35,10 @@ export default function Rewards() {
           </a>
         ) : (
           <button type="button" className="btn btn--solid rewards__signin" onClick={openSignIn}>
-            Join free — sign in
+            Sign in or create an account
           </button>
         )}
-        <p className="rewards__note">Optional — you can always book as a guest.</p>
+        <p className="rewards__note">Optional. You can always book as a guest.</p>
       </div>
     </section>
   );
