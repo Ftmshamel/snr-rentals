@@ -1,86 +1,16 @@
 import { useState } from "react";
-import Logo from "../components/Logo.jsx";
 import MemberCard from "../components/MemberCard.jsx";
 import TierLadder from "../components/TierLadder.jsx";
 import { GoogleMark } from "../components/AccountButton.jsx";
 import { useCatalog } from "../data/catalog.js";
 import { claimBooking, refreshMe, signIn, signOut, useMember } from "../hooks/useMember.js";
 import { TIER_ICONS, perkLines } from "../utils/loyalty.js";
+import MemberShell from "../components/MemberShell.jsx";
+import RentalSpotlight, { ACTIVE, greeting, peso, shortDate, spotlightBooking } from "../components/RentalSpotlight.jsx";
 
 // /account — the member dashboard. Guests get a sign-in page that sells the
 // tiers; members get their own space: tier card, stats, what's happening
 // with their current rental, every booking, perks and the tier ladder.
-
-const ACTIVE = new Set(["pending", "reserved", "out_for_delivery", "with_renter", "for_return", "overdue"]);
-const JOURNEY = [
-  { key: "pending", label: "Requested" },
-  { key: "reserved", label: "Approved" },
-  { key: "out", label: "With you" },
-  { key: "returned", label: "Returned" },
-];
-const JOURNEY_INDEX = {
-  pending: 0,
-  reserved: 1,
-  out_for_delivery: 1,
-  with_renter: 2,
-  for_return: 2,
-  overdue: 2,
-  returned: 3,
-  completed: 3,
-};
-
-function shortDate(iso, withYear = false) {
-  if (!iso) return "";
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    ...(withYear ? { year: "numeric" } : {}),
-  });
-}
-
-function weekday(iso) {
-  if (!iso) return "";
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "long" });
-}
-
-function time12(hhmm) {
-  if (!hhmm) return "";
-  const [h, m] = hhmm.split(":").map(Number);
-  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
-}
-
-function peso(n) {
-  return `₱${Number(n || 0).toLocaleString()}`;
-}
-
-function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
-}
-
-function DashTopBar({ member }) {
-  return (
-    <header className="dash-top">
-      <a href="/" className="dash-top__brand" aria-label="S&R Rentals home">
-        <Logo size="sm" withTagline={false} />
-      </a>
-      <nav className="dash-top__nav">
-        <a href="/">Home</a>
-        <a href="/track">Track</a>
-        <a href="/book" className="btn btn--solid btn--sm">
-          Book a camera
-        </a>
-        {member?.status === "member" && (
-          <button type="button" className="dash-top__out" onClick={() => signOut()}>
-            Sign out
-          </button>
-        )}
-      </nav>
-    </header>
-  );
-}
 
 function SignInPage({ tiers }) {
   const [busy, setBusy] = useState(false);
@@ -136,69 +66,6 @@ function Stat({ label, value, sub }) {
       <span className="dash-stat__value">{value}</span>
       {sub && <span className="dash-stat__sub">{sub}</span>}
     </div>
-  );
-}
-
-function UpNext({ booking }) {
-  if (!booking) {
-    return (
-      <section className="dash-panel dash-upnext dash-upnext--empty">
-        <span className="dash-panel__kicker">Up next</span>
-        <h2 className="dash-upnext__title">No rental lined up</h2>
-        <p className="dash-muted">Planning a trip? Your next booking will show its status right here.</p>
-        <a href="/book" className="btn btn--solid">
-          Book a camera
-        </a>
-      </section>
-    );
-  }
-  const step = JOURNEY_INDEX[booking.stage?.key] ?? 0;
-  const urgent = booking.stage?.key === "overdue";
-  return (
-    <section className={`dash-panel dash-upnext ${urgent ? "is-urgent" : ""}`}>
-      <div className="dash-upnext__head">
-        <span className="dash-panel__kicker">{booking.stage?.key === "pending" ? "Waiting for approval" : "Your current rental"}</span>
-        <span className="dash-upnext__badge">{booking.stage?.label}</span>
-      </div>
-      <h2 className="dash-upnext__title">{booking.camera}</h2>
-      <div className="dash-upnext__dates">
-        <div>
-          <span>{booking.mode === "delivery" ? "Delivery" : "Pick-up"}</span>
-          <strong>
-            {weekday(booking.pickUpDate)}, {shortDate(booking.pickUpDate)}
-          </strong>
-          <em>{time12(booking.pickUpTime)}</em>
-        </div>
-        <span className="dash-upnext__arrow" aria-hidden="true">
-          →
-        </span>
-        <div>
-          <span>Return</span>
-          <strong>
-            {weekday(booking.returnDate)}, {shortDate(booking.returnDate)}
-          </strong>
-          <em>{time12(booking.returnTime)}</em>
-        </div>
-      </div>
-      <ol className="dash-journey" aria-label="Rental progress">
-        {JOURNEY.map((s, i) => (
-          <li key={s.key} className={i < step ? "is-done" : i === step ? "is-now" : ""}>
-            <span className="dash-journey__dot">{i < step ? "✓" : i + 1}</span>
-            <span className="dash-journey__label">{s.label}</span>
-          </li>
-        ))}
-      </ol>
-      <div className="dash-upnext__foot">
-        <span className="dash-muted">
-          Ref <strong>{booking.ref}</strong>
-          {booking.fee != null && ` · ${peso(booking.fee)}`}
-          {booking.savings > 0 && <em className="dash-saved"> · saved {peso(booking.savings)}</em>}
-        </span>
-        <a href={`/track?ref=${encodeURIComponent(booking.ref)}`} className="btn btn--solid btn--sm">
-          Track live →
-        </a>
-      </div>
-    </section>
   );
 }
 
@@ -286,12 +153,7 @@ function ClaimForm() {
 function Dashboard({ me, user }) {
   const name = (me.renter?.name || user?.name || "there").split(" ")[0];
   const active = me.bookings.filter((b) => ACTIVE.has(b.stage?.key));
-  // The rental that matters now: one that's out (soonest return), else the next pick-up.
-  const out = active.filter((b) => ["with_renter", "for_return", "overdue", "out_for_delivery"].includes(b.stage?.key));
-  const upNext =
-    out.sort((a, b) => String(a.returnDate).localeCompare(String(b.returnDate)))[0] ||
-    [...active].sort((a, b) => String(a.pickUpDate).localeCompare(String(b.pickUpDate)))[0] ||
-    null;
+  const upNext = spotlightBooking(me.bookings);
   const saved = me.bookings.reduce((s, b) => s + (b.savings || 0), 0);
   const current = perkLines(me.tier);
   const unlock = me.next ? perkLines(me.next).filter((line) => !current.includes(line)) : [];
@@ -303,7 +165,7 @@ function Dashboard({ me, user }) {
           <p className="dash-hero__hello">
             {greeting()}, {name} <span aria-hidden="true">👋</span>
           </p>
-          <h1 className="dash-hero__title">Your dashboard</h1>
+          <h1 className="dash-hero__title">My rentals &amp; rewards</h1>
           <MemberCard me={me} user={user} />
         </div>
         <div className="dash-stats">
@@ -316,7 +178,7 @@ function Dashboard({ me, user }) {
 
       <div className="dash-main">
         <div className="dash-col">
-          <UpNext booking={upNext} />
+          <RentalSpotlight booking={upNext} />
           <BookingsPanel bookings={me.bookings} />
         </div>
         <aside className="dash-col">
@@ -362,7 +224,12 @@ function Dashboard({ me, user }) {
         <TierLadder tiers={me.tiers} current={me.tier.key} />
       </section>
 
-      <p className="dash-signedin">Signed in as {me.renter?.email || user?.email}</p>
+      <p className="dash-signedin">
+        Signed in as {me.renter?.email || user?.email} ·{" "}
+        <button type="button" className="dash-top__out" onClick={() => signOut().then(() => window.location.assign("/"))}>
+          Sign out
+        </button>
+      </p>
     </div>
   );
 }
@@ -400,10 +267,5 @@ export default function Account() {
     body = <Dashboard me={member.me} user={member.user} />;
   }
 
-  return (
-    <main className="dash-page">
-      <DashTopBar member={member} />
-      {body}
-    </main>
-  );
+  return <MemberShell member={member}>{body}</MemberShell>;
 }
