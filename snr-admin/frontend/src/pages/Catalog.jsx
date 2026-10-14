@@ -504,25 +504,36 @@ function CameraEditor({ camera, onClose, onSaved }) {
   );
 }
 
-// Placeholder serial numbers for cameras that have none yet, one per unit
-// (e.g. G7X-001, G7X-002) — so unit tracking works before the real numbers
-// are typed in. Each one can be renamed to the real serial on the camera's
-// edit form; nothing about stock or prices changes.
-const SERIAL_PREFIX = {
-  "DJI OSMO 360": "OSMO360",
-  "DJI OSMO POCKET 3": "POCKET3",
-  "DJI OSMO NANO": "NANO",
-  "INSTA360 ACE PRO 2": "ACEPRO2",
-  "CANON G7X MARK III": "G7X",
-  "FUJIFILM X-T100": "XT100",
-  "CANON EOS R50": "R50",
-};
+// Sample serial numbers for cameras that have none yet, one per unit, in each
+// brand's real format — DJI and Insta360: 14 letters/digits, Canon: 12
+// digits, Fujifilm: digit + 2 letters + 5 digits — so unit tracking works
+// (and looks right) before the real numbers are typed in. They are
+// deterministic (same camera + unit → same serial) and carry a note so
+// nobody mistakes them for the real ones; replace each on the camera's form.
+const ALNUM = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ"; // no I/O, like real serials
 
-function serialPrefix(name) {
-  const key = String(name || "").trim().toUpperCase();
-  if (SERIAL_PREFIX[key]) return SERIAL_PREFIX[key];
-  const words = key.split(/[^A-Z0-9]+/).filter((w) => w && !["DJI", "CANON", "FUJIFILM", "SONY", "NIKON", "GOPRO", "MARK"].includes(w));
-  return (words.join("") || "CAM").slice(0, 8);
+function seededRandom(text) {
+  let h = 2166136261;
+  for (const ch of text) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return () => {
+    h = Math.imul(h ^ (h >>> 15), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  };
+}
+
+function sampleSerial(name, unit) {
+  const rand = seededRandom(`${name}#${unit}`);
+  const pick = (chars, n) => Array.from({ length: n }, () => chars[Math.floor(rand() * chars.length)]).join("");
+  const digits = "0123456789";
+  const letters = ALNUM.slice(10);
+  const brand = String(name || "").trim().toUpperCase();
+  if (brand.startsWith("DJI")) return pick(digits, 1) + pick(letters, 3) + pick(ALNUM, 2) + pick(digits, 4) + pick(ALNUM, 4);
+  if (brand.startsWith("INSTA360")) return "IA" + pick(letters, 3) + pick(digits, 4) + pick(ALNUM, 5);
+  if (brand.startsWith("CANON")) return pick("123456789", 1) + pick(digits, 11);
+  if (brand.startsWith("FUJIFILM")) return pick("123456789", 1) + pick(letters, 2) + pick(digits, 5);
+  return pick(ALNUM, 10);
 }
 
 /** { camera, serials } for every camera without serials. */
@@ -531,13 +542,12 @@ function placeholderSerials(cameras) {
   const plan = [];
   for (const c of cameras) {
     if ((c.serials || []).length > 0 || !(Number(c.units) > 0)) continue;
-    const prefix = serialPrefix(c.name);
     const serials = [];
     for (let n = 1; serials.length < Number(c.units); n++) {
-      const serial = `${prefix}-${String(n).padStart(3, "0")}`;
+      const serial = sampleSerial(c.name, n);
       if (taken.has(serial)) continue;
       taken.add(serial);
-      serials.push({ serial, active: true, note: "" });
+      serials.push({ serial, active: true, note: "Sample — replace with the real serial" });
     }
     plan.push({ camera: c, serials });
   }
@@ -568,7 +578,7 @@ export default function Catalog() {
   const serialPlan = placeholderSerials(cameras);
   const generateSerials = () => {
     const preview = serialPlan.map((p) => `${p.camera.name}: ${p.serials.map((u) => u.serial).join(", ")}`).join("\n");
-    if (!window.confirm(`Add these serial numbers?\n\n${preview}\n\nYou can rename any of them to the real serial later.`)) return;
+    if (!window.confirm(`Add these serial numbers?\n\n${preview}\n\nThese are samples in each brand's format — replace them with the real serials on each camera's form.`)) return;
     run(async () => {
       for (const { camera, serials } of serialPlan) {
         await apiPatchJson(`/api/catalog?id=${encodeURIComponent(camera.id)}`, { camera: { ...camera, serials } });
@@ -618,8 +628,8 @@ export default function Catalog() {
                 {serialPlan.length} camera{serialPlan.length === 1 ? " has" : "s have"} no serial numbers yet
               </div>
               <p className="font-mono text-[11px] text-[color:var(--color-dark-gray)]">
-                Generate one per unit (e.g. {serialPlan[0].serials[0]?.serial}) so each rental is tied to a unit. Rename
-                them to the real serials anytime.
+                Generate a sample serial per unit in each brand's format (e.g. {serialPlan[0].serials[0]?.serial}) so
+                each rental is tied to a unit. Replace them with the real serials anytime.
               </p>
             </div>
             <button type="button" disabled={busy} onClick={generateSerials} className="ui-btn ui-btn--solid">
