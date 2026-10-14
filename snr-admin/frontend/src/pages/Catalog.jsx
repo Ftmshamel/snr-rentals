@@ -504,6 +504,46 @@ function CameraEditor({ camera, onClose, onSaved }) {
   );
 }
 
+// Placeholder serial numbers for cameras that have none yet, one per unit
+// (e.g. G7X-001, G7X-002) — so unit tracking works before the real numbers
+// are typed in. Each one can be renamed to the real serial on the camera's
+// edit form; nothing about stock or prices changes.
+const SERIAL_PREFIX = {
+  "DJI OSMO 360": "OSMO360",
+  "DJI OSMO POCKET 3": "POCKET3",
+  "DJI OSMO NANO": "NANO",
+  "INSTA360 ACE PRO 2": "ACEPRO2",
+  "CANON G7X MARK III": "G7X",
+  "FUJIFILM X-T100": "XT100",
+  "CANON EOS R50": "R50",
+};
+
+function serialPrefix(name) {
+  const key = String(name || "").trim().toUpperCase();
+  if (SERIAL_PREFIX[key]) return SERIAL_PREFIX[key];
+  const words = key.split(/[^A-Z0-9]+/).filter((w) => w && !["DJI", "CANON", "FUJIFILM", "SONY", "NIKON", "GOPRO", "MARK"].includes(w));
+  return (words.join("") || "CAM").slice(0, 8);
+}
+
+/** { camera, serials } for every camera without serials. */
+function placeholderSerials(cameras) {
+  const taken = new Set(cameras.flatMap((c) => (c.serials || []).map((u) => u.serial.toUpperCase())));
+  const plan = [];
+  for (const c of cameras) {
+    if ((c.serials || []).length > 0 || !(Number(c.units) > 0)) continue;
+    const prefix = serialPrefix(c.name);
+    const serials = [];
+    for (let n = 1; serials.length < Number(c.units); n++) {
+      const serial = `${prefix}-${String(n).padStart(3, "0")}`;
+      if (taken.has(serial)) continue;
+      taken.add(serial);
+      serials.push({ serial, active: true, note: "" });
+    }
+    plan.push({ camera: c, serials });
+  }
+  return plan;
+}
+
 export default function Catalog() {
   const { cameras, loading, error, readOnly, reload } = useCameras();
   const [editing, setEditing] = useState(null); // camera | "new" | null
@@ -524,6 +564,17 @@ export default function Catalog() {
   }
 
   const seed = () => run(() => apiPostJson("/api/catalog?action=seed", {}));
+
+  const serialPlan = placeholderSerials(cameras);
+  const generateSerials = () => {
+    const preview = serialPlan.map((p) => `${p.camera.name}: ${p.serials.map((u) => u.serial).join(", ")}`).join("\n");
+    if (!window.confirm(`Add these serial numbers?\n\n${preview}\n\nYou can rename any of them to the real serial later.`)) return;
+    run(async () => {
+      for (const { camera, serials } of serialPlan) {
+        await apiPatchJson(`/api/catalog?id=${encodeURIComponent(camera.id)}`, { camera: { ...camera, serials } });
+      }
+    });
+  };
 
   const remove = (camera) => {
     const ok = window.confirm(
@@ -559,6 +610,22 @@ export default function Catalog() {
           <p className="ui-card mb-4 px-4 py-3.5 font-mono text-xs text-rose-600">
             The API is not running on Firebase (DATASOURCE), so the catalogue is read-only.
           </p>
+        )}
+        {!readOnly && serialPlan.length > 0 && (
+          <div className="ui-panel mb-4 flex flex-wrap items-center justify-between gap-3 p-4">
+            <div className="min-w-0">
+              <div className="text-sm font-bold">
+                {serialPlan.length} camera{serialPlan.length === 1 ? " has" : "s have"} no serial numbers yet
+              </div>
+              <p className="font-mono text-[11px] text-[color:var(--color-dark-gray)]">
+                Generate one per unit (e.g. {serialPlan[0].serials[0]?.serial}) so each rental is tied to a unit. Rename
+                them to the real serials anytime.
+              </p>
+            </div>
+            <button type="button" disabled={busy} onClick={generateSerials} className="ui-btn ui-btn--solid">
+              Generate serial numbers
+            </button>
+          </div>
         )}
         {actionError && <p className="mb-3 font-mono text-xs text-rose-600">{actionError}</p>}
         {error && <p className="mb-3 font-mono text-xs text-rose-600">{error}</p>}
