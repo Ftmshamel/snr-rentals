@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { apiGetJson, apiPostJson } from "../utils/api.js";
 import { BookingTopBar } from "./PublicBooking.jsx";
+import { useMember } from "../hooks/useMember.js";
+import { ACTIVE, shortDate, spotlightBooking } from "../components/RentalSpotlight.jsx";
 import RiderMap from "../components/RiderMap.jsx";
 import DeliveryDetailsForm, { EMPTY_DELIVERY, deliveryMissing } from "../components/DeliveryDetailsForm.jsx";
 
@@ -272,6 +274,22 @@ export default function TrackBooking() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Members pick from their own bookings; with no code in the link, open the
+  // rental that matters now.
+  const member = useMember();
+  const mine = member.me?.bookings || [];
+  const picks = [...mine.filter((b) => ACTIVE.has(b.stage?.key)), ...mine.filter((b) => !ACTIVE.has(b.stage?.key))].slice(0, 6);
+  useEffect(() => {
+    if (initialRef || !member.me) return;
+    const first = spotlightBooking(member.me.bookings);
+    if (first) {
+      setRef(first.ref);
+      lookup(first.ref);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [member.me]);
+  const current = String(state.booking?.reference || ref || "").toUpperCase();
+
   return (
     <main className="bk-page">
       <BookingTopBar />
@@ -279,9 +297,34 @@ export default function TrackBooking() {
         <p className="bk-kicker">Track Booking ✦</p>
         <h1 className="bk-title">Where's my camera?</h1>
         <p className="bk-sub bk-sub--small">
-          Enter the reference code you got when you booked (e.g. PUBLIC-1760…).
+          {picks.length
+            ? "Pick one of your bookings, or enter any reference code."
+            : "Enter the reference code you got when you booked (e.g. PUBLIC-1760…)."}
         </p>
       </header>
+
+      {picks.length > 0 && (
+        <div className="trk-picks" role="list" aria-label="Your bookings">
+          {picks.map((b) => (
+            <button
+              key={b.ref}
+              type="button"
+              role="listitem"
+              className={`trk-pick ${current === String(b.ref).toUpperCase() ? "is-on" : ""}`}
+              onClick={() => {
+                setRef(b.ref);
+                lookup(b.ref);
+              }}
+            >
+              <strong>{b.camera}</strong>
+              <span>
+                {shortDate(b.pickUpDate)} → {shortDate(b.returnDate)}
+              </span>
+              <em>{b.stage?.label}</em>
+            </button>
+          ))}
+        </div>
+      )}
 
       <form
         className="bk-track__lookup"

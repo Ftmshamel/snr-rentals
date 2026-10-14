@@ -8,8 +8,9 @@ import { TIER_ICONS } from "../utils/loyalty.js";
 
 const TABS = [
   { href: "/", label: "Home", icon: "⌂" },
-  { href: "/book", label: "Book", icon: "＋" },
   { href: "/account", label: "My rentals", icon: "▤" },
+  { href: "/book", label: "Book", icon: "＋" },
+  { href: "/rewards", label: "Rewards", icon: "★" },
   { href: "/track", label: "Track", icon: "⌖" },
 ];
 
@@ -22,7 +23,7 @@ export default function MemberShell({ member, children }) {
   const signedIn = member ? looksSignedIn(member) : false;
   const tier = member?.me?.tier;
   return (
-    <main className={`dash-page ${signedIn ? "has-tabbar" : ""}`}>
+    <div className={`dash-page ${signedIn ? "has-tabbar" : ""}`}>
       <header className="dash-top">
         <a href="/" className="dash-top__brand" aria-label="S&R Rentals home">
           <Logo size="sm" withTagline={false} />
@@ -41,9 +42,9 @@ export default function MemberShell({ member, children }) {
           {signedIn && (
             <div className="dash-top__me">
               <a
-                href="/account"
-                className={`dash-top__tier tier--${tier?.key || "bronze"} ${tier ? "" : "is-skeleton"}`}
-                title="My rentals & rewards"
+                href="/rewards"
+                className={`dash-top__tier tier--${tier?.key || "bronze"} ${member.status === "loading" ? "is-skeleton" : ""}`}
+                title="My rewards"
               >
                 {member.user?.photo ? (
                   <img src={member.user.photo} alt="" referrerPolicy="no-referrer" />
@@ -74,6 +75,6 @@ export default function MemberShell({ member, children }) {
           ))}
         </nav>
       )}
-    </main>
+    </div>
   );
 }

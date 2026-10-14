@@ -117,14 +117,15 @@ split describes the legacy mode and the historical data.
   (default `google,email`) and enabled in Firebase. `status` stays
   `loading` until the account (`me`) has arrived, and pages show skeletons
   meanwhile, so the switch to the member view happens once. Signed-in
-  renters get `/account` — a full-width **member dashboard** (tier card,
-  stats, their current rental with its progress, bookings in Active/History
-  tabs, perks, next-tier unlocks, link a past booking by reference code);
-  signing in from the header or landing page lands them there. A
-  signed-in renter's **`/` is their own home** (`pages/MemberHome.jsx`:
-  greeting + tier, current rental, cameras at their member price), not the
-  marketing landing page; member pages share `components/MemberShell.jsx`
-  (app-style top bar, bottom tab bar on phones), a member strip and member price on `/book`, and the
+  renters get member pages, each with one job, all inside
+  `components/MemberShell.jsx` (Home · My rentals · Rewards · Track top
+  bar; bottom tab bar on phones): **`/`** their own home
+  (`pages/MemberHome.jsx`: greeting + tier, current rental, cameras at
+  their member price — not the marketing landing page), **`/account`** My
+  rentals (every booking with photo, progress and Track; link a past booking
+  by reference code), **`/rewards`** (tier card, perks, next unlock, all
+  tiers), and **`/track` / `/book`** wrapped in the same shell — Track lists
+  their bookings to tap instead of typing a code, a member strip and member price on `/book`, and the
   landing page's Rewards section. Guests book exactly as before.
 - Tier = completed rentals linked to their account (`RENTER_UID`). Tiers
   and perks are owner-editable on the admin's **`/rewards`** page, which

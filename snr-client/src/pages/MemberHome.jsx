@@ -82,7 +82,7 @@ export default function MemberHome({ member }) {
                 Book a camera
               </a>
               <a href="/account" className="btn btn--outline">
-                My rentals &amp; rewards
+                My rentals
               </a>
             </div>
           </div>
@@ -109,6 +109,9 @@ export default function MemberHome({ member }) {
             </a>
             <a href="/account" className="mh-action">
               <span>▤</span> All my bookings
+            </a>
+            <a href="/rewards" className="mh-action">
+              <span>★</span> My rewards &amp; perks
             </a>
             <a href={CONTACT.facebookUrl} target="_blank" rel="noreferrer" className="mh-action">
               <span>✉</span> Message us on Facebook

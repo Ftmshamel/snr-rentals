@@ -10,9 +10,10 @@ import Footer from "./components/Footer.jsx";
 import BackToTop from "./components/BackToTop.jsx";
 import PublicBooking from "./pages/PublicBooking.jsx";
 import TrackBooking from "./pages/TrackBooking.jsx";
-import Account from "./pages/Account.jsx";
+import Account, { RewardsPage } from "./pages/Account.jsx";
 import Rewards from "./components/Rewards.jsx";
 import MemberHome from "./pages/MemberHome.jsx";
+import MemberShell from "./components/MemberShell.jsx";
 import { looksSignedIn, useMember } from "./hooks/useMember.js";
 import SignInModal from "./components/SignInModal.jsx";
 import "./booking.css";
@@ -29,34 +30,25 @@ export default function App() {
 }
 
 function Page() {
-  if (window.location.pathname.startsWith("/track")) {
-    return (
-      <div className="booking-app">
-        <div className="grain" aria-hidden="true" />
-        <TrackBooking />
-      </div>
-    );
-  }
-
-  if (window.location.pathname.startsWith("/account")) {
-    return (
-      <div className="booking-app">
-        <div className="grain" aria-hidden="true" />
-        <Account />
-      </div>
-    );
-  }
-
-  if (window.location.pathname.startsWith("/book")) {
-    return (
-      <div className="booking-app">
-        <div className="grain" aria-hidden="true" />
-        <PublicBooking />
-      </div>
-    );
-  }
-
+  const path = window.location.pathname;
+  if (path.startsWith("/track")) return <AppPage withShell><TrackBooking /></AppPage>;
+  if (path.startsWith("/account")) return <AppPage><Account /></AppPage>;
+  if (path.startsWith("/rewards")) return <AppPage><RewardsPage /></AppPage>;
+  if (path.startsWith("/book")) return <AppPage withShell><PublicBooking /></AppPage>;
   return <Home />;
+}
+
+// Booking-style pages. `withShell`: signed-in renters get the member
+// navigation around them (the page's own "Back to site" bar hides itself).
+function AppPage({ withShell = false, children }) {
+  const member = useMember();
+  const shell = withShell && looksSignedIn(member);
+  return (
+    <div className="booking-app">
+      <div className="grain" aria-hidden="true" />
+      {shell ? <MemberShell member={member}>{children}</MemberShell> : children}
+    </div>
+  );
 }
 
 // "/": signed-in renters get their own home; everyone else the landing page.

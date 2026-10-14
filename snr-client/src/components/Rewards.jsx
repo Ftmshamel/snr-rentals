@@ -26,7 +26,7 @@ export default function Rewards() {
       </div>
       <div className="rewards__cta reveal" style={{ "--d": "240ms" }}>
         {member.status === "member" ? (
-          <a href="/account" className="btn btn--solid">
+          <a href="/rewards" className="btn btn--solid">
             View my rewards →
           </a>
         ) : member.status === "off" ? (
