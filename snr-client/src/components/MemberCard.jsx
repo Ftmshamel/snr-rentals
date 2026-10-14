@@ -1,4 +1,3 @@
-import { TIER_ICONS } from "../utils/loyalty.js";
 
 // A signed-in renter's tier, like a membership card: who they are, their
 // tier, completed rentals and how far the next tier is.
@@ -14,7 +13,7 @@ export default function MemberCard({ me, user }) {
       <div className="member-card__top">
         <span className="member-card__brand">S&amp;R Rentals · Member</span>
         <span className="member-card__tier">
-          {TIER_ICONS[tier.key]} {tier.name}
+          {tier.name}
         </span>
       </div>
       <div className="member-card__who">
@@ -39,11 +38,11 @@ export default function MemberCard({ me, user }) {
             <>
               <strong>{toNext}</strong> more completed rental{toNext === 1 ? "" : "s"} to{" "}
               <strong>
-                {TIER_ICONS[next.key]} {next.name}
+                {next.name}
               </strong>
             </>
           ) : (
-            "You've reached the top tier — thank you for renting with us!"
+            "You're at the top tier. Thank you for renting with us."
           )}
         </p>
       </div>

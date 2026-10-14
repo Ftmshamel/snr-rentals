@@ -95,14 +95,14 @@ export default function Contact() {
   return (
     <section id="contact" className="section" ref={ref}>
       <div className="section__head reveal">
-        <p className="section__kicker">Let's Talk ✦</p>
+        <p className="section__kicker">Let's talk</p>
         <h2 className="section__title section__title--md">Book Your Camera</h2>
         <p className="section__lede">
           Start a booking request right here on the site, or message us on any
           channel below — we'll check availability and confirm your slot.
         </p>
         <a href="/book" className="btn btn--solid btn--lg contact-cta reveal">
-          Start a Booking ✦
+          Start a booking
         </a>
       </div>
 

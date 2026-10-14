@@ -72,9 +72,7 @@ export default function Hero() {
       ))}
 
       <span className="sparkle sparkle--1" aria-hidden="true">✦</span>
-      <span className="sparkle sparkle--2" aria-hidden="true">★</span>
       <span className="sparkle sparkle--3" aria-hidden="true">✦</span>
-      <span className="sparkle sparkle--4" aria-hidden="true">✦</span>
 
       <a href="#cameras" className="hero__scroll-hint" aria-label="Scroll to cameras">
         <span />

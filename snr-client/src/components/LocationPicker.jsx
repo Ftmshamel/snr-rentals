@@ -135,7 +135,7 @@ export default function LocationPicker({ lat, lng, onChange, invalid = false }) 
           Search
         </button>
         <button type="button" className="bk-map__btn bk-map__btn--ghost" onClick={useMyLocation}>
-          📍 Use my location
+          Use my location
         </button>
       </div>
       {results.length > 0 && (

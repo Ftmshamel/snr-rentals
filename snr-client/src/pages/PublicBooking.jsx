@@ -9,7 +9,7 @@ import Logo from "../components/Logo.jsx";
 import GearGrid, { GearImage } from "../components/GearGrid.jsx";
 import useLockBodyScroll from "../hooks/useLockBodyScroll.js";
 import { getIdToken, looksSignedIn, openSignIn, refreshMe, useMember, wasSignedIn } from "../hooks/useMember.js";
-import { TIER_ICONS, memberPerks } from "../utils/loyalty.js";
+import { memberPerks } from "../utils/loyalty.js";
 import DeliveryDetailsForm, {
   EMPTY_DELIVERY,
   deliveryMissing,
@@ -1211,7 +1211,7 @@ function PaymentQrBlock() {
   return (
       <section className="bk-pay">
         <div className="bk-panel-label">
-          Payment QR ✦ 20% Rental Downpayment
+          Payment QR · 20% rental downpayment
         </div>
         <p className="bk-pay__deposit-reminder">
           The ₱1,000 refundable security deposit is separate from this
@@ -1304,10 +1304,10 @@ function MemberStrip({ member }) {
         <p className="bk-member__text">
           Hi {(member.me?.renter?.name || member.user?.name || "").split(" ")[0] || "there"}! You're a{" "}
           <strong>
-            {TIER_ICONS[tier.key]} {tier.name}
+            {tier.name}
           </strong>{" "}
           member
-          {perks.length ? ` — ${perks.join(" + ")} applied to this booking.` : " — your details are filled in for you."}
+          {perks.length ? `. ${perks.join(" and ")} applied to this booking.` : ". Your details are filled in for you."}
         </p>
       </div>
     );
@@ -2797,7 +2797,7 @@ export default function PublicBooking() {
     return (
       <div className={`bk-quote ${payment ? "bk-quote--payment" : ""}`}>
         <div className="bk-quote__title">
-          {payment ? "Rental Fee & Downpayment Breakdown" : "Quotation ✦"}
+          {payment ? "Rental Fee & Downpayment Breakdown" : "Quotation"}
         </div>
         <div className="bk-quote__rows">
           <div className="bk-quote__row">
@@ -2824,7 +2824,7 @@ export default function PublicBooking() {
           {quote.perks.discount > 0 && memberTier && (
             <div className="bk-quote__row bk-quote__row--member">
               <span>
-                {TIER_ICONS[memberTier.key]} {memberTier.name} member · {memberTier.discountPercent}% off camera
+                {memberTier.name} member · {memberTier.discountPercent}% off camera
               </span>
               <span className="bk-num">−{money(quote.perks.discount)}</span>
             </div>
@@ -3230,11 +3230,8 @@ export default function PublicBooking() {
       <main className="bk-page">
         <BookingTopBar />
         <section className="bk-success">
-          <span className="bk-success__sparkle bk-success__sparkle--1" aria-hidden="true">✦</span>
-          <span className="bk-success__sparkle bk-success__sparkle--2" aria-hidden="true">★</span>
-          <span className="bk-success__sparkle bk-success__sparkle--3" aria-hidden="true">✦</span>
           <p className="bk-kicker float-in" style={{ "--d": "0ms" }}>
-            Request Received ✦
+            Request received
           </p>
           <h1 className="bk-title">
             <span className="hero__word" style={{ "--d": "120ms" }}>
@@ -3330,7 +3327,7 @@ export default function PublicBooking() {
 
       <header className="bk-head">
         <p className="bk-kicker float-in" style={{ "--d": "0ms" }}>
-          Booking Request ✦
+          Booking request
         </p>
         <h1 className="bk-title">
           <span className="hero__word" style={{ "--d": "100ms" }}>

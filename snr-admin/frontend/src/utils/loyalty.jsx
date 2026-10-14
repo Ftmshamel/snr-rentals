@@ -41,7 +41,7 @@ export function MemberBadge({ member, small = false }) {
       style={{ background: TIER_COLORS[member.tier] || "#555" }}
     >
       {member.tierName}
-      {member.priority && <span aria-label="priority">★</span>}
+      {member.priority && <span>· priority</span>}
     </span>
   );
 }

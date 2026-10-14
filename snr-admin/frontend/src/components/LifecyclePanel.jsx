@@ -33,7 +33,7 @@ function Stepper({ booking, stage }) {
               }`}
             />
             <span
-              className={`truncate text-center font-mono text-[9px] uppercase tracking-wider ${
+              className={`truncate text-center text-[11px] ${
                 current ? "font-bold text-[color:var(--color-black)]" : "text-[color:var(--color-mid-gray,#8f8f8f)]"
               }`}
             >
@@ -415,7 +415,7 @@ export default function LifecyclePanel({ booking, cameras, onPatch, onReplace })
           type="button"
           disabled={busy}
           onClick={() => run({ status: "cancelled" }, "Cancel this booking? This can't be undone.")}
-          className="font-mono text-[10px] font-bold uppercase tracking-wider text-rose-600 hover:underline"
+          className="text-xs font-bold text-rose-600 hover:underline"
         >
           Cancel booking
         </button>

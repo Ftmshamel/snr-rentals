@@ -5,10 +5,11 @@ import "leaflet/dist/leaflet.css";
 // Where the Lalamove rider is on their trip, for the renter's Track page:
 // the two stops of the leg and the rider's last known position.
 
-const icon = (emoji, extra = "") =>
+// Plain labelled pins: the shop, the renter's end, and the rider as a dot.
+const icon = (label, extra = "") =>
   L.divIcon({
     className: "bk-mapicon",
-    html: `<span class="bk-mapicon__dot ${extra}">${emoji}</span>`,
+    html: `<span class="bk-mapicon__dot ${extra}">${label}</span>`,
     iconSize: [34, 34],
     iconAnchor: [17, 17],
   });
@@ -40,8 +41,8 @@ export default function RiderMap({ route, location, kind }) {
     const shopEnd = kind === "return" ? route.to : route.from;
     const renterEnd = kind === "return" ? route.from : route.to;
     const pts = [];
-    L.marker([shopEnd.lat, shopEnd.lng], { icon: icon("🏠") }).bindTooltip("S&R Rentals").addTo(layer.current);
-    L.marker([renterEnd.lat, renterEnd.lng], { icon: icon("📍") })
+    L.marker([shopEnd.lat, shopEnd.lng], { icon: icon("S&amp;R") }).bindTooltip("S&R Rentals").addTo(layer.current);
+    L.marker([renterEnd.lat, renterEnd.lng], { icon: icon(kind === "return" ? "From" : "You") })
       .bindTooltip(kind === "return" ? "Pick-up" : "Drop-off")
       .addTo(layer.current);
     pts.push([shopEnd.lat, shopEnd.lng], [renterEnd.lat, renterEnd.lng]);
@@ -53,7 +54,7 @@ export default function RiderMap({ route, location, kind }) {
       { color: "#141414", weight: 2, dashArray: "6 6", opacity: 0.5 },
     ).addTo(layer.current);
     if (location) {
-      L.marker([location.lat, location.lng], { icon: icon("🛵", "is-rider"), zIndexOffset: 1000 })
+      L.marker([location.lat, location.lng], { icon: icon("", "is-rider"), zIndexOffset: 1000 })
         .bindTooltip("Rider")
         .addTo(layer.current);
       pts.push([location.lat, location.lng]);

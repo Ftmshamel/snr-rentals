@@ -137,7 +137,7 @@ export default function SignInModal() {
           </div>
         ) : (
           <>
-            <p className="signin__kicker">S&amp;R Rewards ✦</p>
+            <p className="signin__kicker">S&amp;R Rentals</p>
             <h2 id="signin-title" className="signin__title">
               {mode === "create" ? "Create your account" : mode === "reset" ? "Reset your password" : "Sign in"}
             </h2>
@@ -169,7 +169,7 @@ export default function SignInModal() {
 
             {IN_APP_BROWSER && mode !== "reset" && (
               <p className="signin__hint">
-                You're in the Messenger / Facebook browser — Google may not work here. Use{" "}
+                Google sign-in may not work inside Messenger or Facebook. Use{" "}
                 {hasEmail ? "email below" : "Facebook"}, or open this page in Chrome or Safari.
               </p>
             )}
@@ -245,7 +245,7 @@ export default function SignInModal() {
 
             {error && <p className="bk-error signin__msg">✕ {error}</p>}
             {notice && <p className="signin__ok signin__msg">✓ {notice}</p>}
-            <p className="signin__fine">Optional — you can always book as a guest.</p>
+            <p className="signin__fine">Optional. You can always book as a guest.</p>
           </>
         )}
       </div>
