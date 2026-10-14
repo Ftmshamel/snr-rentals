@@ -61,7 +61,11 @@ split describes the legacy mode and the historical data.
   "Prepare <serial>" on the Today page and in the booking, where staff can
   swap it until release. Dates/camera changes re-check it; cancelling frees
   it; an overdue unit stays busy until returned.
-- Cameras list physical units in `serials` (Catalog page). With serials,
+- Cameras list physical units in `serials` (Catalog page). Cameras with
+  none get a **"Generate serial numbers"** box there: one sample serial per
+  unit in the brand's real format (DJI/Insta360 14 letters+digits, Canon 12
+  digits, Fujifilm 8; deterministic, noted "Sample — replace with the real
+  serial"), saved through the normal catalogue PATCH so units don't change. With serials,
   `units` = units in service. A serial with rental history can't be deleted,
   only retired, so "who rented this unit last" always resolves
   (`components/UnitHistory.jsx` on each camera page).

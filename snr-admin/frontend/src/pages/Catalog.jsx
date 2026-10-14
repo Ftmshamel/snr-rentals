@@ -504,6 +504,56 @@ function CameraEditor({ camera, onClose, onSaved }) {
   );
 }
 
+// Sample serial numbers for cameras that have none yet, one per unit, in each
+// brand's real format — DJI and Insta360: 14 letters/digits, Canon: 12
+// digits, Fujifilm: digit + 2 letters + 5 digits — so unit tracking works
+// (and looks right) before the real numbers are typed in. They are
+// deterministic (same camera + unit → same serial) and carry a note so
+// nobody mistakes them for the real ones; replace each on the camera's form.
+const ALNUM = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ"; // no I/O, like real serials
+
+function seededRandom(text) {
+  let h = 2166136261;
+  for (const ch of text) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return () => {
+    h = Math.imul(h ^ (h >>> 15), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  };
+}
+
+function sampleSerial(name, unit) {
+  const rand = seededRandom(`${name}#${unit}`);
+  const pick = (chars, n) => Array.from({ length: n }, () => chars[Math.floor(rand() * chars.length)]).join("");
+  const digits = "0123456789";
+  const letters = ALNUM.slice(10);
+  const brand = String(name || "").trim().toUpperCase();
+  if (brand.startsWith("DJI")) return pick(digits, 1) + pick(letters, 3) + pick(ALNUM, 2) + pick(digits, 4) + pick(ALNUM, 4);
+  if (brand.startsWith("INSTA360")) return "IA" + pick(letters, 3) + pick(digits, 4) + pick(ALNUM, 5);
+  if (brand.startsWith("CANON")) return pick("123456789", 1) + pick(digits, 11);
+  if (brand.startsWith("FUJIFILM")) return pick("123456789", 1) + pick(letters, 2) + pick(digits, 5);
+  return pick(ALNUM, 10);
+}
+
+/** { camera, serials } for every camera without serials. */
+function placeholderSerials(cameras) {
+  const taken = new Set(cameras.flatMap((c) => (c.serials || []).map((u) => u.serial.toUpperCase())));
+  const plan = [];
+  for (const c of cameras) {
+    if ((c.serials || []).length > 0 || !(Number(c.units) > 0)) continue;
+    const serials = [];
+    for (let n = 1; serials.length < Number(c.units); n++) {
+      const serial = sampleSerial(c.name, n);
+      if (taken.has(serial)) continue;
+      taken.add(serial);
+      serials.push({ serial, active: true, note: "Sample — replace with the real serial" });
+    }
+    plan.push({ camera: c, serials });
+  }
+  return plan;
+}
+
 export default function Catalog() {
   const { cameras, loading, error, readOnly, reload } = useCameras();
   const [editing, setEditing] = useState(null); // camera | "new" | null
@@ -524,6 +574,17 @@ export default function Catalog() {
   }
 
   const seed = () => run(() => apiPostJson("/api/catalog?action=seed", {}));
+
+  const serialPlan = placeholderSerials(cameras);
+  const generateSerials = () => {
+    const preview = serialPlan.map((p) => `${p.camera.name}: ${p.serials.map((u) => u.serial).join(", ")}`).join("\n");
+    if (!window.confirm(`Add these serial numbers?\n\n${preview}\n\nThese are samples in each brand's format — replace them with the real serials on each camera's form.`)) return;
+    run(async () => {
+      for (const { camera, serials } of serialPlan) {
+        await apiPatchJson(`/api/catalog?id=${encodeURIComponent(camera.id)}`, { camera: { ...camera, serials } });
+      }
+    });
+  };
 
   const remove = (camera) => {
     const ok = window.confirm(
@@ -559,6 +620,22 @@ export default function Catalog() {
           <p className="ui-card mb-4 px-4 py-3.5 font-mono text-xs text-rose-600">
             The API is not running on Firebase (DATASOURCE), so the catalogue is read-only.
           </p>
+        )}
+        {!readOnly && serialPlan.length > 0 && (
+          <div className="ui-panel mb-4 flex flex-wrap items-center justify-between gap-3 p-4">
+            <div className="min-w-0">
+              <div className="text-sm font-bold">
+                {serialPlan.length} camera{serialPlan.length === 1 ? " has" : "s have"} no serial numbers yet
+              </div>
+              <p className="font-mono text-[11px] text-[color:var(--color-dark-gray)]">
+                Generate a sample serial per unit in each brand's format (e.g. {serialPlan[0].serials[0]?.serial}) so
+                each rental is tied to a unit. Replace them with the real serials anytime.
+              </p>
+            </div>
+            <button type="button" disabled={busy} onClick={generateSerials} className="ui-btn ui-btn--solid">
+              Generate serial numbers
+            </button>
+          </div>
         )}
         {actionError && <p className="mb-3 font-mono text-xs text-rose-600">{actionError}</p>}
         {error && <p className="mb-3 font-mono text-xs text-rose-600">{error}</p>}
