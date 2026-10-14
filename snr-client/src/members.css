@@ -828,3 +828,20 @@
   .mp-rental { grid-template-columns: 1fr; }
   .mp-rental__art { min-height: 110px; }
 }
+
+/* The serial of the unit the renter has — their proof of which camera. */
+.unit-serial {
+  display: inline-grid;
+  gap: 0.1rem;
+  margin-top: 0.6rem;
+  padding: 0.45rem 0.8rem;
+  border: 2px dashed var(--color-ink);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+}
+.unit-serial span { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-dark-gray); }
+.unit-serial strong { font-family: "Courier New", ui-monospace, monospace; font-size: 1.15rem; font-weight: 900; letter-spacing: 0.06em; overflow-wrap: anywhere; }
+.unit-serial--sm { margin-top: 0; padding: 0.3rem 0.65rem; }
+.unit-serial--sm strong { font-size: 0.95rem; }
+.unit-serial--dark { margin: -0.4rem 0 1rem; border-color: rgba(238, 238, 234, 0.5); background: rgba(255, 255, 255, 0.08); }
+.unit-serial--dark span { color: rgba(238, 238, 234, 0.7); }

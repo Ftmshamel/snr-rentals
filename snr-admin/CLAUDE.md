@@ -56,6 +56,13 @@ split describes the legacy mode and the historical data.
   completing needs the unit returned.
 - **`TIMELINE` is written only by the server** — every status change appends
   `{ at, event, note }`. Never PATCH it from the client.
+- **The serial is the proof of which unit a renter had**: it is printed on
+  the contract (admin "Save Contract Image" / printable contract, "Serial
+  No." under Equipment — blank line until assigned) and, **once released**,
+  shown to the renter on `/track`, My rentals and the member home
+  (`unitSerial` in the public views; hidden before release because staff
+  can still swap the unit). The booking window leads with "Next step" and a
+  big Unit card (`LifecyclePanel`), details in a second column.
 - **The system assigns the unit** when a booking is approved
   (`lib/unitAssignment.js`): a serial free for those dates, shown as
   "Prepare <serial>" on the Today page and in the booking, where staff can

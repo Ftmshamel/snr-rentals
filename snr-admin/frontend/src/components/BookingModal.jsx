@@ -167,13 +167,13 @@ function openPrintableContract(booking) {
 h1{font-size:20px;letter-spacing:.08em;margin:0}h2{font-size:12px;margin:20px 0 6px;border-bottom:1px solid #999;padding-bottom:4px}
 p{margin:4px 0}ol{padding-left:20px}li{margin:0 0 7px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px}
 .signatures{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:35px}.sign{text-align:center}.mark{height:58px;display:flex;align-items:end;justify-content:center}
-.signature{max-width:190px;max-height:55px}.line{border-top:1px solid #111;padding-top:5px;font-weight:bold}.muted{color:#666;font-size:10px}
+.signature{max-width:190px;max-height:55px}.serial{font:bold 13px/1 "Courier New",monospace;letter-spacing:.06em;border:1px solid #111;padding:2px 6px}.line{border-top:1px solid #111;padding-top:5px;font-weight:bold}.muted{color:#666;font-size:10px}
 button{margin:0 0 16px;padding:8px 14px;background:#111;color:#fff;border:0;font-weight:bold}@media print{button{display:none}}
 </style></head><body><div class="page"><button onclick="window.print()">Print / Save as PDF</button>
 <div class="head"><div><h1>EQUIPMENT RENTAL AGREEMENT</h1><p><strong>S&amp;R Rentals</strong> · San Ildefonso, Bulacan</p><p>Contact: 0912 016 1865</p></div><div class="muted">Reference<br><strong>${escapeHtml(booking.responseId || "—")}</strong></div></div>
 <h2>I. RENTER &amp; RENTAL PERIOD</h2><div class="grid"><p><strong>Renter:</strong> ${escapeHtml(booking.FULL_NAME || "—")}</p><p><strong>Contact:</strong> ${escapeHtml(booking.CONTACT_NUMBER || "—")}</p><p><strong>Pick-up:</strong> ${escapeHtml(formatDate(booking.PICK_UP_DATE))} · ${escapeHtml(toAmPm(booking.PICK_UP_TIME))}</p><p><strong>Return:</strong> ${escapeHtml(formatDate(booking.RETURN_DATE))} · ${escapeHtml(toAmPm(booking.RETURN_TIME))}</p></div>
 <p><strong>Address:</strong> ${escapeHtml(booking.COMPLETE_ADDRESS || "—")}</p>
-<h2>II. EQUIPMENT &amp; INCLUSIONS</h2><p><strong>Unit:</strong> ${escapeHtml(contract.unit)}</p><p><strong>Add-ons:</strong> ${escapeHtml(addons.join(", ") || "None")}</p>
+<h2>II. EQUIPMENT &amp; INCLUSIONS</h2><div class="grid"><p><strong>Unit:</strong> ${escapeHtml(contract.unit)}</p><p><strong>Serial No.:</strong> ${booking.UNIT_SERIAL ? `<span class="serial">${escapeHtml(booking.UNIT_SERIAL)}</span>` : "________________ (written on release)"}</p></div><p><strong>Add-ons:</strong> ${escapeHtml(addons.join(", ") || "None")}</p>
 <h2>III. FEES</h2><div class="grid"><p><strong>Rental Fee:</strong> ${escapeHtml(peso(booking.RENTAL_FEE))}</p><p><strong>Security Deposit:</strong> ${escapeHtml(peso(booking.SECURITY_DEPOSIT ?? 1000))}</p><p><strong>Total Payables:</strong> ${escapeHtml(peso(getContractTotalPayable(booking)))}</p></div>
 <h2>IV. TERMS &amp; CONDITIONS</h2><ol>${terms}</ol>
 <p><strong>I have read and understood the terms above. I acknowledge receipt of the equipment in good working order.</strong></p>
@@ -379,6 +379,8 @@ async function downloadContractImage(booking) {
 
   section("II. EQUIPMENT & INCLUSIONS (Check all that apply)");
   line(`Unit: ${contract.unit}`);
+  // The physical unit handed over — the renter's proof of which camera they had.
+  line(`Serial No.: ${booking.UNIT_SERIAL || "______________________ (written on release)"}`, true);
   line("Condition: [ ] Good/Working   [ ] No Scratches on Lens");
   line("Accessories:", false, 0);
   const inclusions =
@@ -688,7 +690,7 @@ export default function BookingModal({
       className="ui-overlay"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="ui-modal max-w-lg">
+      <div className={`ui-modal ${mode === "view" ? "bm-wide" : "max-w-lg"}`}>
         {/* Header */}
         <div className="flex items-start justify-between border-b-2 border-[rgba(58,58,58,0.2)] px-5 py-4">
           <div>
@@ -896,7 +898,12 @@ function ViewBody({
           </a>
         </div>
       )}
-      <div className="space-y-5">
+      {/* Left: what to do now. Right: the facts, one card each. */}
+      <div className="bm-grid">
+      <div className="bm-main">
+        <LifecyclePanel booking={booking} cameras={cameras} onPatch={onLifecycle} onReplace={onReplace} />
+      </div>
+      <div className="bm-info">
         <section>
           <div className="mb-2 flex items-center gap-2">
             <span className="ui-kicker">
@@ -953,7 +960,6 @@ function ViewBody({
           </div>
         </section>
 
-        <LifecyclePanel booking={booking} cameras={cameras} onPatch={onLifecycle} onReplace={onReplace} />
 
         <section>
           <div className="ui-kicker mb-2">
@@ -1209,6 +1215,11 @@ function ViewBody({
                     <p><strong>Contact:</strong> {booking.CONTACT_NUMBER || "—"}</p>
                     <p><strong>Pick-up:</strong> {formatDate(booking.PICK_UP_DATE)} · {toAmPm(booking.PICK_UP_TIME)}</p>
                     <p><strong>Return:</strong> {formatDate(booking.RETURN_DATE)} · {toAmPm(booking.RETURN_TIME)}</p>
+                    <p><strong>Unit:</strong> {contract.unit}</p>
+                    <p>
+                      <strong>Serial No.:</strong>{" "}
+                      {booking.UNIT_SERIAL ? <span className="font-mono font-bold">{booking.UNIT_SERIAL}</span> : "— (written on release)"}
+                    </p>
                     <p><strong>Rental Fee:</strong> {peso(booking.RENTAL_FEE)}</p>
                     <p><strong>Total Payables:</strong> {peso(getContractTotalPayable(booking))}</p>
                   </div>
@@ -1268,6 +1279,7 @@ function ViewBody({
             </span>
           </div>
         )}
+      </div>
       </div>
     </>
   );

@@ -133,7 +133,9 @@ the §1 problem cannot happen: `/api/bookings/by?type=unmirrored` returns `[]`.
   - Collections: `renters/{uid}`, `settings/loyalty`.
 - **The public track view is a whitelist** (`lib/public/track.js` `publicView`):
   no documents, phone numbers or other renters' data. Add fields there
-  deliberately.
+  deliberately. `unitSerial` is included only once the unit is released
+  (`out_for_delivery` / `out` / `returned`) — before that staff may still
+  swap it, so showing it would promise the wrong camera.
 - **No default API URL** in either frontend. The old default was the live
   Mongo/Supabase deployment; a misconfigured build now fails instead of
   writing real-looking bookings into the old database.

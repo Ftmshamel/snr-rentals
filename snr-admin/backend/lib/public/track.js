@@ -81,6 +81,9 @@ function publicView(b) {
   const returnOpen = delivery && !b.LALAMOVE_RETURN_LINK && !["returned", "completed", "cancelled", "rejected"].includes(stage.key);
   return {
     reference: b.responseId,
+    // The physical unit, once it has actually been handed over — the
+    // renter's proof of which camera they had (before release it can change).
+    unitSerial: ["out_for_delivery", "out", "returned"].includes(b.FULFILLMENT_STATUS) ? b.UNIT_SERIAL || null : null,
     firstName: firstName(b.FULL_NAME),
     camera: b.PREFERRED_CAMERA,
     mode: delivery ? "delivery" : "pickup",

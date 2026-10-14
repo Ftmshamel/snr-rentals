@@ -49,9 +49,9 @@ function Stepper({ booking, stage }) {
 function Timeline({ entries }) {
   if (!entries?.length) return null;
   return (
-    <div>
-      <div className="ui-kicker mb-1.5 text-[0.6rem]">History</div>
-      <ol className="space-y-1.5 border-l-2 border-[rgba(58,58,58,0.2)] pl-3">
+    <details className="lp-history">
+      <summary>History ({entries.length})</summary>
+      <ol className="mt-2 space-y-1.5 border-l-2 border-[rgba(58,58,58,0.2)] pl-3">
         {[...entries].reverse().map((e, i) => (
           <li key={`${e.at}-${i}`} className="text-xs">
             <span className="font-mono text-[10px] text-[color:var(--color-dark-gray)]">{formatStamp(e.at)}</span>
@@ -61,6 +61,121 @@ function Timeline({ entries }) {
           </li>
         ))}
       </ol>
+    </details>
+  );
+}
+
+function when(date, time) {
+  if (!date) return "";
+  const [y, m, d] = date.split("-").map(Number);
+  const day = new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  if (!time) return day;
+  const [h, min] = time.split(":").map(Number);
+  return `${day}, ${((h + 11) % 12) + 1}:${String(min).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
+
+/** One plain sentence: what staff should do now. */
+function nextStep(stage, booking, delivery) {
+  const unit = booking.UNIT_SERIAL ? ` (unit ${booking.UNIT_SERIAL})` : "";
+  const out = when(booking.PICK_UP_DATE, booking.PICK_UP_TIME);
+  const back = when(booking.RETURN_DATE, booking.RETURN_TIME);
+  switch (stage.key) {
+    case "pending":
+      return "Check the renter's IDs and downpayment below, then approve or reject the request.";
+    case "reserved":
+    case "release_today":
+    case "release_late":
+      return delivery
+        ? `Prepare the camera${unit} and book the Lalamove for ${out}.`
+        : `Prepare the camera${unit} — the renter picks it up ${out}.`;
+    case "out_for_delivery":
+      return "The rider is on the way. Mark it delivered once the renter has it.";
+    case "with_renter":
+      return `With the renter until ${back}.${delivery ? " Book the return rider before then." : ""}`;
+    case "for_return":
+      return `Due back today (${back}). Check the camera when it comes back.`;
+    case "overdue":
+      return `Overdue — it was due ${back}. Contact the renter.`;
+    case "returned":
+      return "Back in the shop. Complete the rental once payments are settled.";
+    case "completed":
+      return "Done — this rental is complete.";
+    default:
+      return null;
+  }
+}
+
+/** The physical unit, big and readable — the thing staff hand over. */
+function UnitCard({ stage, booking, serials, serial, busy, onPick }) {
+  const [changing, setChanging] = useState(false);
+  const beforeRelease = ["reserved", "release_today", "release_late"].includes(stage.key);
+  if (serials.length === 0 && !booking.UNIT_SERIAL) {
+    return beforeRelease ? (
+      <div className="lp-unit lp-unit--empty">
+        <span className="lp-unit__label">Unit to hand over</span>
+        <p className="text-xs">
+          This camera has no serial numbers yet. Owner: open <strong>Catalog</strong> and press{" "}
+          <strong>Generate serial numbers</strong>.
+        </p>
+      </div>
+    ) : null;
+  }
+  const label = beforeRelease
+    ? "Unit to hand over"
+    : ["returned", "completed"].includes(stage.key)
+      ? "Unit returned"
+      : stage.key === "pending"
+        ? "Unit"
+        : "Unit with the renter";
+  return (
+    <div className={`lp-unit ${booking.RETURN_CONDITION === "damaged" ? "lp-unit--damaged" : ""}`}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <span className="lp-unit__label">{label}</span>
+          <div className="lp-unit__serial">{booking.UNIT_SERIAL || "Not assigned yet"}</div>
+          <span className="lp-unit__camera">{booking.PREFERRED_CAMERA}</span>
+        </div>
+        {booking.RETURN_CONDITION && (
+          <span className={`lp-unit__cond ${booking.RETURN_CONDITION === "damaged" ? "is-bad" : ""}`}>
+            {booking.RETURN_CONDITION === "damaged" ? "Damaged" : "Good condition"}
+          </span>
+        )}
+        {beforeRelease && serials.length > 0 && (
+          <button type="button" className="lp-unit__change" onClick={() => setChanging((c) => !c)}>
+            {changing ? "Done" : booking.UNIT_SERIAL ? "Change unit" : "Pick a unit"}
+          </button>
+        )}
+      </div>
+      {stage.key === "pending" && serials.length > 0 && (
+        <p className="lp-unit__hint">A free unit is assigned automatically when you approve.</p>
+      )}
+      {beforeRelease && booking.UNIT_SERIAL && !changing && (
+        <p className="lp-unit__hint">Picked automatically for these dates. Write this serial on the contract.</p>
+      )}
+      {beforeRelease && serials.length > 0 && !booking.UNIT_SERIAL && !changing && (
+        <button type="button" disabled={busy} onClick={() => onPick("auto")} className="ui-btn ui-btn--sm mt-2 w-full">
+          Assign a unit automatically
+        </button>
+      )}
+      {beforeRelease && changing && (
+        <select
+          value={serial}
+          disabled={busy}
+          onChange={(e) => {
+            onPick(e.target.value || "auto");
+            setChanging(false);
+          }}
+          className="ui-input ui-input--sm mt-2"
+        >
+          <option value="">— let the system pick —</option>
+          {serials.map((u) => (
+            <option key={u.serial} value={u.serial}>
+              {u.serial}
+              {u.note ? ` · ${u.note}` : ""}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }
@@ -115,33 +230,36 @@ export default function LifecyclePanel({ booking, cameras, onPatch, onReplace })
   return (
     <section className="ui-surface space-y-3 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="ui-kicker">Rental status</span>
+        <span className="lp-title">Rental status</span>
         <StageBadge booking={booking} />
       </div>
 
       <Stepper booking={booking} stage={stage} />
 
-      {/* Before release the unit is in the picker below. */}
-      {booking.UNIT_SERIAL && !["reserved", "release_today", "release_late"].includes(stage.key) && (
-        <p className="font-mono text-[11px] text-[color:var(--color-ink)]">
-          Unit: <strong>{booking.UNIT_SERIAL}</strong>
-          {booking.RETURN_CONDITION && (
-            <span className={booking.RETURN_CONDITION === "damaged" ? "ml-2 font-bold text-rose-600" : "ml-2 text-green-700"}>
-              · returned {booking.RETURN_CONDITION === "damaged" ? "DAMAGED" : "in good condition"}
-            </span>
-          )}
-        </p>
+      {nextStep(stage, booking, delivery) && (
+        <div className="lp-next">
+          <span className="lp-next__label">Next step</span>
+          <p>{nextStep(stage, booking, delivery)}</p>
+        </div>
       )}
+
+      <UnitCard
+        stage={stage}
+        booking={booking}
+        serials={serials}
+        serial={serial}
+        busy={busy}
+        onPick={(value) => {
+          setSerial(value === "auto" ? "" : value);
+          // Saved straight away so the Today page shows the right unit.
+          run({ UNIT_SERIAL: value });
+        }}
+      />
       {booking.RETURN_NOTES && (
         <p className="text-xs text-[color:var(--color-dark-gray)]">Return notes: {booking.RETURN_NOTES}</p>
       )}
 
       {/* The next step */}
-      {stage.key === "pending" && serials.length > 0 && (
-        <p className="font-mono text-[10px] text-[color:var(--color-dark-gray)]">
-          Approving assigns a free {booking.PREFERRED_CAMERA} unit automatically.
-        </p>
-      )}
       {stage.key === "pending" && (
         <div className="flex gap-2">
           <button type="button" disabled={busy} onClick={() => run({ status: "approved" })} className="ui-btn ui-btn--sm ui-btn--solid flex-1">
@@ -160,44 +278,6 @@ export default function LifecyclePanel({ booking, cameras, onPatch, onReplace })
 
       {["reserved", "release_today", "release_late"].includes(stage.key) && (
         <div className="space-y-2">
-          {serials.length > 0 ? (
-            <label className="block">
-              <span className="ui-label">Unit to prepare (serial no.)</span>
-              <select
-                value={serial}
-                disabled={busy}
-                onChange={(e) => {
-                  setSerial(e.target.value);
-                  // Saved straight away so the Today page shows the right unit.
-                  run({ UNIT_SERIAL: e.target.value || "auto" });
-                }}
-                className="ui-input ui-input--sm"
-              >
-                <option value="">{serial ? "— let the system pick again —" : "— pick a unit —"}</option>
-                {serials.map((u) => (
-                  <option key={u.serial} value={u.serial}>
-                    {u.serial}
-                    {u.note ? ` · ${u.note}` : ""}
-                  </option>
-                ))}
-              </select>
-              <span className="mt-1 block font-mono text-[10px] text-[color:var(--color-dark-gray)]">
-                {booking.UNIT_SERIAL
-                  ? "Picked by the system when the booking was approved — change it if you're sending a different unit."
-                  : "No unit assigned yet."}
-              </span>
-            </label>
-          ) : null}
-          {serials.length > 0 && !booking.UNIT_SERIAL && (
-            <button type="button" disabled={busy} onClick={() => run({ UNIT_SERIAL: "auto" })} className="ui-btn ui-btn--sm w-full">
-              Assign a unit automatically
-            </button>
-          )}
-          {serials.length === 0 && (
-            <p className="font-mono text-[10px] text-[color:var(--color-dark-gray)]">
-              No serial numbers listed for this camera yet — add them on the Catalog page to track each unit.
-            </p>
-          )}
           {apiMode ? (
             <LalamoveApiPanel
               booking={booking}
