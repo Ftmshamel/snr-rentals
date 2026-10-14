@@ -115,7 +115,11 @@ split describes the legacy mode and the historical data.
   renters get `/account` — a full-width **member dashboard** (tier card,
   stats, their current rental with its progress, bookings in Active/History
   tabs, perks, next-tier unlocks, link a past booking by reference code);
-  signing in from the header or landing page lands them there, a member strip and member price on `/book`, and the
+  signing in from the header or landing page lands them there. A
+  signed-in renter's **`/` is their own home** (`pages/MemberHome.jsx`:
+  greeting + tier, current rental, cameras at their member price), not the
+  marketing landing page; member pages share `components/MemberShell.jsx`
+  (app-style top bar, bottom tab bar on phones), a member strip and member price on `/book`, and the
   landing page's Rewards section. Guests book exactly as before.
 - Tier = completed rentals linked to their account (`RENTER_UID`). Tiers
   and perks are owner-editable on the admin's **`/rewards`** page, which

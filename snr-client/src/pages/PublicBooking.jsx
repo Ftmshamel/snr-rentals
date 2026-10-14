@@ -1341,14 +1341,22 @@ function MemberStrip({ member }) {
 }
 
 export function BookingTopBar() {
+  const member = useMember();
+  const tier = member.me?.tier;
   return (
     <div className="bk-top">
       <a href="/" className="bk-top__brand" aria-label="Back to S&R Rentals home">
         <Logo size="sm" withTagline={false} />
       </a>
-      <a href="/" className="bk-top__back">
-        ← Back to site
-      </a>
+      {member.status === "member" ? (
+        <a href="/" className={`dash-top__tier tier--${tier?.key || "bronze"}`}>
+          ← {tier ? `${TIER_ICONS[tier.key]} ${tier.name} · ` : ""}My home
+        </a>
+      ) : (
+        <a href="/" className="bk-top__back">
+          ← Back to site
+        </a>
+      )}
     </div>
   );
 }
