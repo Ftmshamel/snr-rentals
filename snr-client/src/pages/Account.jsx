@@ -91,7 +91,14 @@ function RentalCard({ booking, cameras }) {
       <div className="mp-rental__art">{image && <img src={image} alt="" loading="lazy" />}</div>
       <div className="mp-rental__body">
         <div className="mp-rental__top">
-          <h3>{booking.camera}</h3>
+          <h3>
+            {booking.camera}
+            {booking.order?.size > 1 && (
+              <small className="mp-rental__order">
+                Camera {booking.order.index} of {booking.order.size} · ref {booking.order.ref}
+              </small>
+            )}
+          </h3>
           <span className={`dash-stage dash-stage--${booking.stage?.key}`}>{booking.stage?.label}</span>
         </div>
         <p className="mp-rental__when">

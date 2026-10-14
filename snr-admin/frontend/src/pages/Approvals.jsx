@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Header from "../components/Header.jsx";
 import { apiGetJson, apiPatchJson } from "../utils/api.js";
 import { MemberBadge } from "../utils/loyalty.jsx";
+import { OrderChip } from "../utils/order.jsx";
 import {
   documentOpenLabel,
   documentThumb,
@@ -73,6 +74,13 @@ export default function Approvals() {
     }
   }
 
+  // A multi-camera booking: approve every pending camera of it at once.
+  async function approveOrder(orderRef) {
+    for (const b of bookings.filter((x) => x.ORDER_REF === orderRef)) {
+      await setStatus(b, "approved");
+    }
+  }
+
   return (
     <div className="min-h-screen">
       {lightbox && (
@@ -134,6 +142,8 @@ export default function Approvals() {
               key={b.responseId}
               booking={b}
               onApprove={() => setStatus(b, "approved")}
+              orderPending={b.ORDER_REF ? bookings.filter((x) => x.ORDER_REF === b.ORDER_REF).length : 0}
+              onApproveOrder={() => approveOrder(b.ORDER_REF)}
               onReject={() => setStatus(b, "rejected")}
               onCancel={() => setStatus(b, "cancelled")}
               onLightbox={setLightbox}
@@ -148,6 +158,8 @@ export default function Approvals() {
 function BookingCard({
   booking: b,
   onApprove,
+  orderPending = 0,
+  onApproveOrder,
   onReject,
   onCancel,
   onLightbox,
@@ -164,6 +176,7 @@ function BookingCard({
   function handleAction(action) {
     if (confirming === action) {
       if (action === "approve") onApprove();
+      else if (action === "approveOrder") onApproveOrder();
       else if (action === "reject") onReject();
       else onCancel();
       setConfirming(null);
@@ -186,6 +199,7 @@ function BookingCard({
               <span className="truncate text-base font-bold text-[color:var(--color-black)]">
                 {b.FACEBOOK_ACCOUNT_NAME || b.FULL_NAME || "—"}
               </span>
+              <OrderChip booking={b} />
               <MemberBadge member={b.MEMBER} />
             </div>
             <div className="mt-0.5 text-sm text-[color:var(--color-dark-gray)]">
@@ -326,6 +340,19 @@ function BookingCard({
         >
           {confirming === "approve" ? "Confirm Approve" : "Approve"}
         </button>
+        {orderPending > 1 && (
+          <button
+            type="button"
+            onClick={() => handleAction("approveOrder")}
+            className={`border px-4 py-1.5 font-mono text-xs ${
+              confirming === "approveOrder"
+                ? "border-[color:var(--color-border)] bg-[color:var(--color-ink)] text-white"
+                : "border-[color:var(--color-ink)] text-[color:var(--color-ink)] hover:bg-[rgba(255,255,255,0.6)]"
+            }`}
+          >
+            {confirming === "approveOrder" ? `Confirm — approve ${orderPending}` : `Approve all ${orderPending} cameras`}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -234,7 +234,7 @@ function isRepeatRenter(payload) {
  * the MongoDB + Supabase setup: a cancelled booking stays cancelled, otherwise
  * the requested status wins over the stored one, defaulting to pending.
  */
-async function upsertSubmittedBooking(payload, { source, catalog, member = null }) {
+async function upsertSubmittedBooking(payload, { source, catalog, member = null, order = null }) {
   const id = bookingDocId(payload.responseId);
   if (!id) throw new Error("responseId is required");
   const ref = bookingsCol().doc(id);
@@ -263,6 +263,13 @@ async function upsertSubmittedBooking(payload, { source, catalog, member = null 
     for (const key of ADMIN_OWNED_FIELDS) delete record[key];
   } else {
     record._createdAt = now;
+  }
+  // One camera of a multi-camera order (api/submit splits them): the shared
+  // reference, how many cameras, and which one this is (1 = the code itself).
+  if (order) {
+    record.ORDER_REF = order.ref;
+    record.ORDER_SIZE = order.size;
+    record.ORDER_INDEX = order.index;
   }
 
   // Lalamove delivery form (public site). Required for a new public delivery
@@ -319,6 +326,14 @@ async function upsertSubmittedBooking(payload, { source, catalog, member = null 
   }
   await batch.commit();
   return { action: existing ? "updated" : "inserted", status };
+}
+
+/** Every booking of a multi-camera order, first camera first. */
+async function findBookingsByOrder(orderRef) {
+  const ref = String(orderRef || "").trim();
+  if (!ref) return [];
+  const snap = await bookingsCol().where("ORDER_REF", "==", ref).get();
+  return snap.docs.map((d) => partial(d.data())).sort((a, b) => (a.ORDER_INDEX || 0) - (b.ORDER_INDEX || 0));
 }
 
 // Firestore-only booking fields (no Supabase column), editable through PATCH.
@@ -784,8 +799,16 @@ async function bookingsOfRenter(uid) {
 /** A renter's tier right now, and the bookings it is based on. */
 async function memberStatus(uid) {
   const [tiers, bookings] = await Promise.all([getLoyaltyTiers(), bookingsOfRenter(uid)]);
-  const completed = bookings.filter(countsAsCompleted).length;
+  const completed = completedRentals(bookings.filter(countsAsCompleted));
   return { tiers, bookings, completed, ...tierFor(tiers, completed) };
+}
+
+/**
+ * Completed rentals for the tier: a multi-camera order is ONE rental, not
+ * one per camera (its bookings share ORDER_REF).
+ */
+function completedRentals(bookings) {
+  return new Set(bookings.map((b) => b.ORDER_REF || b.responseId)).size;
 }
 
 /**
@@ -807,6 +830,14 @@ async function linkBookingToRenter(responseId, uid) {
       throw new LoyaltyError("Cancelled or declined bookings can't be added.");
     }
     if (!owner) await ref.update({ RENTER_UID: uid, _lastUpdatedAt: new Date().toISOString() });
+    // The other cameras of the same order come along.
+    const orderRef = snap.get("ORDER_REF");
+    if (orderRef) {
+      const siblings = await bookingsCol().where("ORDER_REF", "==", orderRef).get();
+      for (const d of siblings.docs) {
+        if (!d.get("RENTER_UID")) await d.ref.update({ RENTER_UID: uid, _lastUpdatedAt: new Date().toISOString() });
+      }
+    }
     return partial({ ...snap.data(), RENTER_UID: uid });
   }
   throw new LoyaltyError("No booking found for that reference code.");
@@ -822,10 +853,11 @@ async function listMembers() {
   const byUid = new Map();
   for (const { data } of all) {
     if (!data.RENTER_UID) continue;
-    const entry = byUid.get(data.RENTER_UID) || { bookings: 0, completed: 0, spent: 0, lastRental: null };
+    const entry = byUid.get(data.RENTER_UID) || { bookings: 0, completed: 0, spent: 0, lastRental: null, done: new Set() };
     entry.bookings += 1;
     if (countsAsCompleted(data)) {
-      entry.completed += 1;
+      entry.done.add(data.ORDER_REF || data.responseId); // an order is one rental
+      entry.completed = entry.done.size;
       entry.spent += Number(data.RENTAL_FEE) || 0;
     }
     if (!entry.lastRental || String(data.PICK_UP_DATE) > entry.lastRental) entry.lastRental = data.PICK_UP_DATE || null;
@@ -834,7 +866,7 @@ async function listMembers() {
   return rentersSnap.docs
     .map((d) => {
       const r = d.data();
-      const stats = byUid.get(d.id) || { bookings: 0, completed: 0, spent: 0, lastRental: null };
+      const { done, ...stats } = byUid.get(d.id) || { bookings: 0, completed: 0, spent: 0, lastRental: null };
       const { tier, next, toNext } = tierFor(tiers, stats.completed);
       return { ...r, ...stats, tier: tier.key, tierName: tier.name, nextTierName: next?.name || null, toNext };
     })
@@ -857,6 +889,7 @@ module.exports = {
   updateBookingByResponseId,
   deleteBookingByResponseId,
   upsertSubmittedBooking,
+  findBookingsByOrder,
   // expenses + notes
   listExpenses,
   createExpense,

@@ -106,11 +106,78 @@ function validatePublicBooking(payload) {
 
 // Firebase mode: one write, to Firestore. The booking is priced against the
 // live catalogue (the cameras the owner edits on the Catalog page).
+//
+// Several cameras in one order (ORDER_ITEMS): each camera becomes its own
+// booking — its own fee, ₱1,000 deposit, serial, contract and lifecycle —
+// all sharing one reference code. The first camera keeps the code itself
+// (and carries the order's rush fee); the others are "<code>-2", "<code>-3"…
+// Extras are written first so the renter's reference never points at a
+// half-saved order.
+const MAX_ORDER_CAMERAS = 5;
+
+function orderExtras(payload, catalog) {
+  const { findCamera } = require("../lib/catalog");
+  const raw = payload.ORDER_ITEMS;
+  delete payload.ORDER_ITEMS;
+  if (raw == null) return [];
+  if (!Array.isArray(raw)) throw new LifecycleError("ORDER_ITEMS must be a list.");
+  if (raw.length + 1 > MAX_ORDER_CAMERAS) {
+    throw new LifecycleError(`Up to ${MAX_ORDER_CAMERAS} cameras per booking.`);
+  }
+  const ref = String(payload.responseId).trim();
+  return raw.map((item, i) => {
+    const camera = findCamera(catalog, item?.camera);
+    if (!camera) throw new LifecycleError(`Unknown camera: ${item?.camera || "(none)"}.`);
+    const fee = Number(item.rentalFee);
+    const deposit = Number(payload.SECURITY_DEPOSIT) || 0;
+    return {
+      ...payload,
+      responseId: `${ref}-${i + 2}`,
+      PREFERRED_CAMERA: camera.name,
+      "Please_choose_your_add-ons": Array.isArray(item.addons) ? item.addons.map(String) : [],
+      // No fee from the client → priced from the catalogue on the server.
+      RENTAL_FEE: Number.isFinite(fee) && fee > 0 ? fee : null,
+      TOTAL_PAYABLE_BEFORE_RELEASE: Number.isFinite(fee) && fee > 0 ? fee + deposit : null,
+      CONTRACT_CAMERA: item.contractUnit || camera.name,
+      CONTRACT_TERMS_AND_CONDITIONS: Array.isArray(item.contractTerms)
+        ? item.contractTerms
+        : payload.CONTRACT_TERMS_AND_CONDITIONS,
+    };
+  });
+}
+
+/**
+ * A member's perks across an order: the discount applies to every camera;
+ * the tier's free add-ons are per RENTAL, and an order is one rental — so
+ * they go to the first camera's add-ons, any left over to the next camera's.
+ */
+function orderMembers(member, catalog, payloads) {
+  if (!member) return payloads.map(() => null);
+  const { perksForBooking } = require("../lib/loyalty");
+  let freeLeft = Number(member.freeAddons) || 0;
+  return payloads.map((p) => {
+    const m = { ...member, freeAddons: freeLeft };
+    freeLeft -= perksForBooking(m, catalog, p, p["Please_choose_your_add-ons"]).freeAddons.length;
+    return m;
+  });
+}
+
 async function submitToFirestore(payload, source, member) {
   const { listCameras, upsertSubmittedBooking } = require("../lib/firestoreQueries");
   const catalog = await listCameras();
-  const { action } = await upsertSubmittedBooking(payload, { source, catalog, member });
-  return { ok: true, action };
+  const extras = orderExtras(payload, catalog);
+  if (extras.length === 0) {
+    const { action } = await upsertSubmittedBooking(payload, { source, catalog, member });
+    return { ok: true, action };
+  }
+  const ref = String(payload.responseId).trim();
+  const size = extras.length + 1;
+  const members = orderMembers(member, catalog, [payload, ...extras]);
+  for (const [i, extra] of extras.entries()) {
+    await upsertSubmittedBooking(extra, { source, catalog, member: members[i + 1], order: { ref, size, index: i + 2 } });
+  }
+  const { action } = await upsertSubmittedBooking(payload, { source, catalog, member: members[0], order: { ref, size, index: 1 } });
+  return { ok: true, action, order: { ref, references: [ref, ...extras.map((e) => e.responseId)] } };
 }
 
 /**

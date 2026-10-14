@@ -152,7 +152,38 @@ function RiderLine({ label, info }) {
   );
 }
 
-function Result({ booking, onUpdated }) {
+/** The cameras booked together under one reference code. */
+function OrderItems({ order, onPick }) {
+  return (
+    <div className="trk-order">
+      <div className="bk-panel-label">
+        {order.size} cameras in this booking · ref {order.reference}
+      </div>
+      <ul>
+        {order.items.map((item, i) => (
+          <li key={item.reference}>
+            <button
+              type="button"
+              className={`trk-order__item ${item.current ? "is-on" : ""}`}
+              onClick={() => !item.current && onPick(item.reference)}
+              aria-current={item.current ? "true" : undefined}
+            >
+              <span className="trk-order__num">{i + 1}</span>
+              <span className="trk-order__cam">
+                <strong>{item.camera}</strong>
+                {item.unitSerial && <small>Serial {item.unitSerial}</small>}
+              </span>
+              <em className={`bk-track__stage bk-track__stage--${item.stage.key}`}>{item.stage.label}</em>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="bk-track__muted">Each camera has its own ₱1,000 deposit, refunded when that camera comes back safe.</p>
+    </div>
+  );
+}
+
+function Result({ booking, onUpdated, onPick }) {
   const steps = stepsFor(booking.mode);
   const at = stepIndex(booking.stage.key, booking.mode);
   const ended = ["cancelled", "rejected"].includes(booking.stage.key);
@@ -183,6 +214,8 @@ function Result({ booking, onUpdated }) {
         </div>
         <span className={`bk-track__stage bk-track__stage--${booking.stage.key}`}>{booking.stage.label}</span>
       </div>
+
+      {booking.order?.items?.length > 1 && <OrderItems order={booking.order} onPick={onPick} />}
 
       {!ended && at >= 0 && (
         <ol className="bk-track__steps">
@@ -352,7 +385,16 @@ export default function TrackBooking() {
         </button>
       </form>
       {state.error && <div className="bk-error bk-track__error">✕ {state.error}</div>}
-      {state.booking && <Result booking={state.booking} onUpdated={(b) => setState((s) => ({ ...s, booking: b }))} />}
+      {state.booking && (
+        <Result
+          booking={state.booking}
+          onUpdated={(b) => setState((s) => ({ ...s, booking: { ...b, order: b.order || s.booking?.order } }))}
+          onPick={(code) => {
+            setRef(code);
+            lookup(code);
+          }}
+        />
+      )}
     </main>
   );
 }
