@@ -29,7 +29,8 @@ export default {
     extend: {
       fontFamily: {
         display: ["Poppins", "Montserrat", "sans-serif"],
-        mono: ['"DM Mono"', "monospace"],
+        // "mono" now means the UI font with even-width digits (calm UI, Oct 2026).
+        mono: ["Poppins", "sans-serif"],
         sans: ["Poppins", "sans-serif"],
         script: ["Caveat", "cursive"],
       },

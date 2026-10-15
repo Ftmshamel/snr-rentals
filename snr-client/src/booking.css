@@ -117,7 +117,7 @@
   font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.06em;
   color: var(--color-muted);
   margin-bottom: 0.6rem;
 }
@@ -289,11 +289,11 @@
 
 .bk-label {
   display: block;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-dark-gray);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-ink);
   line-height: 1.35;
   margin-bottom: 0;
 }
@@ -562,7 +562,7 @@ select.bk-input {
   justify-content: space-between;
   gap: 0.5rem;
   margin-top: 0.9rem;
-  border-top: 2px dashed rgba(58, 58, 58, 0.24);
+  border-top: 1px solid var(--color-line);
   padding-top: 0.7rem;
   font-size: 0.72rem;
   font-weight: 700;
@@ -586,7 +586,7 @@ select.bk-input {
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.06em;
   color: var(--color-dark-gray);
   margin-bottom: 0.8rem;
 }
@@ -681,7 +681,7 @@ select.bk-input {
 
 .bk-chooser__summary {
   margin-top: 1rem;
-  border-top: 3px dashed rgba(58, 58, 58, 0.28);
+  border-top: 1px solid var(--color-line);
   padding-top: 1rem;
 }
 
@@ -755,7 +755,7 @@ select.bk-input {
 }
 
 .bk-addons {
-  border-top: 3px dashed rgba(58, 58, 58, 0.28);
+  border-top: 1px solid var(--color-line);
   padding-top: 1.25rem;
 }
 
@@ -823,7 +823,8 @@ select.bk-input {
 }
 
 .bk-addon__price {
-  font-family: "DM Mono", monospace;
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
   font-size: 0.76rem;
   line-height: 1.1;
   white-space: nowrap;
@@ -854,7 +855,7 @@ select.bk-input {
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.06em;
   color: var(--color-dark-gray);
   margin-bottom: 0.9rem;
 }
@@ -880,7 +881,7 @@ select.bk-input {
 
 .bk-quote__rush-note {
   margin: 0.75rem 0 0;
-  border-top: 2px dashed rgba(58, 58, 58, 0.28);
+  border-top: 1px solid var(--color-line);
   padding-top: 0.65rem;
   font-size: 0.7rem;
   font-weight: 650;
@@ -895,7 +896,7 @@ select.bk-input {
   justify-content: space-between;
   gap: 1rem;
   margin-top: 0.7rem;
-  border-top: 2px dashed rgba(58, 58, 58, 0.28);
+  border-top: 1px solid var(--color-line);
   padding: 0.7rem 0.2rem 0;
   font-size: 0.84rem;
   font-weight: 700;
@@ -921,7 +922,8 @@ select.bk-input {
 }
 
 .bk-num {
-  font-family: "DM Mono", monospace;
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
   color: var(--color-ink);
 }
@@ -938,7 +940,7 @@ select.bk-input {
   font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.06em;
 }
 
 .bk-quote__total .bk-num {
@@ -1063,7 +1065,8 @@ select.bk-input {
   border: 1px solid var(--color-line);
   border-radius: 999px;
   padding: 0.4rem 0.85rem;
-  font-family: "DM Mono", monospace;
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
   font-size: 0.9rem;
   font-weight: 700;
   background: var(--color-bg-light);
@@ -1260,7 +1263,7 @@ select.bk-input {
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.06em;
   color: var(--color-dark-gray);
 }
 
@@ -1336,7 +1339,8 @@ select.bk-input {
 
 .bk-lightbox__addons strong {
   flex-shrink: 0;
-  font-family: "DM Mono", monospace;
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
   font-size: 0.72rem;
   white-space: nowrap;
 }
@@ -1431,9 +1435,9 @@ select.bk-input {
 
 /* File uploads */
 .bk-file {
-  border: 3px dashed var(--color-border);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.45);
+  border: 1px dashed #c9c9c3;
+  border-radius: 12px;
+  background: #fafaf8;
   padding: 0.95rem 1rem;
   transition: border-color 0.2s ease, background 0.2s ease;
 }
@@ -1451,7 +1455,7 @@ select.bk-input {
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.06em;
   padding: 0.42rem 0.65rem;
   border: 1px solid var(--color-line);
   border-radius: 12px;
@@ -1539,15 +1543,15 @@ select.bk-input {
 
 .bk-file__input::file-selector-button {
   font-family: var(--font-head);
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--color-bg-light);
-  background: var(--color-ink);
-  border: none;
-  border-radius: 999px;
-  padding: 0.55em 1.05em;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-ink);
+  background: #fff;
+  border: 1px solid #d6d6d0;
+  border-radius: 8px;
+  padding: 0.5em 0.95em;
   margin-right: 0.75rem;
   cursor: pointer;
   transition: transform 0.18s var(--ease-pop);
@@ -1562,7 +1566,7 @@ select.bk-input {
   margin-top: 0.45rem;
   font-size: 0.7rem;
   font-weight: 500;
-  font-style: italic;
+  font-style: normal;
   color: var(--color-dark-gray);
 }
 
@@ -1871,7 +1875,7 @@ select.bk-input {
   gap: 0.55rem;
   margin: 0 0 1.1rem;
   padding: 0.9rem 1rem;
-  border: 2px solid rgba(58, 58, 58, 0.3);
+  border: 1px solid var(--color-line);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.62);
 }
@@ -1948,7 +1952,7 @@ select.bk-input {
   justify-content: space-between;
   gap: 0.85rem;
   margin-bottom: 0.9rem;
-  border: 3px dashed rgba(58, 58, 58, 0.45);
+  border: 1px dashed #c9c9c3;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.54);
   padding: 0.75rem 0.85rem;
@@ -2518,13 +2522,14 @@ select.bk-input {
 .bk-success__ref {
   display: inline-block;
   margin-top: 1.4rem;
-  font-family: "DM Mono", monospace;
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
   font-size: clamp(0.85rem, 2.6vw, 1.05rem);
   font-weight: 700;
   letter-spacing: 0.04em;
-  border: 3px dashed var(--color-ink);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: #f6f6f3;
   padding: 0.8rem 1.4rem;
   overflow-wrap: anywhere;
 }
@@ -3106,9 +3111,9 @@ select.bk-input {
 .bk-track__steps li.is-current { color: var(--color-ink); }
 .bk-track__steps li.is-current .bk-track__bar { background: var(--color-ink); }
 .bk-track__links { display: flex; flex-wrap: wrap; gap: 0.6rem; }
-.bk-track__section { border-top: 2px dashed rgba(58, 58, 58, 0.25); padding-top: 1rem; }
+.bk-track__section { border-top: 1px solid var(--color-line); padding-top: 1rem; }
 .bk-track__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.6rem; }
-.bk-track__timeline { list-style: none; margin: 0; padding: 0 0 0 0.9rem; border-left: 3px solid rgba(58, 58, 58, 0.2); display: grid; gap: 0.6rem; }
+.bk-track__timeline { list-style: none; margin: 0; padding: 0 0 0 0.9rem; border-left: 2px solid var(--color-line); display: grid; gap: 0.6rem; }
 .bk-track__timeline li { display: grid; gap: 0.1rem; font-size: 0.88rem; }
 .bk-track__timeline span { font-size: 0.72rem; font-weight: 700; color: var(--color-dark-gray); }
 @media (max-width: 560px) {
@@ -3269,7 +3274,7 @@ select.bk-input {
   align-items: baseline;
   gap: 0.3rem 0.6rem;
   width: 100%;
-  border: 3px dashed rgba(58, 58, 58, 0.4);
+  border: 1px dashed #c9c9c3;
   border-radius: 16px;
   background: transparent;
   padding: 0.95rem 1.1rem;

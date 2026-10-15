@@ -254,7 +254,9 @@ writes a backup to `database-backups/`. Keep that pattern for new ones.
   lifts. **No emoji or symbol glyphs (✓ ✕ → ⚠ …) as UI markers** — use
   `components/Icon.jsx` (same file in the client and the admin; add a path
   there for a new icon), or the `--icon-check` mask in CSS `::before`.
-  Typographic `—`, `·`, `₱` are fine. Message text the owner copies to
+  Typographic `—`, `·`, `₱` are fine. No typewriter/monospace UI font:
+  `font-mono` / `.ui-num` / `.bk-num` are Poppins with `tabular-nums`. Form
+  labels are sentence case; upload boxes are a 1px light dashed outline. Message text the owner copies to
   Messenger (QuotationGenerator) may keep its emoji.
 - Camera data (names, units, rates, add-ons, inclusions) is the Firestore
   `cameras` collection, read via `GET /api/catalog` by the admin

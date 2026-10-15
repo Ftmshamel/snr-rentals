@@ -175,7 +175,8 @@
   }
 
   .ui-num {
-    font-family: "DM Mono", monospace;
+    font-family: "Poppins", sans-serif;
+    font-variant-numeric: tabular-nums;
     font-weight: 700;
     color: var(--color-ink);
   }
@@ -515,3 +516,6 @@
   flex: none;
   vertical-align: -0.15em;
 }
+
+/* Digits line up in tables and totals without a typewriter font. */
+.font-mono { font-variant-numeric: tabular-nums; }
