@@ -270,6 +270,13 @@ writes a backup to `database-backups/`. Keep that pattern for new ones.
   `font-mono` / `.ui-num` / `.bk-num` are Poppins with `tabular-nums`. Form
   labels are sentence case; upload boxes are a 1px light dashed outline. Message text the owner copies to
   Messenger (QuotationGenerator) may keep its emoji.
+- **Card grids avoid orphan rows.** The booking form's camera chooser
+  (`.bk-chooser__grid`) is 5 per row on desktop, 2 on phones — both divide
+  the 10-item catalogue — and is flex-wrap centred, so a short last row
+  (if the catalogue size changes) sits in the middle, not hanging left.
+- Analytics' **Monthly Trend** (`TrendChart`) always shows the last 6
+  calendar months (revenue + expense bars, net income line), independent of
+  the Months tab's 2-month window — two points only ever draw a straight line.
 - Camera data (names, units, rates, add-ons, inclusions) is the Firestore
   `cameras` collection, read via `GET /api/catalog` by the admin
   (`hooks/useCameras.js`) and the public site (`src/data/catalog.js`). The

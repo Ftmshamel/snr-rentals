@@ -144,7 +144,20 @@ export default function Analytics() {
     return window.length > 0 ? window : byMonth.slice(0, 2);
   }, [byMonth, monthScope]);
 
-  const monthsAsc = useMemo(() => [...visibleMonths].reverse(), [visibleMonths]);
+  // Last 6 calendar months ending this month, oldest first — empty months
+  // included so gaps show as gaps instead of being skipped.
+  const trendMonths = useMemo(() => {
+    const map = Object.fromEntries(byMonth);
+    const [cy, cm] = todayISOLocal().slice(0, 7).split("-").map(Number);
+    const out = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(cy, cm - 1 - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const v = map[key] || { count: 0, total: 0, expenses: 0 };
+      out.push({ key, label: formatMonthShort(key), revenue: v.total, expenses: v.expenses, count: v.count });
+    }
+    return out;
+  }, [byMonth]);
 
   const monthsHint =
     monthScope === "all"
@@ -303,15 +316,12 @@ export default function Analytics() {
                   </div>
                 </Section>
 
-                {/* Net income trend */}
-                {monthsAsc.length >= 2 && (
-                  <Section title="Net Income Trend" hint={monthsHint}>
-                    <LineChart
-                      points={monthsAsc.map(([mo, v]) => ({
-                        label: formatMonthShort(mo),
-                        value: v.total - v.expenses,
-                      }))}
-                    />
+                {/* Monthly trend — always the last 6 calendar months, not the
+                    Months tab's 2-month window: two points only ever draw a
+                    single straight line. */}
+                {trendMonths.some((m) => m.revenue || m.expenses) && (
+                  <Section title="Monthly Trend" hint="Last 6 months">
+                    <TrendChart months={trendMonths} />
                   </Section>
                 )}
 
@@ -655,30 +665,90 @@ function DonutChart({ segments, centerLabel, centerValue, centerNegative }) {
   );
 }
 
-function LineChart({ points }) {
-  if (points.length < 2) return null;
-  const W = 320, H = 96, pad = 8;
-  const vals = points.map((p) => p.value);
-  const max = Math.max(...vals, 0);
-  const min = Math.min(...vals, 0);
-  const range = max - min || 1;
-  const x = (i) => pad + (i * (W - 2 * pad)) / (points.length - 1);
-  const y = (v) => pad + (H - 2 * pad) * (1 - (v - min) / range);
-  const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(" ");
-  const area = `${line} L${x(points.length - 1).toFixed(1)},${y(min).toFixed(1)} L${x(0).toFixed(1)},${y(min).toFixed(1)} Z`;
-  const zeroY = y(0);
+// Revenue and expense bars per month with the net income line over them.
+// Fixed 6-month window (see trendMonths) so it always has a shape to show.
+function TrendChart({ months }) {
+  const W = 640, H = 240;
+  const padL = 48, padR = 12, padT = 22, padB = 30;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+
+  const nets = months.map((m) => m.revenue - m.expenses);
+  const rawMax = Math.max(...months.map((m) => Math.max(m.revenue, m.expenses)), ...nets, 0);
+  const rawMin = Math.min(...nets, 0);
+  // Round the axis to a tidy step so gridlines land on readable numbers.
+  const span = rawMax - rawMin || 1;
+  const step = [1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000, 100000].find((s) => span / s <= 5) || 200000;
+  const max = Math.ceil(rawMax / step) * step || step;
+  const min = Math.floor(rawMin / step) * step;
+  const y = (v) => padT + plotH * (1 - (v - min) / (max - min));
+  const ticks = [];
+  for (let v = min; v <= max; v += step) ticks.push(v);
+
+  const slot = plotW / months.length;
+  const barW = Math.min(18, slot / 4);
+  const cx = (i) => padL + slot * i + slot / 2;
+  const signedCompact = (v) => (v < 0 ? "-" : "") + formatPesoCompact(v);
+  const line = nets.map((v, i) => `${i === 0 ? "M" : "L"}${cx(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-24 w-full" preserveAspectRatio="none">
-        <line x1={pad} x2={W - pad} y1={zeroY} y2={zeroY} className="stroke-[rgba(58,58,58,0.25)]" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-        <path d={area} className="fill-[rgba(58,58,58,0.14)]" />
-        <path d={line} className="fill-none stroke-[color:var(--color-ink)]" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-        {points.map((p, i) => (
-          <circle key={i} cx={x(i)} cy={y(p.value)} r="2.5" className="fill-[color:var(--color-ink)]" vectorEffect="non-scaling-stroke" />
-        ))}
-      </svg>
-      <div className="mt-1 flex justify-between font-mono text-[9px] text-[color:var(--color-dark-gray)]">
-        {points.map((p, i) => <span key={i}>{p.label}</span>)}
+      {/* Scrolls sideways on phones rather than shrinking the labels to ~5px. */}
+      <div className="overflow-x-auto">
+        <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full min-w-[540px]" role="img" aria-label="Revenue, expenses and net income for the last 6 months">
+          {ticks.map((t) => (
+            <g key={t}>
+              <line
+                x1={padL} x2={W - padR} y1={y(t)} y2={y(t)}
+                className={t === 0 ? "stroke-[rgba(58,58,58,0.45)]" : "stroke-[rgba(58,58,58,0.12)]"}
+                strokeWidth="1"
+              />
+              <text x={padL - 8} y={y(t) + 3.5} textAnchor="end" className="fill-[color:var(--color-dark-gray)] text-[10px] tabular-nums">
+                {signedCompact(t)}
+              </text>
+            </g>
+          ))}
+  
+          {months.map((m, i) => (
+            <g key={m.key}>
+              <title>
+                {`${m.label} — revenue ${formatPeso(m.revenue)} · expenses ${formatPeso(m.expenses)} · net ${formatPeso(nets[i])} · ${m.count} rental${m.count !== 1 ? "s" : ""}`}
+              </title>
+              <rect x={cx(i) - slot / 2} y={padT} width={slot} height={plotH} fill="transparent" />
+              <rect
+                x={cx(i) - barW - 2} y={y(m.revenue)} width={barW} height={Math.max(y(0) - y(m.revenue), 0)}
+                rx="3" className="fill-[color:var(--color-ink)]"
+              />
+              <rect
+                x={cx(i) + 2} y={y(m.expenses)} width={barW} height={Math.max(y(0) - y(m.expenses), 0)}
+                rx="3" className="fill-rose-300"
+              />
+              <text x={cx(i)} y={H - 10} textAnchor="middle" className="fill-[color:var(--color-ink)] text-[11px]">
+                {m.label}
+              </text>
+            </g>
+          ))}
+  
+          <path d={line} className="fill-none stroke-emerald-600" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+          {nets.map((v, i) => (
+            <g key={months[i].key}>
+              <circle cx={cx(i)} cy={y(v)} r="4" className={`${v < 0 ? "fill-rose-500" : "fill-emerald-600"} stroke-white`} strokeWidth="2" />
+              <text
+                x={cx(i)} y={y(v) - 9} textAnchor="middle"
+                stroke="#fff" strokeWidth="3.5" strokeLinejoin="round" paintOrder="stroke"
+                className={`text-[10px] font-bold tabular-nums ${v < 0 ? "fill-rose-500" : "fill-emerald-700"}`}
+              >
+                {signedCompact(v)}
+              </text>
+            </g>
+          ))}
+        </svg>
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[11px] text-[color:var(--color-dark-gray)]">
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-[color:var(--color-ink)]" />Revenue</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-rose-300" />Expenses</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-0.5 w-4 rounded bg-emerald-600" />Net income</span>
       </div>
     </div>
   );
