@@ -840,13 +840,13 @@
   display: inline-grid;
   gap: 0.1rem;
   margin-top: 0.6rem;
-  padding: 0.45rem 0.8rem;
-  border: 2px dashed var(--color-ink);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.7);
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: #f6f6f3;
 }
 .unit-serial span { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-dark-gray); }
-.unit-serial strong { font-family: "Courier New", ui-monospace, monospace; font-size: 1.15rem; font-weight: 700; letter-spacing: 0.06em; overflow-wrap: anywhere; }
+.unit-serial strong { font-family: var(--font-head); font-variant-numeric: tabular-nums; font-size: 1.1rem; font-weight: 700; letter-spacing: 0.03em; overflow-wrap: anywhere; }
 .unit-serial--sm { margin-top: 0; padding: 0.3rem 0.65rem; }
 .unit-serial--sm strong { font-size: 0.95rem; }
 .unit-serial--dark { margin: -0.4rem 0 1rem; border-color: rgba(238, 238, 234, 0.5); background: rgba(255, 255, 255, 0.08); }

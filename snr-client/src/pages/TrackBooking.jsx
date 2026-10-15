@@ -272,8 +272,17 @@ function Result({ booking, onUpdated, onPick }) {
       )}
 
       {booking.timeline.length > 0 && (
-        <section className="bk-track__section">
-          <div className="bk-panel-label">History</div>
+        // Collapsed by default: the latest update is enough at a glance.
+        <details className="bk-track__section bk-track__history">
+          <summary>
+            <span className="bk-track__history-title">
+              History <small>({booking.timeline.length} updates)</small>
+            </span>
+            <span className="bk-track__history-latest">
+              Latest: {booking.timeline[booking.timeline.length - 1].label}
+            </span>
+            <Icon name="chevron" size={16} className="bk-track__history-chev" />
+          </summary>
           <ol className="bk-track__timeline">
             {[...booking.timeline].reverse().map((e, i) => (
               <li key={`${e.at}-${i}`}>
@@ -282,7 +291,7 @@ function Result({ booking, onUpdated, onPick }) {
               </li>
             ))}
           </ol>
-        </section>
+        </details>
       )}
     </div>
   );
