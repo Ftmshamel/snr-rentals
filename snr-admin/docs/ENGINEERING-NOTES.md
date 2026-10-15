@@ -500,6 +500,13 @@ Use PowerShell `System.Drawing` for resizing (see git history for the pattern).
 
 ## 8. Conventions worth not breaking
 
+- **Requirement photos are taken on the page, never uploaded (2026-10-15).**
+  Owner's rule: IDs / billing / selfie must come from the renter's camera
+  with S&R's date-time + "for S&R use only" watermark
+  (`snr-client/src/components/CameraCapture.jsx`, `stampForSnr`). Don't
+  reintroduce a file input for these fields. Browser-side only — the API
+  doesn't (and can't reliably) verify where an image came from.
+
 - **New price-list items (2026-10-15).** DJI Neo 2 (₱800 1–2 days, ₱700 3+),
   iPhone 18 Pro Max and Samsung S26 Ultra (₱2,800 for 1 day, ₱1,800/day 2+)
   are in `defaultCatalog.js`; their images were cut out of the owner's price

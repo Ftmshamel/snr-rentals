@@ -185,6 +185,18 @@ billing, selfie) → Review & Sign (contract + e-signature) → **Downpayment**
 after the renter has signed; the capstone paper's booking flow (Figure 3)
 follows this order.
 
+**Requirement photos are camera-only (2026-10-15).** IDs, proof of billing
+and the selfie have no file upload: `components/CameraCapture.jsx` opens the
+device camera on the page (`getUserMedia`, back camera first; front for the
+selfie), and `stampForSnr()` burns in a diagonal "FOR S&R RENTALS USE ONLY"
+watermark plus a footer with the label and the Manila date/time before the
+JPEG is saved (`captured: true`; old drafts' uploaded files are dropped).
+Proof of downpayment is still an upload (it's a payment screenshot) but gets
+the same watermark ("Uploaded …"). Limits: needs HTTPS and camera permission
+(blocked in some in-app browsers — the modal says so and points to the
+phone's browser); it is enforced in the browser only, the API still accepts
+any image.
+
 ### Several cameras in one booking (Oct 2026)
 
 - The public form takes up to 5 cameras for the same dates under **one

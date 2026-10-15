@@ -11,6 +11,7 @@ import useLockBodyScroll from "../hooks/useLockBodyScroll.js";
 import { getIdToken, looksSignedIn, openSignIn, refreshMe, useMember, wasSignedIn } from "../hooks/useMember.js";
 import { memberPerks } from "../utils/loyalty.js";
 import Icon from "../components/Icon.jsx";
+import CameraCapture, { stampForSnr } from "../components/CameraCapture.jsx";
 import DeliveryDetailsForm, {
   EMPTY_DELIVERY,
   deliveryMissing,
@@ -202,17 +203,22 @@ const OPTION_CHOICES = [
 ];
 
 const REQUIREMENT_FILES = [
-  { stateKey: "firstId", payloadKey: "1st_ID", label: "1st Valid ID" },
-  { stateKey: "secondId", payloadKey: "2nd_ID", label: "2nd Valid ID" },
+  // `capture`: taken with the device camera on this page (no file upload),
+  // stamped with date/time + an S&R-only watermark. The value is the camera
+  // to open first ("environment" = back, "user" = front).
+  { stateKey: "firstId", payloadKey: "1st_ID", label: "1st Valid ID", capture: "environment" },
+  { stateKey: "secondId", payloadKey: "2nd_ID", label: "2nd Valid ID", capture: "environment" },
   {
     stateKey: "proofOfBilling",
     payloadKey: "PROOF_OF_BILLING",
     label: "Proof of Billing",
+    capture: "environment",
   },
   {
     stateKey: "selfieWithId",
     payloadKey: "SELFIE_HOLDING_YOUR_ID's",
     label: "Selfie Holding ID",
+    capture: "user",
   },
   {
     stateKey: "proofOfDownpayment",
@@ -757,7 +763,7 @@ function readImageElement(file) {
   });
 }
 
-async function compressImageFile(file) {
+async function compressImageFile(file, stampLabel = "") {
   if (!file) return "";
   if (!file.type.startsWith("image/")) {
     throw new Error("Requirement uploads must be image files.");
@@ -778,6 +784,7 @@ async function compressImageFile(file) {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, height);
   ctx.drawImage(image, 0, 0, width, height);
+  if (stampLabel) stampForSnr(canvas, { label: stampLabel, source: "Uploaded" });
   return canvas.toDataURL("image/jpeg", IMAGE_QUALITY);
 }
 
@@ -831,8 +838,9 @@ function FileInput({ id, label, file, isProcessing, onChange }) {
   );
 }
 
-function RequirementFileInput({ id, label, file, isProcessing, onChange, invalid = false }) {
+function RequirementFileInput({ id, label, file, isProcessing, onChange, onCaptured, capture, invalid = false }) {
   const [showPreview, setShowPreview] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   return (
     <div className={`bk-file bk-file--compact ${invalid ? "is-invalid" : ""}`}>
@@ -873,24 +881,53 @@ function RequirementFileInput({ id, label, file, isProcessing, onChange, invalid
           )}
         </div>
       )}
-      <input
-        id={id}
-        type="file"
-        accept="image/*"
-        disabled={isProcessing}
-        required={!hasRequirementUpload(file)}
-        onChange={(event) => {
-          const selectedFile = event.target.files?.[0] || null;
-          onChange(selectedFile);
-          event.target.value = "";
-        }}
-        className="bk-file__input"
-      />
+      {capture ? (
+        <button
+          id={id}
+          type="button"
+          className={`btn ${file ? "btn--outline" : "btn--solid"} btn--sm bk-file__camera`}
+          onClick={() => setCameraOpen(true)}
+        >
+          <Icon name="camera" size={16} /> {file ? "Retake photo" : "Take photo"}
+        </button>
+      ) : (
+        <input
+          id={id}
+          type="file"
+          accept="image/*"
+          disabled={isProcessing}
+          required={!hasRequirementUpload(file)}
+          onChange={(event) => {
+            const selectedFile = event.target.files?.[0] || null;
+            onChange(selectedFile);
+            event.target.value = "";
+          }}
+          className="bk-file__input"
+        />
+      )}
       <span className="bk-file__hint">
-        {file
-          ? "File saved. Use preview only when you need to check it."
-          : "Image required. Max 12MB."}
+        {capture
+          ? file
+            ? "Photo saved with the date, time and S&R watermark."
+            : capture === "user"
+              ? "Uses your front camera. Hold your ID next to your face."
+              : "Uses your camera. Make sure every detail is readable."
+          : file
+            ? "File saved. Use preview only when you need to check it."
+            : "Image required. Max 12MB."}
       </span>
+      {cameraOpen && (
+        <CameraCapture
+          label={label}
+          facing={capture}
+          onClose={() => setCameraOpen(false)}
+          onCapture={(dataUrl) => {
+            setCameraOpen(false);
+            setShowPreview(true);
+            onCaptured(dataUrl);
+          }}
+        />
+      )}
       {invalid && <span className="bk-field__error">This upload is required</span>}
     </div>
   );
@@ -1433,7 +1470,17 @@ export default function PublicBooking() {
           merged.repeatRenter = merged.repeatRenter === "yes" ? "yes" : "no";
           setForm(merged);
         }
-        if (draft.files) setFiles({ ...initialFiles, ...draft.files });
+        if (draft.files) {
+          // Camera-only requirements: drop anything in an old draft that
+          // was uploaded as a file instead of taken on this page.
+          const restored = { ...initialFiles, ...draft.files };
+          REQUIREMENT_FILES.forEach((field) => {
+            if (field.capture && restored[field.stateKey] && !restored[field.stateKey].captured) {
+              restored[field.stateKey] = null;
+            }
+          });
+          setFiles(restored);
+        }
         // Checked against the catalogue once it loads (effect below).
         if (typeof draft.cameraName === "string" && draft.cameraName) {
           setCameraName(draft.cameraName);
@@ -1854,7 +1901,7 @@ export default function PublicBooking() {
 
     setProcessingFiles((current) => ({ ...current, [field.stateKey]: true }));
     try {
-      const dataUrl = await compressImageFile(file);
+      const dataUrl = await compressImageFile(file, field.label);
       if (!dataUrl.startsWith("data:image/")) {
         throw new Error("Unable to save uploaded image.");
       }
@@ -1875,6 +1922,22 @@ export default function PublicBooking() {
     } finally {
       setProcessingFiles((current) => ({ ...current, [field.stateKey]: false }));
     }
+  }
+
+  function setCapturedPhoto(field, dataUrl) {
+    setSubmitState((state) => ({ ...state, error: null }));
+    if (!String(dataUrl || "").startsWith("data:image/")) return;
+    const taken = new Intl.DateTimeFormat("en-PH", {
+      timeZone: "Asia/Manila",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date());
+    setFiles((current) => ({
+      ...current,
+      [field.stateKey]: { name: `Photo taken ${taken}`, dataUrl, captured: true },
+    }));
   }
 
   function toggleAddon(addonName) {
@@ -3253,7 +3316,9 @@ export default function PublicBooking() {
         file={files[field.stateKey]}
         isProcessing={Boolean(processingFiles[field.stateKey])}
         invalid={showCurrentStepErrors && !hasRequirementUpload(files[field.stateKey])}
+        capture={field.capture}
         onChange={(file) => updateFile(field, file)}
+        onCaptured={(dataUrl) => setCapturedPhoto(field, dataUrl)}
       />
     );
   }
@@ -3554,8 +3619,9 @@ export default function PublicBooking() {
             </div>
           ) : (
             <p className="bk-sub bk-sub--small">
-              Upload clear photos. You'll pay the downpayment in the last step,
-              after you've reviewed and signed the contract.
+              Take each photo with your camera right here. Every photo is stamped
+              with the date, time and an S&amp;R-only watermark. You'll pay the
+              downpayment in the last step, after you've signed the contract.
             </p>
           )}
           <div className="bk-grid-2">
