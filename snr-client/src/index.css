@@ -496,12 +496,15 @@ button {
   gap: 1rem;
 }
 
-@media (max-width: 1100px) {
-  .product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-
-@media (max-width: 900px) {
-  .product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* 5 or 2 per row only — both divide the 10-item lineup evenly. The old
+   4- and 3-column steps left a lone card on the last row (4+4+2, 3+3+3+1).
+   The 2-column layout is capped so tablet cards don't balloon. */
+@media (max-width: 860px) {
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 560px;
+    margin-inline: auto;
+  }
 }
 
 .product-card {
@@ -534,9 +537,9 @@ button {
    every tile's photo area is the same 4:3. */
 .product-card__image {
   position: absolute;
-  inset: 12%;
-  width: 76%;
-  height: 76%;
+  inset: 6%;
+  width: 88%;
+  height: 88%;
   object-fit: contain;
 }
 
@@ -977,63 +980,109 @@ button {
 
 /* ============================================================
    How to Rent — steps
+   Four short cards in a row (2 on tablets, 1 on phones). Each shows
+   number, icon, title and a one-line summary; the full copy is in a
+   <details> pinned to the bottom so the cards stay one even height.
    ============================================================ */
 
 .steps {
   list-style: none;
-  max-width: 880px;
+  max-width: 1120px;
   margin: 0 auto;
+  padding: 0;
   display: grid;
-  gap: 1.6rem;
-  position: relative;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 1000px) {
+  .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .steps { grid-template-columns: 1fr; }
 }
 
 .step {
   display: flex;
-  gap: 1.6rem;
-  align-items: flex-start;
+  flex-direction: column;
   background: var(--color-card);
   border: 1px solid var(--color-line);
-  border-radius: 28px;
-  padding: 1.8rem 2rem;
+  border-radius: 22px;
+  padding: 1.35rem 1.35rem 1.1rem;
   box-shadow: var(--shadow-card);
-  transition:
-    opacity 0.75s ease var(--d, 0ms),
-    transform 0.75s var(--ease-pop) var(--d, 0ms),
-    box-shadow 0.25s var(--ease-pop);
 }
 
-.step.is-visible:hover {
-  transform: none;
-  box-shadow: var(--shadow-card-hover);
-  transition:
-    transform 0.25s var(--ease-pop),
-    box-shadow 0.25s var(--ease-pop);
+.step__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
 }
 
 .step__number {
   display: grid;
   place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.1rem;
+  height: 2.1rem;
   border-radius: 50%;
   background: var(--color-ink);
   color: #fff;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
   flex-shrink: 0;
 }
 
+.step__icon {
+  color: var(--color-muted);
+}
+
 .step__title {
-  font-size: clamp(1.3rem, 2.4vw, 1.7rem);
+  font-size: 1.12rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  margin-bottom: 0.5rem;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
   text-shadow: none;
 }
 
+.step__summary {
+  margin: 0.4rem 0 1rem;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--color-dark-gray);
+}
+
+.step__details {
+  margin-top: auto;
+  border-top: 1px solid var(--color-line);
+  padding-top: 0.7rem;
+}
+
+.step__details > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.step__details > summary::-webkit-details-marker { display: none; }
+
+.step__chevron {
+  transition: transform 0.15s ease;
+}
+
+.step__details[open] .step__chevron {
+  transform: rotate(90deg);
+}
+
 .step__description {
-  font-size: 0.98rem;
+  margin-top: 0.7rem;
+  font-size: 0.86rem;
   font-weight: 500;
   color: var(--color-dark-gray);
   line-height: 1.55;
@@ -1041,16 +1090,16 @@ button {
 
 .step__list {
   list-style: none;
-  margin: 0.85rem 0 0;
+  margin: 0.7rem 0 0;
   padding: 0;
   display: grid;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .step__list li {
   position: relative;
-  padding-left: 1.5rem;
-  font-size: 0.95rem;
+  padding-left: 1.1rem;
+  font-size: 0.84rem;
   font-weight: 600;
   line-height: 1.45;
   color: var(--color-ink);
@@ -1061,16 +1110,17 @@ button {
   position: absolute;
   left: 0;
   top: 0.55em;
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--color-ink);
 }
 
 .step__note {
-  margin-top: 0.85rem;
-  font-size: 0.86rem;
+  margin-top: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 500;
+  line-height: 1.5;
   color: var(--color-muted);
 }
 
@@ -1543,16 +1593,6 @@ a.contact-card.is-visible:hover {
 
   .contact-card:last-child {
     grid-column: 1 / -1;
-  }
-
-  .step {
-    flex-direction: column;
-    gap: 0.8rem;
-    padding: 1.6rem 1.5rem;
-  }
-
-  .step__number {
-    text-align: left;
   }
 
   .section {

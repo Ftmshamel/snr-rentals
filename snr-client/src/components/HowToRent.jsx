@@ -1,6 +1,10 @@
 import { HOW_TO_RENT } from "../data/content.js";
 import useReveal from "../hooks/useReveal.js";
+import Icon from "./Icon.jsx";
 
+// Four short steps side by side; the full requirements and notes for each
+// sit behind "See details" so the section reads at a glance without losing
+// any of the copy.
 export default function HowToRent() {
   const ref = useReveal();
 
@@ -13,16 +17,21 @@ export default function HowToRent() {
 
       <ol className="steps">
         {HOW_TO_RENT.map((step, i) => (
-          <li
-            className="step reveal"
-            key={step.title}
-            style={{ "--d": `${i * 120}ms` }}
-          >
-            <span className="step__number" aria-hidden="true">
-              {i + 1}
-            </span>
-            <div className="step__body">
-              <h3 className="step__title">{step.title}</h3>
+          <li className="step reveal" key={step.title}>
+            <div className="step__top">
+              <span className="step__number" aria-hidden="true">
+                {i + 1}
+              </span>
+              {step.icon && <Icon name={step.icon} size={22} className="step__icon" />}
+            </div>
+            <h3 className="step__title">{step.title}</h3>
+            <p className="step__summary">{step.summary}</p>
+
+            <details className="step__details">
+              <summary>
+                See details
+                <Icon name="chevron" size={14} className="step__chevron" />
+              </summary>
               <p className="step__description">{step.description}</p>
               {step.bullets && (
                 <ul className="step__list">
@@ -32,7 +41,7 @@ export default function HowToRent() {
                 </ul>
               )}
               <p className="step__note">{step.note}</p>
-            </div>
+            </details>
           </li>
         ))}
       </ol>

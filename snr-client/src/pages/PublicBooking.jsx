@@ -668,7 +668,11 @@ function DateRangePicker({ pickupDate, returnDate, onChange, invalid = false }) 
 function CameraChooserCard({ camera, selected, onSelect }) {
   const assets = getCameraAssets(camera);
   const detailCopy = getCameraDetailCopy(camera);
-  const startingPrice = camera.pricing?.[0]?.pricePerDay;
+  // Lowest per-day rate (the longest-rental tier), same as the homepage
+  // lineup and member home show — the first tier is the highest rate.
+  const startingPrice = camera.pricing?.length
+    ? Math.min(...camera.pricing.map((t) => t.pricePerDay))
+    : null;
 
   return (
     <button
@@ -688,7 +692,7 @@ function CameraChooserCard({ camera, selected, onSelect }) {
       <span className="bk-chooser__card-name">{camera.name}</span>
       {startingPrice != null && (
         <span className="bk-chooser__card-price">
-          From ₱{startingPrice}/day
+          From ₱{startingPrice.toLocaleString()}/day
         </span>
       )}
       <span className="bk-chooser__card-hook">{detailCopy.goodFor}</span>
