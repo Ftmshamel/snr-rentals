@@ -4,61 +4,123 @@ import { useCatalog } from "../data/catalog.js";
 import useReveal from "../hooks/useReveal.js";
 import Icon from "./Icon.jsx";
 
-// Sample shots, one folder per camera. Opening a folder shows its photos as
-// posts (S&R Rentals · Shot on <camera> · date, caption, photo) — the way
-// they'd look on the Facebook page. Posted from the admin's Gallery page;
-// API: /api/catalog?action=shots (thumbnails) and ?action=shot&id= (full).
+// Sample shots, one folder per camera. Opening a folder shows its posts the
+// way they'd look on the Facebook page: S&R Rentals · Shot on <camera> ·
+// date, the caption, then the post's 1–10 photos as a grid. Tapping a photo
+// opens a viewer with next/previous. Posted from the admin's Gallery page.
+// API: /api/catalog?action=shots (posts, thumbnails only) and
+// ?action=shot&id=<post>&photo=<photo> (one full-size photo).
 
 function formatDate(iso) {
   if (!iso) return "";
   return new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
-// Swaps the thumbnail for the full photo once the post scrolls into view.
-function PostPhoto({ shot }) {
-  const ref = useRef(null);
-  const [src, setSrc] = useState(shot.thumb);
-  const [full, setFull] = useState(false);
+// Full-size photos are fetched once and shared by the grid and the viewer.
+const fullPhotos = new Map();
+function loadFullPhoto(postId, photoId) {
+  const key = `${postId}/${photoId}`;
+  if (!fullPhotos.has(key)) {
+    const p = apiGetJson(
+      `/api/catalog?action=shot&id=${encodeURIComponent(postId)}&photo=${encodeURIComponent(photoId)}`,
+    )
+      .then((d) => d.photo?.image || null)
+      .catch(() => {
+        fullPhotos.delete(key); // allow a retry later
+        return null;
+      });
+    fullPhotos.set(key, p);
+  }
+  return fullPhotos.get(key);
+}
 
+/** The thumbnail first, then the full photo once `enabled`. */
+function useFullPhoto(postId, photo, enabled) {
+  const [src, setSrc] = useState(photo.thumb);
+  const [full, setFull] = useState(false);
+  useEffect(() => {
+    setSrc(photo.thumb);
+    setFull(false);
+  }, [postId, photo.id, photo.thumb]);
+  useEffect(() => {
+    if (!enabled) return undefined;
+    let cancelled = false;
+    loadFullPhoto(postId, photo.id).then((image) => {
+      if (!cancelled && image) {
+        setSrc(image);
+        setFull(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [postId, photo.id, enabled]);
+  return { src, full };
+}
+
+// True once the element has scrolled near the viewport.
+function useNearViewport(ref) {
+  const [near, setNear] = useState(false);
   useEffect(() => {
     const el = ref.current;
-    if (!el || full) return undefined;
-    let cancelled = false;
+    if (!el || near) return undefined;
     const io = new IntersectionObserver(
       (entries) => {
-        if (!entries.some((e) => e.isIntersecting)) return;
-        io.disconnect();
-        apiGetJson(`/api/catalog?action=shot&id=${encodeURIComponent(shot.id)}`)
-          .then((d) => {
-            if (!cancelled && d.shot?.image) {
-              setSrc(d.shot.image);
-              setFull(true);
-            }
-          })
-          .catch(() => {});
+        if (entries.some((e) => e.isIntersecting)) {
+          setNear(true);
+          io.disconnect();
+        }
       },
       { rootMargin: "300px" },
     );
     io.observe(el);
-    return () => {
-      cancelled = true;
-      io.disconnect();
-    };
-  }, [shot.id, full]);
+    return () => io.disconnect();
+  }, [ref, near]);
+  return near;
+}
 
-  const ratio = shot.width && shot.height ? `${shot.width} / ${shot.height}` : "4 / 3";
+// One photo of a post's grid. A post with a single photo shows it at its own
+// shape and loads it full size; grid cells keep the (400px) thumbnail.
+function GridPhoto({ post, photo, single, onOpen, extra }) {
+  const ref = useRef(null);
+  const near = useNearViewport(ref);
+  const { src, full } = useFullPhoto(post.id, photo, single && near);
+  const ratio = single && photo.width && photo.height ? `${photo.width} / ${photo.height}` : undefined;
   return (
-    <img
-      ref={ref}
-      src={src}
-      alt={shot.caption || `Sample shot from ${shot.cameraName}`}
-      className={`post__photo ${full ? "" : "is-loading"}`}
-      style={{ aspectRatio: ratio }}
-    />
+    <button type="button" ref={ref} className="post-grid__cell" onClick={onOpen} aria-label="View photo">
+      <img
+        src={src}
+        alt=""
+        className={single && !full ? "is-loading" : ""}
+        style={ratio ? { aspectRatio: ratio } : undefined}
+      />
+      {extra > 0 && <span className="post-grid__more">+{extra}</span>}
+    </button>
   );
 }
 
-function Post({ shot }) {
+function PhotoGrid({ post, onOpen }) {
+  const photos = post.photos || [];
+  if (photos.length === 0) return null;
+  const shown = photos.slice(0, 4);
+  const extra = photos.length - shown.length;
+  return (
+    <div className={`post-grid n${Math.min(photos.length, 4)}`}>
+      {shown.map((p, i) => (
+        <GridPhoto
+          key={p.id}
+          post={post}
+          photo={p}
+          single={photos.length === 1}
+          onOpen={() => onOpen(i)}
+          extra={i === shown.length - 1 ? extra : 0}
+        />
+      ))}
+    </div>
+  );
+}
+
+function Post({ post, onOpen }) {
   return (
     <article className="post">
       <header className="post__head">
@@ -68,17 +130,93 @@ function Post({ shot }) {
         <div>
           <div className="post__author">S&amp;R Rentals</div>
           <div className="post__meta">
-            Shot on <strong>{shot.cameraName}</strong> · {formatDate(shot.createdAt)}
+            Shot on <strong>{post.cameraName}</strong> · {formatDate(post.createdAt)}
           </div>
         </div>
       </header>
-      {shot.caption && <p className="post__caption">{shot.caption}</p>}
-      <PostPhoto shot={shot} />
+      {post.caption && <p className="post__caption">{post.caption}</p>}
+      <PhotoGrid post={post} onOpen={(i) => onOpen(post, i)} />
     </article>
   );
 }
 
+// Full-screen photo viewer: arrows / swipe / keyboard to move, Esc to close.
+function Viewer({ post, index, onIndex, onClose }) {
+  const photos = post.photos;
+  const photo = photos[index];
+  const { src, full } = useFullPhoto(post.id, photo, true);
+  const touch = useRef(null);
+  const many = photos.length > 1;
+  const go = (d) => onIndex((index + d + photos.length) % photos.length);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+      else if (many && e.key === "ArrowRight") go(1);
+      else if (many && e.key === "ArrowLeft") go(-1);
+      else return;
+      e.stopPropagation();
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  });
+
+  // Preload the neighbours so moving through the album feels instant.
+  useEffect(() => {
+    if (!many) return;
+    loadFullPhoto(post.id, photos[(index + 1) % photos.length].id);
+    loadFullPhoto(post.id, photos[(index - 1 + photos.length) % photos.length].id);
+  }, [post.id, index, many, photos]);
+
+  return (
+    <div
+      className="viewer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Photo viewer"
+      onClick={onClose}
+      onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
+      onTouchEnd={(e) => {
+        if (!many || touch.current == null) return;
+        const dx = e.changedTouches[0].clientX - touch.current;
+        if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+        touch.current = null;
+      }}
+    >
+      <div className="viewer__top" onClick={(e) => e.stopPropagation()}>
+        <span>{many ? `${index + 1} / ${photos.length}` : post.cameraName}</span>
+        <button type="button" className="viewer__btn" onClick={onClose} aria-label="Close">
+          <Icon name="x" size={20} />
+        </button>
+      </div>
+      <img
+        src={src}
+        alt={post.caption || `Sample shot from ${post.cameraName}`}
+        className={`viewer__img ${full ? "" : "is-loading"}`}
+        onClick={(e) => e.stopPropagation()}
+      />
+      {many && (
+        <>
+          <button type="button" className="viewer__btn viewer__prev" onClick={(e) => { e.stopPropagation(); go(-1); }} aria-label="Previous photo">
+            <Icon name="arrow-left" size={20} />
+          </button>
+          <button type="button" className="viewer__btn viewer__next" onClick={(e) => { e.stopPropagation(); go(1); }} aria-label="Next photo">
+            <Icon name="arrow-right" size={20} />
+          </button>
+        </>
+      )}
+      {post.caption && (
+        <p className="viewer__caption" onClick={(e) => e.stopPropagation()}>
+          <strong>Shot on {post.cameraName}</strong> · {post.caption}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function Folder({ folder, onClose }) {
+  const [viewing, setViewing] = useState(null); // { post, index }
+
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
@@ -103,12 +241,22 @@ function Folder({ folder, onClose }) {
           </button>
         </div>
         <div className="folder-view__feed">
-          {folder.shots.map((s) => <Post key={s.id} shot={s} />)}
+          {folder.posts.map((p) => (
+            <Post key={p.id} post={p} onOpen={(post, index) => setViewing({ post, index })} />
+          ))}
           <a href={`/book?camera=${encodeURIComponent(folder.name)}`} className="btn btn--solid folder-view__book">
             Book the {folder.name} <Icon name="arrow-right" size={16} />
           </a>
         </div>
       </div>
+      {viewing && (
+        <Viewer
+          post={viewing.post}
+          index={viewing.index}
+          onIndex={(index) => setViewing((v) => ({ ...v, index }))}
+          onClose={() => setViewing(null)}
+        />
+      )}
     </div>
   );
 }
@@ -130,13 +278,17 @@ export default function Gallery() {
     if (!shots) return [];
     const byCam = {};
     shots.forEach((s) => (byCam[s.cameraId] ||= []).push(s));
-    const ordered = cameras
-      .filter((c) => byCam[c.id])
-      .map((c) => ({ id: c.id, name: c.name, shots: byCam[c.id] }));
-    // Shots of a camera no longer in the lineup still get a folder.
+    const folder = (id, name) => ({
+      id,
+      name,
+      posts: byCam[id],
+      photos: byCam[id].flatMap((p) => p.photos || []),
+    });
+    const ordered = cameras.filter((c) => byCam[c.id]).map((c) => folder(c.id, c.name));
+    // Posts of a camera no longer in the lineup still get a folder.
     Object.keys(byCam)
       .filter((id) => !cameras.some((c) => c.id === id))
-      .forEach((id) => ordered.push({ id, name: byCam[id][0].cameraName, shots: byCam[id] }));
+      .forEach((id) => ordered.push(folder(id, byCam[id][0].cameraName)));
     return ordered;
   }, [shots, cameras]);
 
@@ -189,15 +341,15 @@ export default function Gallery() {
         <div className="gallery-grid">
           {folders.map((f) => (
             <button key={f.id} type="button" className="gallery-folder" onClick={() => openFolder(f.id)}>
-              <span className={`gallery-folder__cover n${Math.min(f.shots.length, 3)}`}>
-                {f.shots.slice(0, 3).map((s) => (
-                  <img key={s.id} src={s.thumb} alt="" loading="lazy" />
+              <span className={`gallery-folder__cover n${Math.min(f.photos.length, 3)}`}>
+                {f.photos.slice(0, 3).map((p, i) => (
+                  <img key={i} src={p.thumb} alt="" loading="lazy" />
                 ))}
               </span>
               <span className="gallery-folder__label">
                 <span className="gallery-folder__name">{f.name}</span>
                 <span className="gallery-folder__count">
-                  {f.shots.length} photo{f.shots.length === 1 ? "" : "s"}
+                  {f.photos.length} photo{f.photos.length === 1 ? "" : "s"}
                 </span>
               </span>
             </button>

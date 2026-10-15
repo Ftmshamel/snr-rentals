@@ -17,12 +17,13 @@ const shots = require("../lib/sampleShots");
 //   GET    ?action=members    owner: renter accounts with their tier
 //   PATCH  ?action=tiers      owner: member tiers + perks   body: { tiers }
 //
-//   Sample shots (Gallery) — see lib/sampleShots.js:
-//   GET    ?action=shots            public: every shot, thumbnails only
-//   GET    ?action=shot&id=<id>     public: one shot with its full photo
-//   POST   ?action=shots            staff: post a photo  body: { cameraId, caption, image, thumb, width, height }
-//   PATCH  ?action=shots&id=<id>    staff: edit caption / camera
-//   DELETE ?action=shots&id=<id>    staff: remove
+//   Sample shots (Gallery) — posts of 1–10 photos with one caption; see lib/sampleShots.js:
+//   GET    ?action=shots                         public: every post, thumbnails only
+//   GET    ?action=shot&id=<post>&photo=<id>     public: one photo at full size
+//   POST   ?action=shots                         staff: new post  body: { cameraId, caption, photos: [{ thumb, width, height }] }
+//   POST   ?action=shot&id=<post>&photo=<id>     staff: that photo's full image  body: { image }
+//   PATCH  ?action=shots&id=<post>               staff: edit caption / camera
+//   DELETE ?action=shots&id=<post>               staff: remove the post and its photos
 //
 // A changed price or unit count is never overwritten in place: the old value
 // is kept in history up to `effectiveDate` (default: today, Manila time) so
@@ -124,13 +125,14 @@ module.exports = async (req, res) => {
 };
 
 async function handleShots(req, res, store, action, id) {
+  const photo = req.query?.photo;
   if (req.method === "GET") {
     if (action === "shot") {
-      const shot = id ? await shots.getShot(id) : null;
-      if (!shot) return res.status(404).json({ ok: false, error: "Photo not found" });
+      const found = id ? await shots.getPhoto(id, photo) : null;
+      if (!found) return res.status(404).json({ ok: false, error: "Photo not found" });
       // A posted photo never changes (only its caption), so let the CDN keep it.
       res.setHeader("Cache-Control", "public, max-age=300, s-maxage=86400");
-      return res.status(200).json({ ok: true, shot });
+      return res.status(200).json({ ok: true, photo: found });
     }
     res.setHeader("Cache-Control", "no-store");
     return res.status(200).json({ ok: true, shots: await shots.listShots() });
@@ -141,17 +143,21 @@ async function handleShots(req, res, store, action, id) {
   const body = parseJson(req.body);
   if (body === null) return res.status(400).json({ ok: false, error: "Invalid JSON body" });
 
-  if (req.method === "POST") {
+  if (req.method === "POST" && action === "shot" && id && photo) {
+    if (!(await shots.putPhoto(id, photo, body))) return res.status(404).json({ ok: false, error: "Post not found" });
+    return res.status(200).json({ ok: true });
+  }
+  if (req.method === "POST" && action === "shots") {
     const shot = await shots.createShot(body, await store.listCameras());
     return res.status(201).json({ ok: true, shot });
   }
-  if (req.method === "PATCH" && id) {
+  if (req.method === "PATCH" && action === "shots" && id) {
     const shot = await shots.updateShot(id, body, await store.listCameras());
-    if (!shot) return res.status(404).json({ ok: false, error: "Photo not found" });
+    if (!shot) return res.status(404).json({ ok: false, error: "Post not found" });
     return res.status(200).json({ ok: true, shot });
   }
-  if (req.method === "DELETE" && id) {
-    if (!(await shots.deleteShot(id))) return res.status(404).json({ ok: false, error: "Photo not found" });
+  if (req.method === "DELETE" && action === "shots" && id) {
+    if (!(await shots.deleteShot(id))) return res.status(404).json({ ok: false, error: "Post not found" });
     return res.status(200).json({ ok: true });
   }
   return res.status(405).json({ ok: false, error: "Method not allowed" });

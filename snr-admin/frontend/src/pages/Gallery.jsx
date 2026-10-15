@@ -5,9 +5,38 @@ import { useCameras } from "../hooks/useCameras.js";
 import { apiGetJson, apiPostJson, apiPatchJson, apiDeleteJson } from "../utils/api.js";
 import { prepareSampleShot } from "../utils/resizeImage.js";
 
-// Sample shots — photos taken with each camera, posted with a caption like a
-// Facebook post. They show on the public site's Gallery, one folder per
+// Sample shots — posts of 1–10 photos taken with one camera, with one caption,
+// like a Facebook album post. They show on the public site's Gallery, one folder per
 // camera. Storage + API: backend/lib/sampleShots.js via /api/catalog?action=shots.
+
+const MAX_PHOTOS = 10;
+
+// The post's photos as a small grid (first 4; "+N" on the last one).
+function PhotoStrip({ photos }) {
+  if (photos.length === 0) return null;
+  if (photos.length === 1) {
+    return <img src={photos[0].thumb} alt="" className="aspect-[4/3] w-full object-cover" />;
+  }
+  const shown = photos.slice(0, 4);
+  const extra = photos.length - shown.length;
+  return (
+    <div className={`grid aspect-[4/3] gap-0.5 ${shown.length === 2 ? "grid-cols-2" : "grid-cols-2 grid-rows-2"}`}>
+      {shown.map((p, i) => (
+        <div
+          key={p.id}
+          className={`relative overflow-hidden ${shown.length === 3 && i === 0 ? "row-span-2" : ""}`}
+        >
+          <img src={p.thumb} alt="" className="h-full w-full object-cover" />
+          {extra > 0 && i === shown.length - 1 && (
+            <span className="absolute inset-0 grid place-items-center bg-black/50 text-xl font-bold text-white">
+              +{extra}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function formatDate(iso) {
   if (!iso) return "";
@@ -24,7 +53,7 @@ export default function Gallery() {
   const [caption, setCaption] = useState("");
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
-  const [posting, setPosting] = useState(null); // "2 of 3" while uploading
+  const [posting, setPosting] = useState(null); // progress label while uploading
   const [postError, setPostError] = useState(null);
   const fileRef = useRef(null);
 
@@ -53,29 +82,56 @@ export default function Gallery() {
 
   const visible = filter === "all" ? shots : shots.filter((s) => s.cameraId === filter);
 
+  function chooseFiles(list) {
+    const picked = [...list];
+    if (picked.length > MAX_PHOTOS) {
+      setPostError(`A post can have up to ${MAX_PHOTOS} photos — the first ${MAX_PHOTOS} are kept.`);
+    } else {
+      setPostError(null);
+    }
+    setFiles(picked.slice(0, MAX_PHOTOS));
+  }
+
+  // One post = every chosen photo + one caption. The post goes up first with
+  // the small previews; each full-size photo follows in its own request
+  // (all at once would pass the server's 4.5 MB upload limit).
   async function handlePost(e) {
     e.preventDefault();
     if (!cameraId || files.length === 0) return;
     setPostError(null);
-    const posted = [];
+    const n = files.length;
+    let created = null;
     try {
-      for (let i = 0; i < files.length; i++) {
-        setPosting(files.length > 1 ? `${i + 1} of ${files.length}` : "…");
-        const photo = await prepareSampleShot(files[i]);
-        const res = await apiPostJson("/api/catalog?action=shots", {
-          cameraId,
-          caption,
-          ...photo,
-        });
-        posted.push({ ...res.shot, thumb: photo.thumb });
+      const prepared = [];
+      for (let i = 0; i < n; i++) {
+        setPosting(n > 1 ? `Preparing photo ${i + 1} of ${n}` : "Preparing photo");
+        prepared.push(await prepareSampleShot(files[i]));
+      }
+      setPosting("Posting");
+      const res = await apiPostJson("/api/catalog?action=shots", {
+        cameraId,
+        caption,
+        photos: prepared.map(({ thumb, width, height }) => ({ thumb, width, height })),
+      });
+      created = res.shot;
+      for (let i = 0; i < n; i++) {
+        setPosting(n > 1 ? `Uploading photo ${i + 1} of ${n}` : "Uploading photo");
+        await apiPostJson(
+          `/api/catalog?action=shot&id=${created.id}&photo=${created.photos[i].id}`,
+          { image: prepared[i].image },
+        );
       }
       setCaption("");
       setFiles([]);
       if (fileRef.current) fileRef.current.value = "";
     } catch (err) {
-      setPostError(err.message);
+      setPostError(
+        created
+          ? `The post was saved but a photo didn't finish uploading (${err.message}). Delete the post below and try again.`
+          : err.message,
+      );
     } finally {
-      if (posted.length) setShots((prev) => [...posted.reverse(), ...prev]);
+      if (created) setShots((prev) => [created, ...prev]);
       setPosting(null);
     }
   }
@@ -91,7 +147,9 @@ export default function Gallery() {
   }
 
   async function remove(id) {
-    if (!window.confirm("Delete this sample shot? It will disappear from the website.")) return;
+    const post = shots.find((s) => s.id === id);
+    const n = post?.photos?.length || 1;
+    if (!window.confirm(`Delete this post${n > 1 ? ` and its ${n} photos` : ""}? It will disappear from the website.`)) return;
     const before = shots;
     setShots((prev) => prev.filter((s) => s.id !== id));
     try {
@@ -110,8 +168,8 @@ export default function Gallery() {
           <div className="ui-kicker">Website</div>
           <h1 className="ui-title font-display text-3xl">Sample Shots</h1>
           <p className="mt-1 text-sm text-[color:var(--color-dark-gray)]">
-            Photos taken with each camera. Each post shows in that camera&apos;s folder in the
-            website&apos;s Gallery, with your caption — like a Facebook post.
+            Photos taken with each camera. Each post — up to {MAX_PHOTOS} photos and one caption, like a
+            Facebook post — shows in that camera&apos;s folder in the website&apos;s Gallery.
           </p>
         </div>
 
@@ -140,7 +198,7 @@ export default function Gallery() {
                 type="file"
                 accept="image/*"
                 multiple
-                onChange={(e) => setFiles([...e.target.files])}
+                onChange={(e) => chooseFiles(e.target.files)}
                 className="block w-full text-sm"
                 required
               />
@@ -152,7 +210,7 @@ export default function Gallery() {
                 </div>
               )}
               <p className="mt-1 text-xs text-[color:var(--color-dark-gray)]">
-                Choose one or more. Several photos become separate posts with the same caption.
+                Choose up to {MAX_PHOTOS}. They go up together as one post with your caption.
                 Photos are resized before upload.
               </p>
             </div>
@@ -172,7 +230,7 @@ export default function Gallery() {
             {postError && <p className="text-xs text-rose-500">{postError}</p>}
             <div className="flex justify-end">
               <button type="submit" disabled={Boolean(posting)} className="ui-btn ui-btn--solid">
-                {posting ? `Posting ${posting}` : "Post"}
+                {posting ? `${posting}…` : files.length > 1 ? `Post ${files.length} photos` : "Post"}
               </button>
             </div>
           </div>
@@ -209,11 +267,13 @@ export default function Gallery() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {visible.map((s) => (
             <article key={s.id} className="ui-panel overflow-hidden">
-              {s.thumb && <img src={s.thumb} alt="" className="aspect-[4/3] w-full object-cover" />}
+              <PhotoStrip photos={s.photos || []} />
               <div className="p-4">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="text-sm font-bold">{s.cameraName}</span>
-                  <span className="text-xs text-[color:var(--color-dark-gray)]">{formatDate(s.createdAt)}</span>
+                  <span className="text-xs text-[color:var(--color-dark-gray)]">
+                    {(s.photos?.length || 0) > 1 ? `${s.photos.length} photos · ` : ""}{formatDate(s.createdAt)}
+                  </span>
                 </div>
                 {editingId === s.id ? (
                   <div className="mt-2 space-y-2">
