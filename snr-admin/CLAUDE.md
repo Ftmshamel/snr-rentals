@@ -127,21 +127,24 @@ split describes the legacy mode and the historical data.
 
 ### Sample shots gallery (Oct 2026)
 
-- Staff post photos taken with each camera on the admin **Gallery** page
-  (`/gallery`, any login): pick the camera, choose one or more photos, add a
-  caption. The public homepage shows a **Sample Shots** section — one folder
-  per camera (collage cover + count); a folder opens as Facebook-style posts
-  (S&R Rentals · Shot on <camera> · date, caption, photo) with a Book button.
+- Staff post on the admin **Gallery** page (`/gallery`, any login): pick the
+  camera, choose **1–10 photos**, add one caption — they go up as **one post**,
+  like a Facebook album post. The public homepage's **Sample Shots** section has
+  one folder per camera; a folder shows its posts (S&R Rentals · Shot on
+  <camera> · date, caption) with the photos as a FB-style grid (1 / 2 / 3 /
+  2×2 + "+N"). Tapping a photo opens a viewer (next/prev, swipe, arrow keys).
   `#gallery/<cameraId>` opens a folder directly, so it can be shared as a link.
-- Storage: Firestore `sampleShots`, one doc per photo with `image` (≤1600px)
-  and `thumb` (≤480px) JPEG data URLs, resized in the browser
-  (`frontend/src/utils/resizeImage.js`) — no Cloud Storage on the free plan,
-  and the caps keep each doc under the 1 MiB limit. `lib/sampleShots.js`.
-- Routes (no new function): `api/catalog.js?action=shots` (GET public list,
-  **thumbnails only** via `select()`; POST/PATCH/DELETE staff) and
-  `?action=shot&id=` (one full photo, CDN-cached). The public post swaps the
-  thumbnail for the full photo when it scrolls into view.
-
+- Storage: Firestore `sampleShots`, **one doc per post** with `photos: [{ id,
+  thumb, width, height }]` (thumbs ≤400px so 10 fit under the 1 MiB doc cap)
+  and each full photo (≤1600px) in `sampleShots/{post}/photos/{id}`. Resized in
+  the browser (`frontend/src/utils/resizeImage.js`); no Cloud Storage on the
+  free plan. Posts from before albums keep `image`/`thumb` on the doc and read
+  as a one-photo post with photo id "0". `lib/sampleShots.js`.
+- Routes (no new function), `api/catalog.js`: `?action=shots` GET public list
+  (thumbnails only, via `select()`), POST staff new post; `?action=shot&id=&photo=`
+  GET one full photo (CDN-cached), POST staff upload that photo. The admin
+  creates the post first, then uploads each full photo in its own request
+  (together they'd pass Vercel's 4.5 MB body limit).
 
 ### Member tiers — S&R Rewards (Oct 2026)
 

@@ -44,12 +44,13 @@ function toJpeg(source, maxSide, maxChars) {
   return null;
 }
 
-/** { image, thumb, width, height } ready for POST /api/catalog?action=shots */
+/** { image, thumb, width, height } for one photo of a sample-shot post */
 export async function prepareSampleShot(file) {
   if (!file || !/^image\//.test(file.type)) throw new Error("Choose a photo file.");
   const source = await decode(file);
   const full = toJpeg(source, 1600, 800_000) || toJpeg(source, 1200, 800_000);
-  const thumb = toJpeg(source, 480, 110_000);
+  // Up to 10 thumbnails share the post doc (1 MiB cap), so keep them small.
+  const thumb = toJpeg(source, 400, 75_000) || toJpeg(source, 300, 75_000);
   if (source.close) source.close();
   if (!full || !thumb) throw new Error("This photo is too large to upload. Try another one.");
   return { image: full.url, thumb: thumb.url, width: full.width, height: full.height };
