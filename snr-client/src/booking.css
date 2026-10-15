@@ -610,15 +610,16 @@ select.bk-input {
    size changes, sits centred instead of hanging off the left. */
 .bk-chooser__grid {
   --bk-cols: 5;
+  --bk-gap: 0.75rem;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.75rem;
+  gap: var(--bk-gap);
   margin-top: 0.7rem;
 }
 
 .bk-chooser__grid > .bk-chooser__card {
-  flex: 0 0 calc((100% - (var(--bk-cols) - 1) * 0.75rem) / var(--bk-cols));
+  flex: 0 0 calc((100% - (var(--bk-cols) - 1) * var(--bk-gap)) / var(--bk-cols));
   min-width: 0;
 }
 
@@ -657,10 +658,17 @@ select.bk-input {
   box-shadow: var(--shadow-sm);
 }
 
-.bk-chooser__card-img {
+/* Every photo gets the same square box, centred inside it, so names and
+   prices line up across the row whatever the photo's shape (square
+   cameras, a wide drone, tall phones). Needs the `.booking-app` prefix:
+   `.booking-app img { height: auto }` otherwise outranks it and each image
+   falls back to its own aspect ratio. */
+.booking-app .bk-chooser__card-img {
   width: 100%;
-  max-width: 120px;
-  height: 76px;
+  max-width: 150px;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  margin-inline: auto;
   object-fit: contain;
   filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.16));
 }
@@ -2891,12 +2899,7 @@ select.bk-input {
   }
 
   .bk-chooser__grid {
-    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-    gap: 0.55rem;
-  }
-
-  .bk-chooser__card-img {
-    height: 62px;
+    --bk-gap: 0.55rem;
   }
 
   .bk-chooser__summary-head {
