@@ -14,7 +14,8 @@ export default function Hero() {
           </p>
           <h1 className="hero__title">Camera rentals, made simple.</h1>
           <p className="hero__subtitle">
-            Action cams, vlog cams and mirrorless kits from <strong>S&amp;R Rentals</strong>.
+            Action cams, vlog cams, mirrorless kits, a drone and flagship phones from{" "}
+            <strong>S&amp;R Rentals</strong>.
             Check availability, book online and pick up or get it delivered.
           </p>
           <div className="hero__actions">

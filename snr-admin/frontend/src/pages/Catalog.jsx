@@ -556,7 +556,7 @@ function placeholderSerials(cameras) {
 }
 
 export default function Catalog() {
-  const { cameras, loading, error, readOnly, reload } = useCameras();
+  const { cameras, loading, error, readOnly, reload, missingDefaults = [] } = useCameras();
   const [editing, setEditing] = useState(null); // camera | "new" | null
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState(null);
@@ -638,6 +638,22 @@ export default function Catalog() {
             </button>
           </div>
         )}
+        {!readOnly && cameras.length > 0 && missingDefaults.length > 0 && (
+          <div className="ui-panel mb-4 flex flex-wrap items-center justify-between gap-3 p-4">
+            <div className="min-w-0">
+              <div className="text-sm font-bold">
+                {missingDefaults.length} new item{missingDefaults.length === 1 ? "" : "s"} from the price list
+              </div>
+              <p className="text-xs text-[color:var(--color-dark-gray)]">
+                {missingDefaults.join(", ")} — not on the website yet. Adding them never changes the
+                cameras already here; edit their units, inclusions and serials after.
+              </p>
+            </div>
+            <button type="button" disabled={busy} onClick={seed} className="ui-btn ui-btn--solid">
+              Add {missingDefaults.length === 1 ? "it" : "them"}
+            </button>
+          </div>
+        )}
         {actionError && <p className="mb-3 font-mono text-xs text-rose-600">{actionError}</p>}
         {error && <p className="mb-3 font-mono text-xs text-rose-600">{error}</p>}
 
@@ -651,7 +667,7 @@ export default function Catalog() {
           <div className="ui-panel space-y-3 p-5">
             <div className="text-sm font-bold">The catalogue is empty.</div>
             <p className="text-sm text-[color:var(--color-dark-gray)]">
-              Load the seven cameras S&amp;R rented before the move to Firebase (with their rates, rate history,
+              Load the cameras, drone and phones on the S&amp;R price list (with their rates, rate history,
               add-ons and inclusions), or start from scratch.
             </p>
             <div className="flex flex-wrap gap-2">

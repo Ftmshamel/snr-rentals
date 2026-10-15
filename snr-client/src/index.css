@@ -513,19 +513,22 @@ button {
 }
 
 .product-card__art {
-  display: grid;
-  place-items: center;
+  position: relative;
+  display: block;
   aspect-ratio: 4 / 3;
   width: 100%;
   background: #f6f6f3;
   border-bottom: 1px solid var(--color-line);
-  padding: 12%;
   cursor: zoom-in;
 }
 
+/* Absolutely placed so a tall photo (a phone) can't stretch the box:
+   every tile's photo area is the same 4:3. */
 .product-card__image {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 12%;
+  width: 76%;
+  height: 76%;
   object-fit: contain;
 }
 

@@ -10,7 +10,7 @@ const { LoyaltyError } = require("../lib/loyalty");
 //   GET                       public: every camera (the public site filters
 //                             out `active: false`; the admin shows all)
 //   POST                      owner: add a camera            body: { camera }
-//   POST   ?action=seed       owner: load DEFAULT_CATALOG into an empty catalogue
+//   POST   ?action=seed       owner: add the DEFAULT_CATALOG items the catalogue lacks (all, when empty)
 //   PATCH  ?id=<id>           owner: edit                    body: { camera, effectiveDate }
 //   DELETE ?id=<id>           owner: remove
 //   GET    ?action=members    owner: renter accounts with their tier
@@ -66,7 +66,10 @@ module.exports = async (req, res) => {
       // `tiers` — the member tiers and perks, shown on the public site.
       res.setHeader("Cache-Control", "no-store");
       const [cameras, tiers] = await Promise.all([store.listCameras(), store.getLoyaltyTiers()]);
-      return res.status(200).json({ ok: true, cameras, tiers });
+      // `missingDefaults` — price-list items not in the catalogue yet; the
+      // owner's Catalog page offers to add them (POST ?action=seed).
+      const missingDefaults = store.missingDefaultNames(cameras, DEFAULT_CATALOG);
+      return res.status(200).json({ ok: true, cameras, tiers, missingDefaults });
     }
 
     if (!requireOwner(req, res)) return;

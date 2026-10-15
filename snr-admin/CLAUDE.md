@@ -39,7 +39,13 @@ split describes the legacy mode and the historical data.
 - Firestore layout + queries: `backend/lib/firestoreQueries.js`
 - Catalogue rules (validation, price/unit history, fees): `backend/lib/catalog.js`
 - Catalogue API: `backend/api/catalog.js`; admin editor: `/catalog` (owner only)
-- First-run defaults: `backend/lib/defaultCatalog.js` ("Load default cameras")
+- Defaults / price list: `backend/lib/defaultCatalog.js`. "Load default cameras"
+  fills an empty catalogue; on a filled one the Catalog page lists defaults it
+  lacks (`GET /api/catalog` → `missingDefaults`) and **Add them** inserts only
+  those — existing cameras are never touched. That's how new price-list items
+  (DJI Neo 2 drone, iPhone 18 Pro Max, Samsung S26 Ultra — Oct 2026) reach
+  production: add to `defaultCatalog.js` + the client's `data/assets.js`
+  (+ a PNG in `snr-client/public/`), then the owner clicks Add them.
 
 ### Rental lifecycle and serial numbers (Oct 2026, from the defense panel)
 

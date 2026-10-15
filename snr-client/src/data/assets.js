@@ -33,6 +33,10 @@ export const CAMERA_ASSETS = {
     image: "/canonr50.png",
     detailImage: "/canonr50-inclusions.png",
   },
+  // Cut out of the Oct 2026 price-list poster.
+  "dji-neo-2": { image: "/neo2.png" },
+  "iphone-18-pro-max": { image: "/iphone18promax.png" },
+  "samsung-s26-ultra": { image: "/s26ultra.png" },
 };
 
 export const CAMERA_NAME_TO_ASSET_ID = {
@@ -47,6 +51,11 @@ export const CAMERA_NAME_TO_ASSET_ID = {
   "FUJIFILM X-T100": "fujifilm-x-t100",
   "CANON EOS R50": "canon-eos-r50",
   "Canon EOS R50": "canon-eos-r50",
+  "DJI Neo 2": "dji-neo-2",
+  "iPhone 18 Pro Max": "iphone-18-pro-max",
+  "IPHONE 18 PRO MAX": "iphone-18-pro-max",
+  "Samsung S26 Ultra": "samsung-s26-ultra",
+  "SAMSUNG S26 ULTRA": "samsung-s26-ultra",
 };
 
 // Images set on the admin Catalog page win; these bundled files are the

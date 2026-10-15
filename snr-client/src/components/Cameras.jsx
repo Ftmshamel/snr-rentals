@@ -103,8 +103,8 @@ export default function Cameras() {
         <p className="section__kicker">The Lineup</p>
         <h2 className="section__title">Cameras</h2>
         <p className="section__lede">
-          Rented per 24-hour cycle. Longer trips get the lower daily rate -
-          add-ons priced per day.
+          Cameras, a drone and flagship phones, rented per 24-hour cycle.
+          Longer trips get the lower daily rate; add-ons are priced per day.
         </p>
       </div>
 

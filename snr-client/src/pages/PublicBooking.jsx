@@ -2908,14 +2908,16 @@ export default function PublicBooking() {
               )}
               <div>
                 <strong>{selectedCamera.name}</strong>
-                <span>Comes with:</span>
+                {(selectedCamera.inclusions || []).length > 0 && <span>Comes with:</span>}
               </div>
             </div>
-            <ul className="bk-chooser__inclusions">
-              {(selectedCamera.inclusions || []).map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
+            {(selectedCamera.inclusions || []).length > 0 && (
+              <ul className="bk-chooser__inclusions">
+                {selectedCamera.inclusions.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            )}
             <button
               type="button"
               className="bk-chooser__more"

@@ -829,14 +829,24 @@ async function deleteCamera(id) {
 
 /** Load the default catalogue — only into an empty collection. */
 async function seedCameras(defaults) {
-  const existing = await camerasCol().limit(1).get();
-  if (!existing.empty) {
-    throw new CatalogValidationError("The catalogue already has cameras; defaults are only loaded into an empty one.");
+  // An empty catalogue gets every default. A filled one only gets the
+  // defaults it doesn't have yet (matched by id or name) — e.g. items added
+  // to the price list later. Existing cameras are never touched.
+  const existing = (await camerasCol().get()).docs.map(cameraOut);
+  const has = (d) =>
+    existing.some(
+      (c) => c.id === d.id || String(c.name).trim().toLowerCase() === String(d.name).trim().toLowerCase(),
+    );
+  const missing = defaults.filter((d) => !has(d));
+  if (missing.length === 0) {
+    throw new CatalogValidationError("Every default item is already in the catalogue.");
   }
+  const nextOrder = existing.reduce((m, c) => Math.max(m, Number(c.sortOrder) || 0), -1) + 1;
   const batch = db().batch();
   const now = new Date().toISOString();
-  defaults.forEach((input, i) => {
-    const camera = sanitizeCamera({ sortOrder: i, ...input }, { allowHistory: true });
+  missing.forEach((input, i) => {
+    const order = existing.length ? nextOrder + i : i;
+    const camera = sanitizeCamera({ ...input, sortOrder: order }, { allowHistory: true });
     camera.priceHistory = camera.priceHistory || [];
     camera.unitHistory = camera.unitHistory || [];
     camera.updated_at = now;
@@ -844,6 +854,18 @@ async function seedCameras(defaults) {
   });
   await batch.commit();
   return listCameras();
+}
+
+/** Names of default items not in the catalogue yet (for the owner's Catalog page). */
+function missingDefaultNames(cameras, defaults) {
+  return defaults
+    .filter(
+      (d) =>
+        !cameras.some(
+          (c) => c.id === d.id || String(c.name).trim().toLowerCase() === String(d.name).trim().toLowerCase(),
+        ),
+    )
+    .map((d) => d.name);
 }
 
 // ── Members (renter accounts + tiers) ───────────────────────────────────────
@@ -996,6 +1018,7 @@ module.exports = {
   updateCamera,
   deleteCamera,
   seedCameras,
+  missingDefaultNames,
   // members
   getLoyaltyTiers,
   saveLoyaltyTiers,

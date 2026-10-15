@@ -500,6 +500,16 @@ Use PowerShell `System.Drawing` for resizing (see git history for the pattern).
 
 ## 8. Conventions worth not breaking
 
+- **New price-list items (2026-10-15).** DJI Neo 2 (₱800 1–2 days, ₱700 3+),
+  iPhone 18 Pro Max and Samsung S26 Ultra (₱2,800 for 1 day, ₱1,800/day 2+)
+  are in `defaultCatalog.js`; their images were cut out of the owner's price
+  poster (`neo2.png`, `iphone18promax.png`, `s26ultra.png`). Production gets
+  them only when the owner clicks **Add them** on the Catalog page (seed now
+  adds missing defaults to a non-empty catalogue, never overwriting). Open:
+  their inclusions, scratch fees and serials are blank, and the deposit is the
+  same ₱1,000 per item as a camera — confirm with the owner. The poster also
+  lists phone rates only up to 3 days; the site charges ₱1,800/day beyond.
+
 - **Calm UI (2026-10-15).** The "poster" look (hard offset shadows, thick
   outlines, animated grain, marquee, floating hero cameras, scroll-reveal) was
   replaced after defense feedback that it looked unprofessional and moved too
