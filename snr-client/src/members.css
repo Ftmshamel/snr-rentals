@@ -1006,6 +1006,22 @@
 .mh-cam:hover .mh-cam__cta { color: var(--color-ink); }
 .mh-cam__perk { justify-self: start; margin-left: 0.9rem; padding: 0.1rem 0.55rem !important; }
 
+/* The white .dash-panel above also wiped the backgrounds these two cards
+   rely on, leaving their light text on white (unreadable). */
+/* Current rental: keeps its dark card — its text, dots and track are light. */
+.dash-panel.dash-upnext:not(.dash-upnext--empty) { background: var(--color-ink); color: var(--color-bg-light); border-color: var(--color-ink); }
+.dash-panel.dash-upnext.is-urgent { background: #7a1616; border-color: #7a1616; }
+/* Tier perks: a white card like the rest, the tier shown in the check marks. */
+.dash-panel.dash-perks { background: #fff; color: var(--color-ink); border-top: 4px solid var(--tier-solid); }
+.dash-panel.dash-perks .dash-panel__kicker { color: var(--color-dark-gray); opacity: 1; }
+.dash-panel.dash-perks .dash-perks__list li::before { background: var(--tier-solid); }
+.dash-panel.dash-perks .dash-perks__auto { color: var(--color-muted); opacity: 1; }
+
+/* Rent a camera: 5 per row (2 on phones) so the 10-item lineup never
+   leaves a lone card on the last row; auto-fill gave 4 + 4 + 2. */
+.mh-cams__grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.9rem; }
+@media (max-width: 860px) { .mh-cams__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; } }
+
 /* Phone tab bar: docked to the bottom edge, quiet active state */
 @media (max-width: 760px) {
   .tabbar { left: 0; right: 0; bottom: 0; border-radius: 0; border: 0; border-top: 1px solid var(--color-line); box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05); padding: 0.3rem 0.4rem calc(0.3rem + env(safe-area-inset-bottom)); }
