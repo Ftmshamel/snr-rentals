@@ -203,6 +203,7 @@ export const FAQS = [
 export const NAV_LINKS = [
   { label: "Home", href: "#home" },
   { label: "Cameras", href: "#cameras" },
+  { label: "Gallery", href: "#gallery" },
   { label: "How to Rent", href: "#how-to-rent" },
   { label: "Rewards", href: "#rewards" },
   { label: "Terms", href: "#terms" },

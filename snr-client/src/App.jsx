@@ -3,6 +3,7 @@ import Hero from "./components/Hero.jsx";
 import Marquee from "./components/Marquee.jsx";
 import Cameras from "./components/Cameras.jsx";
 import HowToRent from "./components/HowToRent.jsx";
+import Gallery from "./components/Gallery.jsx";
 import Terms from "./components/Terms.jsx";
 import FAQ from "./components/FAQ.jsx";
 import Contact from "./components/Contact.jsx";
@@ -81,7 +82,8 @@ function Landing() {
       <main>
         <Hero />
         <Marquee />
-        <Cameras />
+        <Cameras />
+        <Gallery />
         <HowToRent />
         <Rewards />
         <Terms />

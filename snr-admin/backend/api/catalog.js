@@ -1,9 +1,10 @@
 const { setCorsJson } = require("../lib/cors");
-const { requireOwner } = require("../lib/auth");
+const { requireAuth, requireOwner } = require("../lib/auth");
 const { isFirebase } = require("../lib/sourceName");
 const { CatalogValidationError, todayManila } = require("../lib/catalog");
 const { DEFAULT_CATALOG } = require("../lib/defaultCatalog");
 const { LoyaltyError } = require("../lib/loyalty");
+const shots = require("../lib/sampleShots");
 
 // The camera catalogue — names, units, day rates, add-ons, inclusions.
 //
@@ -15,6 +16,13 @@ const { LoyaltyError } = require("../lib/loyalty");
 //   DELETE ?id=<id>           owner: remove
 //   GET    ?action=members    owner: renter accounts with their tier
 //   PATCH  ?action=tiers      owner: member tiers + perks   body: { tiers }
+//
+//   Sample shots (Gallery) — see lib/sampleShots.js:
+//   GET    ?action=shots            public: every shot, thumbnails only
+//   GET    ?action=shot&id=<id>     public: one shot with its full photo
+//   POST   ?action=shots            staff: post a photo  body: { cameraId, caption, image, thumb, width, height }
+//   PATCH  ?action=shots&id=<id>    staff: edit caption / camera
+//   DELETE ?action=shots&id=<id>    staff: remove
 //
 // A changed price or unit count is never overwritten in place: the old value
 // is kept in history up to `effectiveDate` (default: today, Manila time) so
@@ -55,6 +63,8 @@ module.exports = async (req, res) => {
   const action = req.query?.action;
 
   try {
+    if (action === "shots" || action === "shot") return await handleShots(req, res, store, action, id);
+
     if (req.method === "GET" && action === "members") {
       if (!requireOwner(req, res)) return;
       res.setHeader("Cache-Control", "no-store");
@@ -105,10 +115,44 @@ module.exports = async (req, res) => {
 
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   } catch (err) {
-    if (err instanceof CatalogValidationError || err instanceof LoyaltyError) {
+    if (err instanceof CatalogValidationError || err instanceof LoyaltyError || err instanceof shots.SampleShotError) {
       return res.status(400).json({ ok: false, error: err.message });
     }
     console.error("[api/catalog]", err);
     return res.status(500).json({ ok: false, error: err.message || "Server error" });
   }
 };
+
+async function handleShots(req, res, store, action, id) {
+  if (req.method === "GET") {
+    if (action === "shot") {
+      const shot = id ? await shots.getShot(id) : null;
+      if (!shot) return res.status(404).json({ ok: false, error: "Photo not found" });
+      // A posted photo never changes (only its caption), so let the CDN keep it.
+      res.setHeader("Cache-Control", "public, max-age=300, s-maxage=86400");
+      return res.status(200).json({ ok: true, shot });
+    }
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(200).json({ ok: true, shots: await shots.listShots() });
+  }
+
+  // Posting sample shots is everyday work, so any staff login may do it.
+  if (!requireAuth(req, res)) return;
+  const body = parseJson(req.body);
+  if (body === null) return res.status(400).json({ ok: false, error: "Invalid JSON body" });
+
+  if (req.method === "POST") {
+    const shot = await shots.createShot(body, await store.listCameras());
+    return res.status(201).json({ ok: true, shot });
+  }
+  if (req.method === "PATCH" && id) {
+    const shot = await shots.updateShot(id, body, await store.listCameras());
+    if (!shot) return res.status(404).json({ ok: false, error: "Photo not found" });
+    return res.status(200).json({ ok: true, shot });
+  }
+  if (req.method === "DELETE" && id) {
+    if (!(await shots.deleteShot(id))) return res.status(404).json({ ok: false, error: "Photo not found" });
+    return res.status(200).json({ ok: true });
+  }
+  return res.status(405).json({ ok: false, error: "Method not allowed" });
+}

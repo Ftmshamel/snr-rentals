@@ -15,6 +15,7 @@ import Catalog from "./pages/Catalog.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Rewards from "./pages/Rewards.jsx";
 import Privacy from "./pages/Privacy.jsx";
+import Gallery from "./pages/Gallery.jsx";
 
 export default function App() {
   const [authed, setAuthed] = useState(() =>
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/addons" element={<AddOnList />} />
         <Route path="/addons/:addonName" element={<AddOnCalendar />} />
         <Route path="/quotation" element={<QuotationGenerator />} />
+        <Route path="/gallery" element={<Gallery />} />
         <Route path="/approvals" element={<Approvals />} />
         <Route path="/rentals" element={<RentalsTable />} />
         <Route path="/analytics" element={isOwner ? <Analytics /> : <Navigate to="/" replace />} />

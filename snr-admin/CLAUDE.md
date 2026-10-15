@@ -125,6 +125,24 @@ split describes the legacy mode and the historical data.
 - Public routes are multiplexed: `api/public.js?action=availability|verify-renter|track|return-details|me|claim|privacy-request`
   (handlers in `lib/public/`).
 
+### Sample shots gallery (Oct 2026)
+
+- Staff post photos taken with each camera on the admin **Gallery** page
+  (`/gallery`, any login): pick the camera, choose one or more photos, add a
+  caption. The public homepage shows a **Sample Shots** section — one folder
+  per camera (collage cover + count); a folder opens as Facebook-style posts
+  (S&R Rentals · Shot on <camera> · date, caption, photo) with a Book button.
+  `#gallery/<cameraId>` opens a folder directly, so it can be shared as a link.
+- Storage: Firestore `sampleShots`, one doc per photo with `image` (≤1600px)
+  and `thumb` (≤480px) JPEG data URLs, resized in the browser
+  (`frontend/src/utils/resizeImage.js`) — no Cloud Storage on the free plan,
+  and the caps keep each doc under the 1 MiB limit. `lib/sampleShots.js`.
+- Routes (no new function): `api/catalog.js?action=shots` (GET public list,
+  **thumbnails only** via `select()`; POST/PATCH/DELETE staff) and
+  `?action=shot&id=` (one full photo, CDN-cached). The public post swaps the
+  thumbnail for the full photo when it scrolls into view.
+
+
 ### Member tiers — S&R Rewards (Oct 2026)
 
 - Optional **sign-in** on the public site (Firebase Authentication;
@@ -293,6 +311,8 @@ writes a backup to `database-backups/`. Keep that pattern for new ones.
   filter (it reads transparent pixels as ink). The canvas ink extractors
   (contracts, story image) still work — they take `min()` with existing alpha.
 - Service areas are **Bulacan · Manila · Laguna** (Cavite dropped Oct 2026).
+- The brand is written **S&R Rentals** everywhere a person reads it (never
+  "SnR"; `snr-` stays only in code names, URLs and project ids).
 - Analytics' **Monthly Trend** (`TrendChart`) always shows the last 6
   calendar months (revenue + expense bars, net income line), independent of
   the Months tab's 2-month window — two points only ever draw a straight line.

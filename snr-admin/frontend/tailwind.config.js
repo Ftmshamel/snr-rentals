@@ -1,7 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 
 // Monochrome poster theme, ported from the client-side site
-// (SnR-Rentals-App-Client-Side/src/index.css).
+// (snr-client/src/index.css).
 //
 // The admin is light-only: the dark-mode toggle was removed when this theme
 // landed, so there are no `dark:` variants anywhere in src/.
