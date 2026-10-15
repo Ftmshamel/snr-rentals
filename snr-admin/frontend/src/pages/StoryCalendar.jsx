@@ -275,7 +275,7 @@ function drawStory(canvas, cameras, month, logo, cameraImages) {
   ctx.textAlign = "center";
   ctx.font = "600 16px Poppins, Arial, sans-serif";
   ctx.fillStyle = "#5f5b55";
-  ctx.fillText("BULACAN / MANILA / LAGUNA / CAVITE  •  0912 016 1865", WIDTH / 2, 1608);
+  ctx.fillText("BULACAN / MANILA / LAGUNA  •  0912 016 1865", WIDTH / 2, 1608);
 
   ctx.fillStyle = "#171717";
   ctx.font = "600 31px Poppins, Arial, sans-serif";

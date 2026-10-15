@@ -10,7 +10,7 @@ export default function Hero() {
       <div className="hero__inner">
         <div className="hero__copy">
           <p className="hero__kicker">
-            <Icon name="pin" size={15} /> Bulacan · Manila · Laguna · Cavite
+            <Icon name="pin" size={15} /> Bulacan · Manila · Laguna
           </p>
           <h1 className="hero__title">Camera rentals, made simple.</h1>
           <p className="hero__subtitle">

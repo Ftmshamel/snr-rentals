@@ -6,7 +6,6 @@ export const CONTACT = {
   phoneHref: "tel:+639120161865",
   areas: "Bulacan / Manila / Laguna",
   facebookName: "Camera for Rent - S&R Rentals",
-  // TODO: replace with the real Facebook page URL before publishing
   facebookUrl: "https://www.facebook.com/profile.php?id=61586923391156",
   instagramHandle: "@snr.rentals",
   instagramUrl: "https://www.instagram.com/snr.rentals",
@@ -34,6 +33,8 @@ export const STATS = [
 export const HOW_TO_RENT = [
   {
     title: "Check Availability",
+    icon: "calendar",
+    summary: "Pick your camera, dates, and pickup or delivery.",
     description:
       "Open our booking form on this website and choose your preferred unit, pickup or delivery option, and rental schedule. Availability is checked automatically as you complete the first step:",
     bullets: [
@@ -46,6 +47,8 @@ export const HOW_TO_RENT = [
   },
   {
     title: "Complete Your Booking",
+    icon: "user",
+    summary: "Add your details, take your ID photos, and pay the 20% downpayment.",
     description:
       "Once your schedule shows as available, continue through the booking form. Review the privacy notice and rental terms, enter your renter details, then provide these details and take the required photos with your camera on the website (each one is stamped with the date, time and an S&R-only watermark):",
     bullets: [
@@ -59,20 +62,24 @@ export const HOW_TO_RENT = [
   },
   {
     title: "Review, Sign & Submit",
+    icon: "check",
+    summary: "Check everything, sign the contract online, and submit.",
     description:
       "Make sure all your ID and document photos are clear and readable. Review your booking and rental contract, add your e-signature, then submit everything directly through this website.",
     note: "Keep your booking reference and send us your downloaded or screenshot contract via PM. We'll review your request and message you on Facebook with the official confirmation of your reservation.",
   },
   {
-    title: "Handover / Pickup / Delivery",
+    title: "Pickup or Delivery",
+    icon: "truck",
+    summary: "Settle the balance and ₱1,000 deposit, then pick up or get it delivered.",
     description:
       "We operate around Bulacan, Manila, and Laguna only. Pickup and delivery options depend on your area:",
     bullets: [
       "Bulacan: Maasim, San Ildefonso pickup or delivery",
-      "Manila & Cavite: Delivery only",
+      "Manila: Delivery only",
       "Laguna: Malamig, Biñan pickup or DLSU Laguna or delivery",
     ],
-    note: "Before release, settle the remaining balance, pay the ₱1,000 refundable security deposit, and sign the lease contract. For delivery, our own rider handles drop-off and return — delays past the agreed schedule are still charged as extended hours.",
+    note: "Before release, settle the remaining balance, pay the ₱1,000 refundable security deposit, and sign the lease contract. For delivery, we book a Lalamove rider for drop-off and return, and you can follow the rider on the Track page — delays past the agreed schedule are still charged as extended hours.",
   },
 ];
 
@@ -94,7 +101,7 @@ export const TERMS = [
       "Reservation Fee: A 20% downpayment is required. This is non-refundable but deductible from the total rental fee.",
       "Security Deposit: A ₱1,000 security deposit is required before releasing the unit. This is fully refundable upon the safe and complete return of the equipment.",
       "Full Balance: The remaining balance must be settled in full before the unit is released.",
-      "Delivery Fee: For delivery and return, the renter is responsible for the delivery fee — our own rider handles the trip both ways.",
+      "Delivery Fee: For delivery and return, the renter is responsible for the Lalamove delivery fee — we book the rider for the trip both ways.",
       "Rush Fee: A ₱300 rush fee applies only when you submit a booking for pickup or delivery that same day. It does not apply to day-before or earlier bookings.",
     ],
   },
@@ -133,15 +140,15 @@ export const FAQS = [
   },
   {
     q: "What are the pickup or delivery options per area?",
-    a: "Bulacan: Maasim, San Ildefonso pickup or delivery. Manila & Cavite: Delivery only. Laguna: Malamig, Biñan pickup or DLSU Laguna or delivery.",
+    a: "Bulacan: Maasim, San Ildefonso pickup or delivery. Manila: Delivery only. Laguna: Malamig, Biñan pickup or DLSU Laguna or delivery.",
   },
   {
     q: "Who handles the delivery?",
-    a: "We do. S&R Rentals' own rider delivers and picks up the unit, so you don't need to book anything yourself — he can also walk you through the camera on drop-off.",
+    a: "Lalamove. We book the rider for you, so you don't need to arrange anything yourself, and you can follow the rider live on the Track page using your booking reference.",
   },
   {
     q: "Do I need to arrange the return delivery myself?",
-    a: "No. Our rider will coordinate the pickup with you directly — just make sure the unit and its accessories are ready on or before the confirmed return time.",
+    a: "No. We book the Lalamove rider for the return pickup too. You can change the return pickup address on the Track page until that rider is booked — just make sure the unit and its accessories are ready on or before the confirmed return time.",
   },
   {
     q: "When is my booking confirmed?",

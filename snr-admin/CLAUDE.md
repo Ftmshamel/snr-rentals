@@ -271,9 +271,28 @@ writes a backup to `database-backups/`. Keep that pattern for new ones.
   labels are sentence case; upload boxes are a 1px light dashed outline. Message text the owner copies to
   Messenger (QuotationGenerator) may keep its emoji.
 - **Card grids avoid orphan rows.** The booking form's camera chooser
-  (`.bk-chooser__grid`) is 5 per row on desktop, 2 on phones — both divide
-  the 10-item catalogue — and is flex-wrap centred, so a short last row
-  (if the catalogue size changes) sits in the middle, not hanging left.
+  (`.bk-chooser__grid`) and the homepage lineup (`.product-grid`) are only
+  ever 5 or 2 per row — both divide the 10-item catalogue. The chooser is
+  flex-wrap centred, so a short last row (if the catalogue size changes)
+  sits in the middle. Chooser photos share one square box (needs the
+  `.booking-app` prefix to beat `.booking-app img { height: auto }`).
+- **"From ₱X/day" is the lowest tier rate** everywhere (lineup, member
+  home, booking chooser) — not `pricing[0]`, which is the highest.
+- Delivery copy (How to Rent, Terms, FAQ in `snr-client/src/data/content.js`)
+  says **Lalamove**, not "our own rider". How to Rent shows each step's
+  `summary` + `icon`; the full description/bullets/note sit in "See details".
+- **Footer** (`snr-client/src/components/Footer.jsx`): no logo art — the
+  name is set in type, with Explore / For renters / Contact columns and a
+  **DTI Registered Business** badge (`public/dti-logo.png`, the DTI mark only;
+  government campaign marks like Bagong Pilipinas are deliberately left
+  out — the badge states a registration, not an endorsement). The compact
+  variant under /book, /track and member pages shows the badge + legal line.
+- **`logo.png` is pre-cut ink** (black on transparent, 1200px, ~100 KB) in
+  both apps. It was a 4906px, 8.8 MB scan on grey paper that an SVG filter
+  cut out at runtime; `Logo.jsx` is now a plain `<img>`. Don't re-add the
+  filter (it reads transparent pixels as ink). The canvas ink extractors
+  (contracts, story image) still work — they take `min()` with existing alpha.
+- Service areas are **Bulacan · Manila · Laguna** (Cavite dropped Oct 2026).
 - Analytics' **Monthly Trend** (`TrendChart`) always shows the last 6
   calendar months (revenue + expense bars, net income line), independent of
   the Months tab's 2-month window — two points only ever draw a straight line.

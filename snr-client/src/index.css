@@ -496,12 +496,15 @@ button {
   gap: 1rem;
 }
 
-@media (max-width: 1100px) {
-  .product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-
-@media (max-width: 900px) {
-  .product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* 5 or 2 per row only — both divide the 10-item lineup evenly. The old
+   4- and 3-column steps left a lone card on the last row (4+4+2, 3+3+3+1).
+   The 2-column layout is capped so tablet cards don't balloon. */
+@media (max-width: 860px) {
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 560px;
+    margin-inline: auto;
+  }
 }
 
 .product-card {
@@ -534,9 +537,9 @@ button {
    every tile's photo area is the same 4:3. */
 .product-card__image {
   position: absolute;
-  inset: 12%;
-  width: 76%;
-  height: 76%;
+  inset: 6%;
+  width: 88%;
+  height: 88%;
   object-fit: contain;
 }
 
@@ -977,63 +980,109 @@ button {
 
 /* ============================================================
    How to Rent — steps
+   Four short cards in a row (2 on tablets, 1 on phones). Each shows
+   number, icon, title and a one-line summary; the full copy is in a
+   <details> pinned to the bottom so the cards stay one even height.
    ============================================================ */
 
 .steps {
   list-style: none;
-  max-width: 880px;
+  max-width: 1120px;
   margin: 0 auto;
+  padding: 0;
   display: grid;
-  gap: 1.6rem;
-  position: relative;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 1000px) {
+  .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .steps { grid-template-columns: 1fr; }
 }
 
 .step {
   display: flex;
-  gap: 1.6rem;
-  align-items: flex-start;
+  flex-direction: column;
   background: var(--color-card);
   border: 1px solid var(--color-line);
-  border-radius: 28px;
-  padding: 1.8rem 2rem;
+  border-radius: 22px;
+  padding: 1.35rem 1.35rem 1.1rem;
   box-shadow: var(--shadow-card);
-  transition:
-    opacity 0.75s ease var(--d, 0ms),
-    transform 0.75s var(--ease-pop) var(--d, 0ms),
-    box-shadow 0.25s var(--ease-pop);
 }
 
-.step.is-visible:hover {
-  transform: none;
-  box-shadow: var(--shadow-card-hover);
-  transition:
-    transform 0.25s var(--ease-pop),
-    box-shadow 0.25s var(--ease-pop);
+.step__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
 }
 
 .step__number {
   display: grid;
   place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.1rem;
+  height: 2.1rem;
   border-radius: 50%;
   background: var(--color-ink);
   color: #fff;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
   flex-shrink: 0;
 }
 
+.step__icon {
+  color: var(--color-muted);
+}
+
 .step__title {
-  font-size: clamp(1.3rem, 2.4vw, 1.7rem);
+  font-size: 1.12rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  margin-bottom: 0.5rem;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
   text-shadow: none;
 }
 
+.step__summary {
+  margin: 0.4rem 0 1rem;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--color-dark-gray);
+}
+
+.step__details {
+  margin-top: auto;
+  border-top: 1px solid var(--color-line);
+  padding-top: 0.7rem;
+}
+
+.step__details > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.step__details > summary::-webkit-details-marker { display: none; }
+
+.step__chevron {
+  transition: transform 0.15s ease;
+}
+
+.step__details[open] .step__chevron {
+  transform: rotate(90deg);
+}
+
 .step__description {
-  font-size: 0.98rem;
+  margin-top: 0.7rem;
+  font-size: 0.86rem;
   font-weight: 500;
   color: var(--color-dark-gray);
   line-height: 1.55;
@@ -1041,16 +1090,16 @@ button {
 
 .step__list {
   list-style: none;
-  margin: 0.85rem 0 0;
+  margin: 0.7rem 0 0;
   padding: 0;
   display: grid;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .step__list li {
   position: relative;
-  padding-left: 1.5rem;
-  font-size: 0.95rem;
+  padding-left: 1.1rem;
+  font-size: 0.84rem;
   font-weight: 600;
   line-height: 1.45;
   color: var(--color-ink);
@@ -1061,16 +1110,17 @@ button {
   position: absolute;
   left: 0;
   top: 0.55em;
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--color-ink);
 }
 
 .step__note {
-  margin-top: 0.85rem;
-  font-size: 0.86rem;
+  margin-top: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 500;
+  line-height: 1.5;
   color: var(--color-muted);
 }
 
@@ -1396,47 +1446,166 @@ a.contact-card.is-visible:hover {
 
 /* ============================================================
    Footer
+   Four columns (about + DTI badge, explore, for renters, contact) over a
+   thin legal bar. No logo art — the business name is set in type.
    ============================================================ */
 
 .footer {
-  background: var(--color-footer);
+  background: #fafaf8;
   border-top: 1px solid var(--color-line);
   margin-top: 3rem;
+  color: var(--color-ink);
 }
 
 .footer__inner {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 3rem 1.5rem 2.2rem;
-  text-align: center;
+  padding: 3rem 1.5rem 1.5rem;
+}
+
+.footer__grid {
   display: grid;
-  gap: 0.9rem;
-  justify-items: center;
+  grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr));
+  gap: 2rem 2.5rem;
 }
 
-.footer__areas,
-.footer__socials {
-  font-size: 0.92rem;
-  font-weight: 600;
+.footer__name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
-.footer__socials a,
-.footer__areas a {
-  text-decoration: none;
-  border-bottom: 1px solid var(--color-line);
-  transition: opacity 0.2s ease;
-}
-
-.footer__socials a:hover,
-.footer__areas a:hover {
-  opacity: 0.6;
-}
-
-.footer__copy {
-  font-size: 0.78rem;
-  font-weight: 500;
+.footer__blurb {
+  margin-top: 0.5rem;
+  max-width: 34ch;
+  font-size: 0.88rem;
+  line-height: 1.6;
   color: var(--color-dark-gray);
-  margin-top: 0.6rem;
+}
+
+.footer__heading {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+  margin-bottom: 0.85rem;
+}
+
+.footer__col ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.footer__col a,
+.footer__fine a {
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.footer__col a:hover,
+.footer__fine a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.footer__contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.footer__contact .icon {
+  color: var(--color-muted);
+  flex-shrink: 0;
+}
+
+.footer__dti {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 0.6rem 0.9rem 0.6rem 0.65rem;
+  background: #fff;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+}
+
+.footer__dti-logo {
+  width: auto;
+  height: 40px;
+}
+
+.footer__dti-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.footer__dti-no {
+  font-size: 0.74rem;
+  color: var(--color-dark-gray);
+  font-variant-numeric: tabular-nums;
+}
+
+.footer__bottom {
+  margin-top: 2.5rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--color-line);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.4rem 1.5rem;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+
+@media (max-width: 900px) {
+  .footer__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .footer__about { grid-column: 1 / -1; }
+}
+
+@media (max-width: 560px) {
+  .footer__inner { padding: 2.4rem 1.25rem 1.25rem; }
+  .footer__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.75rem 1.25rem; }
+  .footer__grid > .footer__col:last-child { grid-column: 1 / -1; }
+  .footer__bottom { flex-direction: column; }
+}
+
+/* Slim version under the booking, track and member pages. */
+.footer--compact {
+  margin-top: 2.5rem;
+  background: transparent;
+}
+
+.footer__inner--compact {
+  padding: 1.4rem 1rem 1.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem 1.5rem;
+}
+
+.footer__dti--sm {
+  margin-top: 0;
+  padding: 0.4rem 0.7rem 0.4rem 0.5rem;
+  gap: 0.55rem;
+}
+
+.footer__dti--sm .footer__dti-logo { height: 30px; }
+
+.footer__fine {
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+
+@media (max-width: 560px) {
+  .footer__inner--compact { flex-direction: column; text-align: center; }
 }
 
 /* ============================================================
@@ -1543,16 +1712,6 @@ a.contact-card.is-visible:hover {
 
   .contact-card:last-child {
     grid-column: 1 / -1;
-  }
-
-  .step {
-    flex-direction: column;
-    gap: 0.8rem;
-    padding: 1.6rem 1.5rem;
-  }
-
-  .step__number {
-    text-align: left;
   }
 
   .section {
@@ -1664,28 +1823,6 @@ a.contact-card.is-visible:hover {
     transition-duration: 0.01ms !important;
   }
 
-}
-
-.footer__legal {
-  font-size: 0.8rem;
-  font-weight: 600;
-  line-height: 1.6;
-}
-
-.footer__legal a {
-  text-decoration: none;
-  border-bottom: 1px solid var(--color-line);
-}
-
-.footer--compact {
-  margin-top: 2.5rem;
-  background: transparent;
-  border-top: 2px solid rgba(58, 58, 58, 0.25);
-}
-
-.footer--compact .footer__inner {
-  padding: 1.4rem 1rem 1.6rem;
-  gap: 0.2rem;
 }
 
 /* Cookie consent (Google Analytics) */
