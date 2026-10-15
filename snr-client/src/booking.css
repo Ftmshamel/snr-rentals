@@ -604,11 +604,26 @@ select.bk-input {
   background: rgba(255, 255, 255, 0.8);
 }
 
+/* Five per row on desktop, two on phones — both divide the 10-item
+   catalogue evenly. auto-fill gave 4 per row at laptop widths, leaving a
+   2-card orphan row. Flex (not grid) so a short last row, if the catalogue
+   size changes, sits centred instead of hanging off the left. */
 .bk-chooser__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  --bk-cols: 5;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 0.75rem;
   margin-top: 0.7rem;
+}
+
+.bk-chooser__grid > .bk-chooser__card {
+  flex: 0 0 calc((100% - (var(--bk-cols) - 1) * 0.75rem) / var(--bk-cols));
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .bk-chooser__grid { --bk-cols: 2; }
 }
 
 .bk-chooser__card {
