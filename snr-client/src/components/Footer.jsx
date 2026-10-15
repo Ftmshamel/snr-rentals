@@ -20,6 +20,7 @@ function DtiBadge({ small = false }) {
 // /track and the member pages.
 const EXPLORE = [
   { label: "Cameras", href: "/#cameras" },
+  { label: "Sample Shots", href: "/#gallery" },
   { label: "How to Rent", href: "/#how-to-rent" },
   { label: "S&R Rewards", href: "/#rewards" },
   { label: "FAQs", href: "/#faqs" },

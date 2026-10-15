@@ -1,10 +1,10 @@
 const STANDARD_TERMS = [
   "Liability: The Renter assumes full responsibility for the equipment. In case of damage, the Renter agrees to pay the repair costs as assessed by an authorized service center. In case of loss or irreparable damage, the Renter agrees to pay the full replacement value of the unit.",
   "Cosmetic Damage & Scratches: Scratches significantly lower the resale value of our cameras. If the equipment is returned with new scratches on the body, screen, or lens, the following fees apply:",
-  "Security Deposit: The ₱1,000 deposit will be refunded upon return of the equipment in the same condition as it was released. SnR Rentals reserves the right to deduct from this deposit for any missing accessories or minor damages.",
+  "Security Deposit: The ₱1,000 deposit will be refunded upon return of the equipment in the same condition as it was released. S&R Rentals reserves the right to deduct from this deposit for any missing accessories or minor damages.",
   "Late Returns: A penalty of ₱50 per hour will be charged for late returns. Delays exceeding 3 hours will result in an automatic 1-day rental extension being charged.",
   "Usage: The Renter agrees to use the equipment in a lawful and careful manner. Sub-leasing (renting it to others) is strictly prohibited.",
-  "Data Privacy:SnR Rentals is not responsible for any files left on the SD card after the return.",
+  "Data Privacy: S&R Rentals is not responsible for any files left on the SD card after the return.",
 ];
 
 function withScratchFees(fees) {

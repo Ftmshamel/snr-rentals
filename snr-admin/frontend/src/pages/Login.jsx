@@ -30,7 +30,7 @@ export default function Login({ onLogin }) {
         <div className="mb-7 text-center">
           <div className="ui-kicker mb-2">S&amp;R Rentals</div>
           <h1 className="ui-title font-display text-5xl">
-            SnR<span className="text-[color:var(--color-dark-gray)]"> Admin</span>
+            S&amp;R<span className="text-[color:var(--color-dark-gray)]"> Admin</span>
           </h1>
         </div>
 

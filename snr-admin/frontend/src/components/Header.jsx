@@ -14,6 +14,7 @@ const NAV = [
   { to: "/addons", label: "Add-ons", match: (p) => p.startsWith("/addon") },
   { to: "/catalog", label: "Catalog", match: (p) => p === "/catalog", ownerOnly: true },
   { to: "/rewards", label: "Rewards", match: (p) => p === "/rewards", ownerOnly: true },
+  { to: "/gallery", label: "Gallery", match: (p) => p === "/gallery" },
   { to: "/quotation", label: "Quote", match: (p) => p === "/quotation", group: true },
   { to: "/analytics", label: "Analytics", match: (p) => p === "/analytics", ownerOnly: true },
   { to: "/expenses", label: "Expenses", match: (p) => p === "/expenses", ownerOnly: true },
@@ -56,7 +57,7 @@ export default function Header({
               </Link>
             ) : null}
             <div className="flex min-w-0 flex-wrap items-baseline gap-2">
-              <span className="ui-title font-display text-2xl">SnR</span>
+              <span className="ui-title font-display text-2xl">S&amp;R</span>
               <span className="font-display text-2xl font-extrabold text-[color:var(--color-dark-gray)]">
                 Admin
               </span>
