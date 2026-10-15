@@ -543,6 +543,81 @@ const DEFAULT_CATALOG = [
     "detailImage": "/canonr50-inclusions.png",
     "goodFor": "Sharp photos, 4K video, and interchangeable-lens flexibility.",
     "perfectFor": "Events, portraits, travel shoots, and creator content."
+  },
+  {
+    "id": "dji-neo-2",
+    "name": "DJI Neo 2",
+    "tag": "Drone",
+    "active": true,
+    "sortOrder": 7,
+    "units": 1,
+    "pricing": [
+      {
+        "minDays": 1,
+        "maxDays": 2,
+        "pricePerDay": 800
+      },
+      {
+        "minDays": 3,
+        "maxDays": null,
+        "pricePerDay": 700
+      }
+    ],
+    "addOns": [],
+    "inclusions": [],
+    "image": "/neo2.png",
+    "goodFor": "Hands-free aerial shots that follow you.",
+    "perfectFor": "Travel, hikes, beach trips and outdoor vlogs."
+  },
+  {
+    "id": "iphone-18-pro-max",
+    "name": "iPhone 18 Pro Max",
+    "tag": "Smartphone",
+    "active": true,
+    "sortOrder": 8,
+    "units": 1,
+    "pricing": [
+      {
+        "minDays": 1,
+        "maxDays": 1,
+        "pricePerDay": 2800
+      },
+      {
+        "minDays": 2,
+        "maxDays": null,
+        "pricePerDay": 1800
+      }
+    ],
+    "addOns": [],
+    "inclusions": [],
+    "image": "/iphone18promax.png",
+    "goodFor": "Flagship phone video and photos with no camera to learn.",
+    "perfectFor": "Events, concerts, travel and quick content."
+  },
+  {
+    "id": "samsung-s26-ultra",
+    "name": "Samsung S26 Ultra",
+    "tag": "Smartphone",
+    "active": true,
+    "sortOrder": 9,
+    "units": 1,
+    "pricing": [
+      {
+        "minDays": 1,
+        "maxDays": 1,
+        "pricePerDay": 2800
+      },
+      {
+        "minDays": 2,
+        "maxDays": null,
+        "pricePerDay": 1800
+      }
+    ],
+    "addOns": [],
+    "inclusions": [],
+    "image": "/s26ultra.png",
+    "goodFor": "Long-range zoom and sharp phone video.",
+    "perfectFor": "Concerts, sports, travel and events."
   }
 ];
 

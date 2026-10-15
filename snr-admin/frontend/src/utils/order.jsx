@@ -17,7 +17,7 @@ export function OrderChip({ booking, small = false }) {
   return (
     <span
       title={`One booking of ${booking.ORDER_SIZE} cameras · ref ${booking.ORDER_REF}`}
-      className={`inline-flex items-center rounded-full border-2 border-[color:var(--color-ink)] px-2 py-0.5 font-mono font-bold uppercase text-[color:var(--color-ink)] ${
+      className={`inline-flex items-center rounded-full border border-[color:var(--color-ink)] px-2 py-0.5 font-mono font-bold uppercase text-[color:var(--color-ink)] ${
         small ? "text-[9px]" : "text-[10px]"
       }`}
     >

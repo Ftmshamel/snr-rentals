@@ -8,6 +8,7 @@ import NewRentalModal from "../components/NewRentalModal.jsx";
 import DateNoteEditor from "../components/DateNoteEditor.jsx";
 import { useBookings } from "../hooks/useBookings.js";
 import StoryCalendar from "./StoryCalendar.jsx";
+import Icon from "../components/Icon.jsx";
 
 export default function MonthlySchedule() {
   const [viewMonth, setViewMonth] = useState(() => {
@@ -121,9 +122,9 @@ export default function MonthlySchedule() {
         ) : (
           <>
             {overdueBookings.length > 0 && (
-              <div className="mb-5 rounded-card border-[3px] border-rose-700 bg-[rgba(255,241,240,0.75)] p-4 shadow-panel">
+              <div className="mb-5 rounded-card border border-rose-700 bg-[rgba(255,241,240,0.75)] p-4 shadow-panel">
                 <div className="ui-kicker mb-2.5 text-rose-800">
-                  ⚠ Overdue Returns ({overdueBookings.length})
+                  <Icon name="info" size={15} /> Overdue Returns ({overdueBookings.length})
                 </div>
                 <div className="space-y-1.5">
                   {overdueBookings.map((b) => {
@@ -137,7 +138,7 @@ export default function MonthlySchedule() {
                         key={b.responseId}
                         type="button"
                         onClick={() => setActiveBooking(b)}
-                        className="flex w-full items-center justify-between gap-3 rounded-row border-2 border-rose-300 bg-[rgba(255,255,255,0.8)] px-3 py-2.5 text-left transition-all duration-200 ease-pop hover:-translate-y-0.5 hover:border-rose-700 hover:shadow-sm2"
+                        className="flex w-full items-center justify-between gap-3 rounded-row border border-rose-300 bg-[rgba(255,255,255,0.8)] px-3 py-2.5 text-left transition-all duration-200 ease-pop hover:-translate-y-0.5 hover:border-rose-700 hover:shadow-sm2"
                       >
                         <div className="min-w-0">
                           <div className="truncate text-sm font-semibold text-[color:var(--color-black)]">

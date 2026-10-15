@@ -39,7 +39,13 @@ split describes the legacy mode and the historical data.
 - Firestore layout + queries: `backend/lib/firestoreQueries.js`
 - Catalogue rules (validation, price/unit history, fees): `backend/lib/catalog.js`
 - Catalogue API: `backend/api/catalog.js`; admin editor: `/catalog` (owner only)
-- First-run defaults: `backend/lib/defaultCatalog.js` ("Load default cameras")
+- Defaults / price list: `backend/lib/defaultCatalog.js`. "Load default cameras"
+  fills an empty catalogue; on a filled one the Catalog page lists defaults it
+  lacks (`GET /api/catalog` → `missingDefaults`) and **Add them** inserts only
+  those — existing cameras are never touched. That's how new price-list items
+  (DJI Neo 2 drone, iPhone 18 Pro Max, Samsung S26 Ultra — Oct 2026) reach
+  production: add to `defaultCatalog.js` + the client's `data/assets.js`
+  (+ a PNG in `snr-client/public/`), then the owner clicks Add them.
 
 ### Rental lifecycle and serial numbers (Oct 2026, from the defense panel)
 
@@ -179,6 +185,18 @@ billing, selfie) → Review & Sign (contract + e-signature) → **Downpayment**
 after the renter has signed; the capstone paper's booking flow (Figure 3)
 follows this order.
 
+**Requirement photos are camera-only (2026-10-15).** IDs, proof of billing
+and the selfie have no file upload: `components/CameraCapture.jsx` opens the
+device camera on the page (`getUserMedia`, back camera first; front for the
+selfie), and `stampForSnr()` burns in a diagonal "FOR S&R RENTALS USE ONLY"
+watermark plus a footer with the label and the Manila date/time before the
+JPEG is saved (`captured: true`; old drafts' uploaded files are dropped).
+Proof of downpayment is still an upload (it's a payment screenshot) but gets
+the same watermark ("Uploaded …"). Limits: needs HTTPS and camera permission
+(blocked in some in-app browsers — the modal says so and points to the
+phone's browser); it is enforced in the browser only, the API still accepts
+any image.
+
 ### Several cameras in one booking (Oct 2026)
 
 - The public form takes up to 5 cameras for the same dates under **one
@@ -242,6 +260,16 @@ writes a backup to `database-backups/`. Keep that pattern for new ones.
 
 - Admin is **light-only**. `ui-*` classes in `frontend/src/index.css` are the
   design system (`ui-panel`, `ui-btn`, `ui-input`, `ui-chip`, …). No `dark:` variants.
+- **Calm UI (since 2026-10-15), both apps.** White cards, 1px `--color-line`
+  borders, soft low shadows. Retired: hard offset shadows, 3–4px outlines, the
+  film grain, marquee strips, floating/bobbing cameras, scroll-reveal, hover
+  lifts. **No emoji or symbol glyphs (✓ ✕ → ⚠ …) as UI markers** — use
+  `components/Icon.jsx` (same file in the client and the admin; add a path
+  there for a new icon), or the `--icon-check` mask in CSS `::before`.
+  Typographic `—`, `·`, `₱` are fine. No typewriter/monospace UI font:
+  `font-mono` / `.ui-num` / `.bk-num` are Poppins with `tabular-nums`. Form
+  labels are sentence case; upload boxes are a 1px light dashed outline. Message text the owner copies to
+  Messenger (QuotationGenerator) may keep its emoji.
 - Camera data (names, units, rates, add-ons, inclusions) is the Firestore
   `cameras` collection, read via `GET /api/catalog` by the admin
   (`hooks/useCameras.js`) and the public site (`src/data/catalog.js`). The

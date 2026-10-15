@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ============================================================
-   S&R Rentals — Admin, monochrome poster theme
+   S&R Rentals — Admin, clean monochrome theme
    Ported from the client-side site (src/index.css + booking.css).
 
    Light-only by design: the dark-mode toggle was removed with this
@@ -20,13 +20,15 @@
   --color-ink: #141414;
   --color-dark-gray: #2f2f2f;
   --color-border: #3a3a3a;
-  --color-bg: #d8dad5;
-  --color-bg-light: #eeeeea;
-  --color-card: rgba(238, 238, 234, 0.62);
+  --color-bg: #f3f3f0;
+  --color-bg-light: #ffffff;
+  --color-line: #e2e2dd;
+  --color-muted: #5f5f5c;
+  --color-card: #ffffff;
   --color-danger: #b42318;
-  --shadow-card: 10px 12px 0 rgba(0, 0, 0, 0.2);
-  --shadow-card-hover: 14px 18px 0 rgba(0, 0, 0, 0.25);
-  --shadow-panel: 7px 8px 0 rgba(0, 0, 0, 0.18);
+  --shadow-card: 0 1px 2px rgba(16, 16, 16, 0.04), 0 4px 14px rgba(16, 16, 16, 0.05);
+  --shadow-card-hover: 0 2px 4px rgba(16, 16, 16, 0.05), 0 10px 24px rgba(16, 16, 16, 0.08);
+  --shadow-panel: 0 1px 2px rgba(16, 16, 16, 0.05);
   --ease-pop: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -65,6 +67,7 @@
         transparent 1px 3px
       );
     background-attachment: fixed;
+    background-image: none;
   }
 
   ::selection {
@@ -98,7 +101,7 @@
   z-index: 999;
   opacity: 0.05;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
-  animation: grain 9s steps(10) infinite;
+  display: none; /* retired: a static page reads calmer */
 }
 
 @keyframes grain {
@@ -120,22 +123,22 @@
   /* Primary content card. Density-tuned: 22px vs the client's 26-32px. */
   .ui-panel {
     background: var(--color-card);
-    border: 4px solid var(--color-border);
-    border-radius: 22px;
+    border: 1px solid var(--color-line);
+    border-radius: 16px;
     box-shadow: var(--shadow-card);
   }
 
   /* Secondary surface — nested blocks, sub-sections. */
   .ui-card {
-    background: rgba(255, 255, 255, 0.58);
-    border: 3px solid var(--color-border);
-    border-radius: 18px;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: 14px;
   }
 
   /* Dense surface — table shells, list rows, calendar frames. */
   .ui-surface {
-    background: rgba(255, 255, 255, 0.5);
-    border: 2px solid var(--color-border);
+    background: #fff;
+    border: 1px solid var(--color-line);
     border-radius: 12px;
   }
 
@@ -148,11 +151,10 @@
   /* ── Type ─────────────────────────────────────────────────── */
 
   .ui-title {
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: -0.02em;
-    line-height: 1;
+    line-height: 1.1;
     color: var(--color-black);
-    text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.14);
   }
 
   /* Uppercase tracked eyebrow — the theme's workhorse label. */
@@ -173,7 +175,8 @@
   }
 
   .ui-num {
-    font-family: "DM Mono", monospace;
+    font-family: "Poppins", sans-serif;
+    font-variant-numeric: tabular-nums;
     font-weight: 700;
     color: var(--color-ink);
   }
@@ -188,30 +191,23 @@
     min-height: 42px;
     padding: 0.55rem 1.15rem;
     font-size: 0.82rem;
-    font-weight: 800;
-    letter-spacing: 0.01em;
+    font-weight: 600;
+    letter-spacing: 0;
     text-decoration: none;
     white-space: nowrap;
-    border: 3px solid var(--color-ink);
-    border-radius: 999px;
-    background: rgba(238, 238, 234, 0.6);
+    border: 1px solid #d6d6d0;
+    border-radius: 10px;
+    background: #fff;
     color: var(--color-ink);
-    box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.16);
     transition:
-      transform 0.18s var(--ease-pop),
-      box-shadow 0.18s var(--ease-pop),
-      background 0.18s ease,
-      color 0.18s ease;
+      background 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease;
   }
 
   .ui-btn:hover:not(:disabled) {
-    transform: translate(-2px, -2px);
-    box-shadow: 7px 8px 0 rgba(0, 0, 0, 0.2);
-  }
-
-  .ui-btn:active:not(:disabled) {
-    transform: translate(2px, 2px);
-    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2);
+    background: #f4f4f1;
+    border-color: #c9c9c3;
   }
 
   .ui-btn:disabled {
@@ -221,8 +217,13 @@
 
   .ui-btn--solid {
     background: var(--color-ink);
-    color: var(--color-bg-light);
-    box-shadow: 5px 6px 0 rgba(0, 0, 0, 0.25);
+    border-color: var(--color-ink);
+    color: #fff;
+  }
+
+  .ui-btn--solid:hover:not(:disabled) {
+    background: #2b2b2b;
+    border-color: #2b2b2b;
   }
 
   .ui-btn--danger {
@@ -240,18 +241,14 @@
   .ui-btn--sm {
     min-height: 32px;
     padding: 0.3rem 0.8rem;
-    font-size: 0.68rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    border-width: 2px;
-    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.14);
+    font-size: 0.78rem;
+    border-radius: 8px;
   }
 
   .ui-btn--icon {
     min-height: 34px;
     width: 34px;
     padding: 0;
-    border-width: 2px;
   }
 
   /* ── Form controls ────────────────────────────────────────── */
@@ -262,12 +259,12 @@
     padding: 0.62rem 0.9rem;
     font-family: inherit;
     font-size: 0.92rem;
-    font-weight: 600;
+    font-weight: 500;
     line-height: 1.35;
     color: var(--color-ink);
-    background: rgba(255, 255, 255, 0.78);
-    border: 3px solid var(--color-border);
-    border-radius: 14px;
+    background: #fff;
+    border: 1px solid #d6d6d0;
+    border-radius: 10px;
     outline: none;
     appearance: none;
     -webkit-appearance: none;
@@ -279,8 +276,7 @@
 
   .ui-input:focus {
     border-color: var(--color-ink);
-    box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.18);
-    transform: translateY(-1px);
+    box-shadow: 0 0 0 3px rgba(20, 20, 20, 0.08);
   }
 
   .ui-input:disabled {
@@ -307,8 +303,7 @@
     min-height: 36px;
     padding: 0.35rem 0.7rem;
     font-size: 0.82rem;
-    border-width: 2px;
-    border-radius: 10px;
+    border-radius: 8px;
   }
 
   select.ui-input--sm {
@@ -322,14 +317,12 @@
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    border: 2px solid var(--color-ink);
+    border: 1px solid var(--color-line);
     border-radius: 999px;
-    padding: 0.22em 0.75em;
-    font-size: 0.68rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    background: rgba(238, 238, 234, 0.7);
+    padding: 0.2em 0.7em;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: #f4f4f1;
     white-space: nowrap;
   }
 
@@ -341,9 +334,9 @@
   /* ── Tables ───────────────────────────────────────────────── */
 
   .ui-table-wrap {
-    border: 3px solid var(--color-border);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    background: #fff;
     overflow: hidden;
   }
 
@@ -353,12 +346,13 @@
   }
 
   .ui-table thead th {
-    background: var(--color-ink);
-    color: var(--color-bg-light);
-    font-size: 0.66rem;
-    font-weight: 800;
+    background: #f6f6f3;
+    color: var(--color-muted);
+    border-bottom: 1px solid var(--color-line);
+    font-size: 0.72rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.04em;
     text-align: left;
     padding: 0.65rem 0.85rem;
     white-space: nowrap;
@@ -367,12 +361,12 @@
   .ui-table tbody td {
     padding: 0.6rem 0.85rem;
     font-size: 0.86rem;
-    font-weight: 600;
-    border-top: 2px solid rgba(58, 58, 58, 0.16);
+    font-weight: 500;
+    border-top: 1px solid var(--color-line);
   }
 
   .ui-table tbody tr:hover {
-    background: rgba(255, 255, 255, 0.6);
+    background: #fafaf8;
   }
 
   /* ── Modals ───────────────────────────────────────────────── */
@@ -385,7 +379,7 @@
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background: rgba(10, 10, 10, 0.82);
+    background: rgba(10, 10, 10, 0.5);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
     animation: ui-fade 0.22s ease both;
@@ -401,11 +395,11 @@
     flex-direction: column;
     width: 100%;
     max-height: 90vh;
-    background: var(--color-bg-light);
-    border: 4px solid var(--color-border);
-    border-radius: 24px;
-    box-shadow: 14px 18px 0 rgba(0, 0, 0, 0.34);
-    animation: ui-pop 0.32s var(--ease-pop) both;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+    animation: ui-fade 0.15s ease both;
   }
 
   @keyframes ui-pop {
@@ -417,13 +411,13 @@
 
   .ui-divider {
     border: 0;
-    border-top: 2px dashed rgba(58, 58, 58, 0.28);
+    border-top: 1px solid var(--color-line);
   }
 
   .ui-skeleton {
-    background: rgba(238, 238, 234, 0.75);
-    border: 3px solid var(--color-border);
-    border-radius: 18px;
+    background: #ecece8;
+    border: 1px solid var(--color-line);
+    border-radius: 14px;
     animation: ui-pulse 1.4s ease-in-out infinite;
   }
 
@@ -433,10 +427,10 @@
   }
 
   .ui-note {
-    border-left: 4px solid var(--color-ink);
+    border-left: 3px solid #d6d6d0;
     padding-left: 0.75rem;
-    font-size: 0.78rem;
-    font-weight: 700;
+    font-size: 0.8rem;
+    font-weight: 500;
     line-height: 1.45;
     color: var(--color-dark-gray);
   }
@@ -466,13 +460,13 @@
 .bm-info { display: grid; gap: 0.75rem; min-width: 0; }
 .bm-info > section {
   padding: 0.85rem 1rem;
-  border: 2px solid rgba(58, 58, 58, 0.18);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: #fff;
 }
 .bm-info > div:last-child { border: 0; padding-top: 0; }
 
-.lp-title { font-family: var(--font-display, inherit); font-size: 1.15rem; font-weight: 900; color: var(--color-black); }
+.lp-title { font-family: var(--font-display, inherit); font-size: 1.15rem; font-weight: 700; color: var(--color-black); }
 .lp-next {
   padding: 0.75rem 0.9rem;
   border-radius: 14px;
@@ -483,8 +477,8 @@
 .lp-next p { margin-top: 0.15rem; font-size: 0.95rem; font-weight: 700; line-height: 1.35; }
 .lp-unit {
   padding: 0.85rem 1rem;
-  border: 3px solid var(--color-ink);
-  border-radius: 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
   background: #fff;
 }
 .lp-unit--empty { border-style: dashed; background: rgba(255, 255, 255, 0.5); }
@@ -515,3 +509,13 @@
 .bm-order__cam small { font-family: ui-monospace, monospace; font-size: 0.7rem; color: var(--color-mid-gray); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bm-order__sum { margin: 0.55rem 0 0; font-size: 0.82rem; }
 .bm-order__note { margin: 0.3rem 0 0; font-size: 0.75rem; color: #666; }
+
+/* Inline line icons (components/Icon.jsx) sit on the text baseline. */
+.icon {
+  display: inline-block;
+  flex: none;
+  vertical-align: -0.15em;
+}
+
+/* Digits line up in tables and totals without a typewriter font. */
+.font-mono { font-variant-numeric: tabular-nums; }

@@ -3,6 +3,7 @@ import Header from "../components/Header.jsx";
 import BookingModal from "../components/BookingModal.jsx";
 import { apiGetJson } from "../utils/api.js";
 import { StageBadge } from "../utils/lifecycle.jsx";
+import Icon from "../components/Icon.jsx";
 
 const PAGE_SIZE = 20;
 
@@ -388,7 +389,7 @@ export default function RentalsTable() {
                   disabled={page === 1}
                   className="ui-btn ui-btn--sm"
                 >
-                  ← Prev
+                  <Icon name="arrow-left" size={14} /> Prev
                 </button>
                 <span className="font-mono text-xs text-[color:var(--color-dark-gray)]">
                   Page {page} of {totalPages}
@@ -399,7 +400,7 @@ export default function RentalsTable() {
                   disabled={page === totalPages}
                   className="ui-btn ui-btn--sm"
                 >
-                  Next →
+                  Next <Icon name="arrow-right" size={14} />
                 </button>
               </div>
             )}

@@ -9,6 +9,7 @@ import {
   formatISODateLocal,
   parseISODate,
 } from "../utils/dateHelpers.js";
+import Icon from "./Icon.jsx";
 
 const MODES = ["Meet Up", "Deliver"];
 const REQUIREMENT_DOC_FIELDS = [
@@ -378,7 +379,7 @@ export default function NewRentalModal({
             onClick={onClose}
             className="text-[color:var(--color-dark-gray)] hover:text-[color:var(--color-ink)]"
           >
-            ✕
+            <Icon name="x" size={16} />
           </button>
         </div>
 

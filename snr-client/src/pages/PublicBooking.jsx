@@ -10,6 +10,8 @@ import GearGrid, { GearImage } from "../components/GearGrid.jsx";
 import useLockBodyScroll from "../hooks/useLockBodyScroll.js";
 import { getIdToken, looksSignedIn, openSignIn, refreshMe, useMember, wasSignedIn } from "../hooks/useMember.js";
 import { memberPerks } from "../utils/loyalty.js";
+import Icon from "../components/Icon.jsx";
+import CameraCapture, { stampForSnr } from "../components/CameraCapture.jsx";
 import DeliveryDetailsForm, {
   EMPTY_DELIVERY,
   deliveryMissing,
@@ -201,17 +203,22 @@ const OPTION_CHOICES = [
 ];
 
 const REQUIREMENT_FILES = [
-  { stateKey: "firstId", payloadKey: "1st_ID", label: "1st Valid ID" },
-  { stateKey: "secondId", payloadKey: "2nd_ID", label: "2nd Valid ID" },
+  // `capture`: taken with the device camera on this page (no file upload),
+  // stamped with date/time + an S&R-only watermark. The value is the camera
+  // to open first ("environment" = back, "user" = front).
+  { stateKey: "firstId", payloadKey: "1st_ID", label: "1st Valid ID", capture: "environment" },
+  { stateKey: "secondId", payloadKey: "2nd_ID", label: "2nd Valid ID", capture: "environment" },
   {
     stateKey: "proofOfBilling",
     payloadKey: "PROOF_OF_BILLING",
     label: "Proof of Billing",
+    capture: "environment",
   },
   {
     stateKey: "selfieWithId",
     payloadKey: "SELFIE_HOLDING_YOUR_ID's",
     label: "Selfie Holding ID",
+    capture: "user",
   },
   {
     stateKey: "proofOfDownpayment",
@@ -756,7 +763,7 @@ function readImageElement(file) {
   });
 }
 
-async function compressImageFile(file) {
+async function compressImageFile(file, stampLabel = "") {
   if (!file) return "";
   if (!file.type.startsWith("image/")) {
     throw new Error("Requirement uploads must be image files.");
@@ -777,6 +784,7 @@ async function compressImageFile(file) {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, height);
   ctx.drawImage(image, 0, 0, width, height);
+  if (stampLabel) stampForSnr(canvas, { label: stampLabel, source: "Uploaded" });
   return canvas.toDataURL("image/jpeg", IMAGE_QUALITY);
 }
 
@@ -792,7 +800,7 @@ function FileInput({ id, label, file, isProcessing, onChange }) {
       {file && (
         <div className="bk-file__saved">
           <div className="bk-file__saved-row">
-            <span className="bk-file__name">✓ {file.name}</span>
+            <span className="bk-file__name"><Icon name="check" size={14} strokeWidth={3} /> {file.name}</span>
             <button
               type="button"
               onClick={() => onChange(null)}
@@ -830,8 +838,9 @@ function FileInput({ id, label, file, isProcessing, onChange }) {
   );
 }
 
-function RequirementFileInput({ id, label, file, isProcessing, onChange, invalid = false }) {
+function RequirementFileInput({ id, label, file, isProcessing, onChange, onCaptured, capture, invalid = false }) {
   const [showPreview, setShowPreview] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   return (
     <div className={`bk-file bk-file--compact ${invalid ? "is-invalid" : ""}`}>
@@ -872,24 +881,53 @@ function RequirementFileInput({ id, label, file, isProcessing, onChange, invalid
           )}
         </div>
       )}
-      <input
-        id={id}
-        type="file"
-        accept="image/*"
-        disabled={isProcessing}
-        required={!hasRequirementUpload(file)}
-        onChange={(event) => {
-          const selectedFile = event.target.files?.[0] || null;
-          onChange(selectedFile);
-          event.target.value = "";
-        }}
-        className="bk-file__input"
-      />
+      {capture ? (
+        <button
+          id={id}
+          type="button"
+          className={`btn ${file ? "btn--outline" : "btn--solid"} btn--sm bk-file__camera`}
+          onClick={() => setCameraOpen(true)}
+        >
+          <Icon name="camera" size={16} /> {file ? "Retake photo" : "Take photo"}
+        </button>
+      ) : (
+        <input
+          id={id}
+          type="file"
+          accept="image/*"
+          disabled={isProcessing}
+          required={!hasRequirementUpload(file)}
+          onChange={(event) => {
+            const selectedFile = event.target.files?.[0] || null;
+            onChange(selectedFile);
+            event.target.value = "";
+          }}
+          className="bk-file__input"
+        />
+      )}
       <span className="bk-file__hint">
-        {file
-          ? "File saved. Use preview only when you need to check it."
-          : "Image required. Max 12MB."}
+        {capture
+          ? file
+            ? "Photo saved with the date, time and S&R watermark."
+            : capture === "user"
+              ? "Uses your front camera. Hold your ID next to your face."
+              : "Uses your camera. Make sure every detail is readable."
+          : file
+            ? "File saved. Use preview only when you need to check it."
+            : "Image required. Max 12MB."}
       </span>
+      {cameraOpen && (
+        <CameraCapture
+          label={label}
+          facing={capture}
+          onClose={() => setCameraOpen(false)}
+          onCapture={(dataUrl) => {
+            setCameraOpen(false);
+            setShowPreview(true);
+            onCaptured(dataUrl);
+          }}
+        />
+      )}
       {invalid && <span className="bk-field__error">This upload is required</span>}
     </div>
   );
@@ -1088,7 +1126,7 @@ function SignaturePad({ value, onChange, signerName, contractName, onError, inva
         className="bk-signature__fullscreen-button"
         onClick={openFullscreenSignature}
       >
-        <span aria-hidden="true">↔</span>
+        <Icon name="arrows-h" size={20} />
         <span><strong>Sign Full Screen</strong><small>Opens in landscape for more writing room</small></span>
       </button>
       {invalid && <span className="bk-field__error">Signature is required</span>}
@@ -1107,7 +1145,7 @@ function SignaturePad({ value, onChange, signerName, contractName, onError, inva
             </div>
             <div className="bk-signature-fullscreen__actions">
               <button type="button" onClick={clearSignature}>Clear</button>
-              <button type="button" className="is-done" onClick={closeFullscreenSignature}>Done ✓</button>
+              <button type="button" className="is-done" onClick={closeFullscreenSignature}>Done</button>
             </div>
           </div>
           <canvas
@@ -1120,7 +1158,7 @@ function SignaturePad({ value, onChange, signerName, contractName, onError, inva
             onPointerCancel={stopDrawing}
             onPointerLeave={stopDrawing}
           />
-          <div className="bk-signature-fullscreen__baseline">SIGN ABOVE THIS LINE →</div>
+          <div className="bk-signature-fullscreen__baseline">SIGN ABOVE THIS LINE</div>
         </div>
       </div>
     </section>
@@ -1172,7 +1210,7 @@ function PreviewLightbox({ preview, onClose }) {
                 onClick={onClose}
                 aria-label="Close"
               >
-                ✕
+                <Icon name="x" size={18} />
               </button>
             </div>
 
@@ -1205,7 +1243,7 @@ function PreviewLightbox({ preview, onClose }) {
                 onClick={onClose}
                 aria-label="Close"
               >
-                ✕
+                <Icon name="x" size={18} />
               </button>
             </div>
             <div className="bk-lightbox__scroll">
@@ -1314,7 +1352,7 @@ function CopyButton({ text }) {
         }
       }}
     >
-      {copied ? "Copied ✓" : "Copy"}
+      {copied ? "Copied" : "Copy"}
     </button>
   );
 }
@@ -1372,7 +1410,7 @@ export function BookingTopBar() {
         <Logo size="sm" withTagline={false} />
       </a>
       <a href="/" className="bk-top__back">
-        ← Back to site
+        <Icon name="arrow-left" size={16} /> Back to site
       </a>
     </div>
   );
@@ -1432,7 +1470,17 @@ export default function PublicBooking() {
           merged.repeatRenter = merged.repeatRenter === "yes" ? "yes" : "no";
           setForm(merged);
         }
-        if (draft.files) setFiles({ ...initialFiles, ...draft.files });
+        if (draft.files) {
+          // Camera-only requirements: drop anything in an old draft that
+          // was uploaded as a file instead of taken on this page.
+          const restored = { ...initialFiles, ...draft.files };
+          REQUIREMENT_FILES.forEach((field) => {
+            if (field.capture && restored[field.stateKey] && !restored[field.stateKey].captured) {
+              restored[field.stateKey] = null;
+            }
+          });
+          setFiles(restored);
+        }
         // Checked against the catalogue once it loads (effect below).
         if (typeof draft.cameraName === "string" && draft.cameraName) {
           setCameraName(draft.cameraName);
@@ -1853,7 +1901,7 @@ export default function PublicBooking() {
 
     setProcessingFiles((current) => ({ ...current, [field.stateKey]: true }));
     try {
-      const dataUrl = await compressImageFile(file);
+      const dataUrl = await compressImageFile(file, field.label);
       if (!dataUrl.startsWith("data:image/")) {
         throw new Error("Unable to save uploaded image.");
       }
@@ -1874,6 +1922,22 @@ export default function PublicBooking() {
     } finally {
       setProcessingFiles((current) => ({ ...current, [field.stateKey]: false }));
     }
+  }
+
+  function setCapturedPhoto(field, dataUrl) {
+    setSubmitState((state) => ({ ...state, error: null }));
+    if (!String(dataUrl || "").startsWith("data:image/")) return;
+    const taken = new Intl.DateTimeFormat("en-PH", {
+      timeZone: "Asia/Manila",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date());
+    setFiles((current) => ({
+      ...current,
+      [field.stateKey]: { name: `Photo taken ${taken}`, dataUrl, captured: true },
+    }));
   }
 
   function toggleAddon(addonName) {
@@ -2151,7 +2215,7 @@ export default function PublicBooking() {
       ? "Checking availability…"
       : availabilityReady
         ? availabilityCount > 0
-          ? "Available for your schedule ✓"
+          ? "Available for your schedule"
           : "Not available for that schedule"
         : availability.state === "error"
           ? availability.error
@@ -2831,7 +2895,7 @@ export default function PublicBooking() {
                       ? free.available <= 0
                         ? "Not available for that schedule"
                         : `Only ${free.available} free for that schedule — you picked ${unitsWanted[item.camera]}`
-                      : "Available for your schedule ✓"
+                      : "Available for your schedule"
                     : free?.state === "loading"
                       ? "Checking availability…"
                       : free?.state === "error"
@@ -2907,14 +2971,16 @@ export default function PublicBooking() {
               )}
               <div>
                 <strong>{selectedCamera.name}</strong>
-                <span>Comes with:</span>
+                {(selectedCamera.inclusions || []).length > 0 && <span>Comes with:</span>}
               </div>
             </div>
-            <ul className="bk-chooser__inclusions">
-              {(selectedCamera.inclusions || []).map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
+            {(selectedCamera.inclusions || []).length > 0 && (
+              <ul className="bk-chooser__inclusions">
+                {selectedCamera.inclusions.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            )}
             <button
               type="button"
               className="bk-chooser__more"
@@ -3250,7 +3316,9 @@ export default function PublicBooking() {
         file={files[field.stateKey]}
         isProcessing={Boolean(processingFiles[field.stateKey])}
         invalid={showCurrentStepErrors && !hasRequirementUpload(files[field.stateKey])}
+        capture={field.capture}
         onChange={(file) => updateFile(field, file)}
+        onCaptured={(dataUrl) => setCapturedPhoto(field, dataUrl)}
       />
     );
   }
@@ -3359,7 +3427,7 @@ export default function PublicBooking() {
             {form.repeatRenter === "yes" &&
               (isRepeatVerified ? (
                 <div className="bk-repeat__verified">
-                  ✓ Verified — welcome back,{" "}
+                  <Icon name="check" size={15} strokeWidth={3} /> Verified — welcome back,{" "}
                   <strong>{form.repeatVerifiedName}</strong>! Your details are
                   on file, so just set your trip type and destination below.
                   You'll also skip the ID uploads later — only the proof of
@@ -3546,13 +3614,14 @@ export default function PublicBooking() {
         <div className="bk-stack">
           {isRepeatVerified ? (
             <div className="bk-repeat__verified bk-repeat__verified--standalone">
-              ✓ Verified repeat renter — we'll reuse the IDs on your record.
+              <Icon name="check" size={15} strokeWidth={3} /> Verified repeat renter — we'll reuse the IDs on your record.
               Nothing to upload here; tap Next.
             </div>
           ) : (
             <p className="bk-sub bk-sub--small">
-              Upload clear photos. You'll pay the downpayment in the last step,
-              after you've reviewed and signed the contract.
+              Take each photo with your camera right here. Every photo is stamped
+              with the date, time and an S&amp;R-only watermark. You'll pay the
+              downpayment in the last step, after you've signed the contract.
             </p>
           )}
           <div className="bk-grid-2">
@@ -3742,7 +3811,7 @@ export default function PublicBooking() {
           <li>₱300 rush fee for same-day only</li>
         </ul>
         <p className="bk-sub bk-sub--small float-in" style={{ "--d": "540ms" }}>
-          Already booked? <a href="/track">Track your booking →</a>
+          Already booked? <a href="/track">Track your booking</a>
         </p>
         <MemberStrip member={member} />
       </header>
@@ -3756,7 +3825,7 @@ export default function PublicBooking() {
               className={`bk-step ${index === currentStep ? "is-current" : ""} ${stepComplete[index] ? "is-done" : ""} ${validatedSteps.has(index) && !stepComplete[index] ? "is-incomplete" : ""}`}
             >
               <span className="bk-step__num" aria-hidden="true">
-                {stepComplete[index] ? "✓" : index + 1}
+                {stepComplete[index] ? <Icon name="check" size={14} strokeWidth={3} /> : index + 1}
               </span>
               <span className="bk-step__label">{step}</span>
             </li>
@@ -3770,7 +3839,7 @@ export default function PublicBooking() {
           </div>
           {submitState.error && (
             <div className="bk-error" role="alert">
-              ✕ {submitState.error}
+              <Icon name="info" size={16} /> {submitState.error}
             </div>
           )}
         </div>
@@ -3782,7 +3851,7 @@ export default function PublicBooking() {
             disabled={currentStep === 0 || submitState.loading}
             className="btn btn--outline"
           >
-            ← Back
+            <Icon name="arrow-left" size={16} /> Back
           </button>
           <button
             type="button"
@@ -3790,11 +3859,11 @@ export default function PublicBooking() {
             disabled={submitState.loading}
             className="bk-nav__restart"
           >
-            ↺ Start Over
+            <Icon name="reset" size={16} /> Start Over
           </button>
           {currentStep < STEPS.length - 1 ? (
             <button type="button" onClick={handleNext} className="btn btn--solid">
-              Next →
+              Next <Icon name="arrow-right" size={16} />
             </button>
           ) : (
             <button type="submit" disabled={submitState.loading || hasProcessingFile} className="btn btn--solid">

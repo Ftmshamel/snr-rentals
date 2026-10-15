@@ -47,7 +47,7 @@ export const HOW_TO_RENT = [
   {
     title: "Complete Your Booking",
     description:
-      "Once your schedule shows as available, continue through the booking form. Review the privacy notice and rental terms, enter your renter details, then provide these details and uploads:",
+      "Once your schedule shows as available, continue through the booking form. Review the privacy notice and rental terms, enter your renter details, then provide these details and take the required photos with your camera on the website (each one is stamped with the date, time and an S&R-only watermark):",
     bullets: [
       "Facebook account name and profile link",
       "2 Valid IDs (1 must be a Government ID)",
@@ -60,7 +60,7 @@ export const HOW_TO_RENT = [
   {
     title: "Review, Sign & Submit",
     description:
-      "Make sure all uploaded IDs, photos, and documents are clear and valid. Review your booking and rental contract, add your e-signature, then submit everything directly through this website.",
+      "Make sure all your ID and document photos are clear and readable. Review your booking and rental contract, add your e-signature, then submit everything directly through this website.",
     note: "Keep your booking reference and send us your downloaded or screenshot contract via PM. We'll review your request and message you on Facebook with the official confirmation of your reservation.",
   },
   {

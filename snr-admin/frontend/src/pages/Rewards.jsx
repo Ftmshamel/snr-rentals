@@ -154,7 +154,7 @@ export default function Rewards() {
           ) : (
             <div className="space-y-2">
               {members.map((m) => (
-                <div key={m.uid} className="flex items-center justify-between gap-3 rounded-[14px] border-2 border-[rgba(58,58,58,0.18)] bg-white/60 px-3 py-2">
+                <div key={m.uid} className="flex items-center justify-between gap-3 rounded-[14px] border border-[rgba(58,58,58,0.18)] bg-white/60 px-3 py-2">
                   <div className="flex min-w-0 items-center gap-3">
                     {m.picture ? (
                       <img src={m.picture} alt="" className="h-8 w-8 shrink-0 rounded-full" referrerPolicy="no-referrer" />

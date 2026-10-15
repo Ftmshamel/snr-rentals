@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Header from "../components/Header.jsx";
 import { apiGetJson, apiPostJson, apiDeleteJson, apiPatchJson } from "../utils/api.js";
+import Icon from "../components/Icon.jsx";
 
 const MONTHS = [
   "January","February","March","April","May","June",
@@ -360,7 +361,7 @@ export default function Expenses() {
                   disabled={page === 1}
                   className="ui-btn ui-btn--sm"
                 >
-                  ← Prev
+                  <Icon name="arrow-left" size={14} /> Prev
                 </button>
                 <span className="font-mono text-xs text-[color:var(--color-dark-gray)]">
                   Page {page} of {totalPages}
@@ -371,7 +372,7 @@ export default function Expenses() {
                   disabled={page === totalPages}
                   className="ui-btn ui-btn--sm"
                 >
-                  Next →
+                  Next <Icon name="arrow-right" size={14} />
                 </button>
               </div>
             )}

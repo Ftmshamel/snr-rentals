@@ -371,7 +371,7 @@ export default function LifecyclePanel({ booking, cameras, onPatch, onReplace })
             ].map(([value, label]) => (
               <label
                 key={value}
-                className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full border-2 px-3 py-1.5 text-xs font-bold ${
+                className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold ${
                   condition === value
                     ? value === "damaged"
                       ? "border-rose-600 bg-rose-600 text-white"

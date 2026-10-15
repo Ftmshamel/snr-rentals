@@ -500,6 +500,34 @@ Use PowerShell `System.Drawing` for resizing (see git history for the pattern).
 
 ## 8. Conventions worth not breaking
 
+- **Requirement photos are taken on the page, never uploaded (2026-10-15).**
+  Owner's rule: IDs / billing / selfie must come from the renter's camera
+  with S&R's date-time + "for S&R use only" watermark
+  (`snr-client/src/components/CameraCapture.jsx`, `stampForSnr`). Don't
+  reintroduce a file input for these fields. Browser-side only — the API
+  doesn't (and can't reliably) verify where an image came from.
+
+- **New price-list items (2026-10-15).** DJI Neo 2 (₱800 1–2 days, ₱700 3+),
+  iPhone 18 Pro Max and Samsung S26 Ultra (₱2,800 for 1 day, ₱1,800/day 2+)
+  are in `defaultCatalog.js`; their images were cut out of the owner's price
+  poster (`neo2.png`, `iphone18promax.png`, `s26ultra.png`). Production gets
+  them only when the owner clicks **Add them** on the Catalog page (seed now
+  adds missing defaults to a non-empty catalogue, never overwriting). Open:
+  their inclusions, scratch fees and serials are blank, and the deposit is the
+  same ₱1,000 per item as a camera — confirm with the owner. The poster also
+  lists phone rates only up to 3 days; the site charges ₱1,800/day beyond.
+
+- **Calm UI (2026-10-15).** The "poster" look (hard offset shadows, thick
+  outlines, animated grain, marquee, floating hero cameras, scroll-reveal) was
+  replaced after defense feedback that it looked unprofessional and moved too
+  much. Tokens: `--color-line`, `--color-muted`, `--shadow-sm/md` in the
+  client's `index.css`; the admin's `ui-*` classes and `tailwind.config.js`
+  shadows carry the same values. Icons come from `components/Icon.jsx` (one
+  copy per app) — never emoji or ✓/✕/→ glyphs. Camera tiles
+  (`ProductCard.jsx`, member home `mh-cam`) use a fixed 4:3 photo box so image
+  and text stay in proportion. Landing grid: 5 per row on desktop, 4 under
+  1100px, 3 under 900px, 2 on phones.
+
 - **`ui-*` classes** (`frontend/src/index.css`) are the design system: `ui-panel`,
   `ui-card`, `ui-btn`, `ui-input`, `ui-chip`, `ui-table`, `ui-modal`. The admin is
   **light-only** — the dark-mode toggle was removed, and no `dark:` variants

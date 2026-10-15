@@ -19,7 +19,7 @@ function ConditionChip({ booking }) {
   return booking.RETURN_CONDITION === "damaged" ? (
     <span className="rounded-full bg-rose-600 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-white">Damaged</span>
   ) : (
-    <span className="rounded-full border-2 border-green-600 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-green-700">Good</span>
+    <span className="rounded-full border border-green-600 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-green-700">Good</span>
   );
 }
 
@@ -52,7 +52,7 @@ function UnitCard({ unit, rentals, onOpen }) {
             <StageBadge booking={current} />
           </button>
         ) : (
-          <span className="rounded-full border-2 border-green-600 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-green-700">
+          <span className="rounded-full border border-green-600 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-green-700">
             In shop
           </span>
         )}

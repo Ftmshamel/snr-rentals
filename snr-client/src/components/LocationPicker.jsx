@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import Icon from "./Icon.jsx";
 
 // Map pin for the Lalamove delivery form. The renter searches for their
 // place, taps the map, or uses their phone's location, then drags the pin to
@@ -155,7 +156,7 @@ export default function LocationPicker({ lat, lng, onChange, invalid = false }) 
           <span>{status}</span>
         ) : hasPin ? (
           <span>
-            ✓ Pin set ({lat.toFixed(5)}, {lng.toFixed(5)}) ·{" "}
+            <Icon name="check" size={14} strokeWidth={3} /> Pin set ({lat.toFixed(5)}, {lng.toFixed(5)}) ·{" "}
             <a href={mapsLink(lat, lng)} target="_blank" rel="noreferrer">
               check it in Google Maps
             </a>

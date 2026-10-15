@@ -66,7 +66,7 @@ export default function Login({ onLogin }) {
               />
             </div>
             {error && (
-              <p className="text-xs font-black text-[color:var(--color-danger)]">
+              <p className="text-xs font-bold text-[color:var(--color-danger)]">
                 {error}
               </p>
             )}

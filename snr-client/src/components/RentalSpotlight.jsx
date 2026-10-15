@@ -1,3 +1,4 @@
+import Icon from "./Icon.jsx";
 // The rental that matters right now — what it is, when, and how far along —
 // shown on the member Home and the dashboard. Also the date/money helpers
 // both pages use.
@@ -99,7 +100,7 @@ export default function RentalSpotlight({ booking }) {
           <em>{time12(booking.pickUpTime)}</em>
         </div>
         <span className="dash-upnext__arrow" aria-hidden="true">
-          →
+          <Icon name="arrow-right" size={20} />
         </span>
         <div>
           <span>Return</span>
@@ -112,7 +113,7 @@ export default function RentalSpotlight({ booking }) {
       <ol className="dash-journey" aria-label="Rental progress">
         {JOURNEY.map((s, i) => (
           <li key={s.key} className={i < step ? "is-done" : i === step ? "is-now" : ""}>
-            <span className="dash-journey__dot">{i < step ? "✓" : i + 1}</span>
+            <span className="dash-journey__dot">{i < step ? <Icon name="check" size={14} strokeWidth={3} /> : i + 1}</span>
             <span className="dash-journey__label">{s.label}</span>
           </li>
         ))}
@@ -124,7 +125,7 @@ export default function RentalSpotlight({ booking }) {
           {booking.savings > 0 && <em className="dash-saved"> · saved {peso(booking.savings)}</em>}
         </span>
         <a href={`/track?ref=${encodeURIComponent(booking.ref)}`} className="btn btn--solid btn--sm">
-          Track live →
+          Track live <Icon name="arrow-right" size={15} />
         </a>
       </div>
     </section>

@@ -6,6 +6,7 @@ import BookingDetail from "../components/BookingDetail.jsx";
 import { useBookings } from "../hooks/useBookings.js";
 import { useAddOns } from "../hooks/useAddOns.js";
 import { distributeToUnits, todayISOLocal } from "../utils/dateHelpers.js";
+import Icon from "../components/Icon.jsx";
 
 export default function AddOnCalendar() {
   const { addonName: addonNameParam } = useParams();
@@ -54,7 +55,7 @@ export default function AddOnCalendar() {
               to="/addons"
               className="mb-2 inline-block ui-btn ui-btn--sm text-[color:var(--color-ink)] hover:bg-[rgba(255,255,255,0.6)] hover:text-[color:var(--color-black)]"
             >
-              ← BACK
+              <Icon name="arrow-left" size={14} /> BACK
             </Link>
             <div className="mb-3 truncate text-lg font-bold text-[color:var(--color-black)]">
               {decoded || "Add-on"}

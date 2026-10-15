@@ -25,6 +25,7 @@ export function reloadCameras() {
         publish({
           cameras: Array.isArray(data.cameras) ? data.cameras : [],
           readOnly: Boolean(data.readOnly),
+          missingDefaults: Array.isArray(data.missingDefaults) ? data.missingDefaults : [],
           loading: false,
           loaded: true,
         });

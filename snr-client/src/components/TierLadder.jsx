@@ -1,4 +1,5 @@
 import { perkLines, requirementLabel } from "../utils/loyalty.js";
+import Icon from "./Icon.jsx";
 
 // The four member tiers side by side, each with what it takes and what it
 // gives. `current` (a tier key) marks where a signed-in renter stands.
@@ -19,7 +20,7 @@ export default function TierLadder({ tiers, current = null, compact = false }) {
               <span className="tier-card__name">{t.name}</span>
             </div>
             <div className="tier-card__body">
-              {here && <span className="tier-card__here">✓ Your tier</span>}
+              {here && <span className="tier-card__here"><Icon name="check" size={13} strokeWidth={3} /> Your tier</span>}
               <p className="tier-card__req">{requirementLabel(t)}</p>
               <ul className="tier-card__perks">
                 {perkLines(t).map((line) => (

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { availabilityOn, nextFreeDate } from "../utils/availability.js";
+import Icon from "./Icon.jsx";
 
 function shortDate(iso) {
   if (!iso) return "";
@@ -43,7 +44,7 @@ export default function InventoryRow({ item, bookings, dateIso, kind, to }) {
           )}
           {overbooked && (
             <span className="ui-chip border-[color:var(--color-danger)] bg-[color:var(--color-danger)] text-white">
-              ⚠ Overbooked by {inUse - units}
+              <Icon name="info" size={14} /> Overbooked by {inUse - units}
             </span>
           )}
         </div>
@@ -51,7 +52,7 @@ export default function InventoryRow({ item, bookings, dateIso, kind, to }) {
 
       <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end sm:gap-0.5">
         <div
-          className={`font-display text-2xl font-black leading-none ${
+          className={`font-display text-2xl font-bold leading-none ${
             soldOut
               ? "text-[color:var(--color-danger)]"
               : "text-[color:var(--color-black)]"

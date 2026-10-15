@@ -4,6 +4,7 @@ import { useCatalog } from "../data/catalog.js";
 import { getCameraAssets } from "../data/assets.js";
 import { CONTACT } from "../data/content.js";
 import { memberPerks } from "../utils/loyalty.js";
+import Icon from "../components/Icon.jsx";
 
 // "/" for a signed-in renter: their own home instead of the marketing page —
 // greeting and tier, the rental that's happening now, and the cameras with
@@ -32,7 +33,7 @@ function CameraTile({ camera, tier }) {
         <small> / day</small>
       </span>
       {memberRate != null && <span className="mh-cam__perk">{tier.name} price</span>}
-      <span className="mh-cam__cta">Book →</span>
+      <span className="mh-cam__cta">Book <Icon name="arrow-right" size={15} /></span>
     </a>
   );
 }
@@ -67,12 +68,12 @@ export default function MemberHome({ member }) {
         <section className={`mh-hero tier--${tier?.key || "bronze"}`}>
           <div className="mh-hero__text">
             <h1 className="mh-hero__name">
-              {greeting()}, {name}.
+              {greeting()}, {name}
             </h1>
             {tier ? (
               <p className="mh-hero__tier">
-                {tier.name} member
-                {tier.discountPercent ? ` · ${tier.discountPercent}% off every rental` : ""}
+                <span className="mh-hero__chip">{tier.name} member</span>
+                {tier.discountPercent ? ` ${tier.discountPercent}% off every rental` : ""}
                 {tier.freeAddons ? ` · ${tier.freeAddons} free add-on` : ""}
               </p>
             ) : (
@@ -104,21 +105,16 @@ export default function MemberHome({ member }) {
         <div className="mh-grid">
           <RentalSpotlight booking={spotlight} />
           <section className="dash-panel mh-help">
-            <span className="dash-panel__kicker">Quick actions</span>
-            <a href="/track" className="mh-action">
-              Track a booking
-            </a>
-            <a href="/account" className="mh-action">
-              All my bookings
-            </a>
-            <a href="/rewards" className="mh-action">
-              My rewards &amp; perks
-            </a>
+            <span className="dash-panel__kicker">Need help?</span>
+            <p className="dash-muted">Questions about a booking, delivery or return? Message or call us.</p>
             <a href={CONTACT.facebookUrl} target="_blank" rel="noreferrer" className="mh-action">
-              Message us on Facebook
+              <Icon name="mail" size={18} /> Message us on Facebook
             </a>
             <a href={CONTACT.phoneHref} className="mh-action">
-              Call {CONTACT.phone}
+              <Icon name="phone" size={18} /> Call {CONTACT.phone}
+            </a>
+            <a href="/track" className="mh-action">
+              <Icon name="pin" size={18} /> Track a booking
             </a>
           </section>
         </div>

@@ -277,7 +277,7 @@ function BookingCard({
                     <img
                       src={documentThumb(id, 400)}
                       alt={label}
-                      className="w-full rounded-row border-2 border-[color:var(--color-border)] object-cover"
+                      className="w-full rounded-row border border-[color:var(--color-border)] object-cover"
                     />
                   </button>
                 ))}

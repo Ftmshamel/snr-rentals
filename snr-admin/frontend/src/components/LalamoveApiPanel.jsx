@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiPostJson } from "../utils/api.js";
+import Icon from "./Icon.jsx";
 
 // Book and follow a Lalamove order through the API (backend/lib/lalamoveBookings.js).
 // For a delivery, booking also releases the unit, so a serial must be picked
@@ -48,11 +49,11 @@ export default function LalamoveApiPanel({ booking, kind, serial, needsSerial, e
   const sandbox = env !== "production";
 
   return (
-    <div className="space-y-2 rounded-[14px] border-2 border-[color:var(--color-ink)] bg-white/80 p-3">
+    <div className="space-y-2 rounded-[14px] border border-[color:var(--color-ink)] bg-white/80 p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="ui-kicker text-[0.6rem]">Lalamove {kind === "delivery" ? "delivery" : "return pickup"} · API</span>
         {sandbox && (
-          <span className="rounded-full border-2 border-amber-500 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-amber-700">
+          <span className="rounded-full border border-amber-500 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-amber-700">
             Sandbox · test only
           </span>
         )}
@@ -68,7 +69,7 @@ export default function LalamoveApiPanel({ booking, kind, serial, needsSerial, e
               Order {order.orderId} · ₱{Number(order.total || 0).toLocaleString()}
             </span>
             {order.simulated && (
-              <span className="rounded-full border-2 border-amber-500 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-amber-700">
+              <span className="rounded-full border border-amber-500 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-amber-700">
                 Simulated
               </span>
             )}
@@ -103,7 +104,7 @@ export default function LalamoveApiPanel({ booking, kind, serial, needsSerial, e
           <div className="flex flex-wrap gap-2 pt-1">
             {order.shareLink && (
               <a href={order.shareLink} target="_blank" rel="noreferrer" className="ui-btn ui-btn--sm">
-                Live tracking ↗
+                Live tracking <Icon name="external" size={13} />
               </a>
             )}
             {active && !order.simulated && (
@@ -125,14 +126,14 @@ export default function LalamoveApiPanel({ booking, kind, serial, needsSerial, e
           {/* Lalamove's sandbox has no riders, so nothing ever accepts a test
               order. For demos, step it through by hand — clearly labelled. */}
           {active && sandbox && (
-            <div className="mt-1 rounded-[10px] border-2 border-dashed border-amber-500 p-2">
+            <div className="mt-1 rounded-[10px] border border-dashed border-amber-500 p-2">
               <button
                 type="button"
                 disabled={Boolean(busy)}
                 onClick={() => act("simulate")}
                 className="ui-btn ui-btn--sm w-full"
               >
-                {busy === "simulate" ? "Moving…" : "⏭ Simulate next step (sandbox demo)"}
+                {busy === "simulate" ? "Moving…" : "Simulate next step (sandbox demo)"}
               </button>
               <p className="mt-1 font-mono text-[9px] text-amber-800">
                 Sandbox has no real riders. This moves the order to the next stage (rider found → picked up →
