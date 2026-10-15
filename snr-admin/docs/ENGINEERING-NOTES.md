@@ -500,6 +500,16 @@ Use PowerShell `System.Drawing` for resizing (see git history for the pattern).
 
 ## 8. Conventions worth not breaking
 
+- **Calm UI (2026-10-15).** The "poster" look (hard offset shadows, thick
+  outlines, animated grain, marquee, floating hero cameras, scroll-reveal) was
+  replaced after defense feedback that it looked unprofessional and moved too
+  much. Tokens: `--color-line`, `--color-muted`, `--shadow-sm/md` in the
+  client's `index.css`; the admin's `ui-*` classes and `tailwind.config.js`
+  shadows carry the same values. Icons come from `components/Icon.jsx` (one
+  copy per app) — never emoji or ✓/✕/→ glyphs. Camera tiles
+  (`ProductCard.jsx`, member home `mh-cam`) use a fixed 4:3 photo box so image
+  and text stay in proportion; phones show two columns.
+
 - **`ui-*` classes** (`frontend/src/index.css`) are the design system: `ui-panel`,
   `ui-card`, `ui-btn`, `ui-input`, `ui-chip`, `ui-table`, `ui-modal`. The admin is
   **light-only** — the dark-mode toggle was removed, and no `dark:` variants

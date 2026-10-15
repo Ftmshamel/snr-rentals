@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { SHOP } from "../data/shop.js";
+import Icon from "./Icon.jsx";
 
 // Everything staff need to book a Lalamove by hand, laid out in the order the
 // Lalamove app asks for it: pick-up, drop-off, then the contact and note.
@@ -75,9 +76,9 @@ function CopyRow({ label, value, href, copyKey, copier }) {
       <button
         type="button"
         onClick={() => copier.copy(copyKey, value)}
-        className="shrink-0 rounded-full border-2 border-[color:var(--color-ink)] px-2 py-0.5 font-mono text-[10px] font-bold"
+        className="shrink-0 rounded-full border border-[color:var(--color-ink)] px-2 py-0.5 font-mono text-[10px] font-bold"
       >
-        {copier.copied === copyKey ? "✓" : "Copy"}
+        {copier.copied === copyKey ? <Icon name="check" size={14} strokeWidth={3} /> : "Copy"}
       </button>
     </div>
   );
@@ -124,7 +125,7 @@ export default function LalamoveBox({ booking, kind, link, onLinkChange, onSaveL
   const [first, second] = kind === "delivery" ? [shop, renter] : [renter, shop];
 
   return (
-    <div className="space-y-2 rounded-[14px] border-2 border-[rgba(58,58,58,0.25)] bg-white/70 p-3">
+    <div className="space-y-2 rounded-[14px] border border-[rgba(58,58,58,0.25)] bg-white/70 p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="ui-kicker text-[0.6rem]">Lalamove {kind === "delivery" ? "delivery" : "return pickup"}</span>
         {savedLink ? (
@@ -154,11 +155,11 @@ export default function LalamoveBox({ booking, kind, link, onLinkChange, onSaveL
 
       <div className="flex flex-wrap gap-2">
         <a href="https://web.lalamove.com/" target="_blank" rel="noreferrer" className="ui-btn ui-btn--sm">
-          Open Lalamove ↗
+          Open Lalamove <Icon name="external" size={13} />
         </a>
         {savedLink && (
           <a href={savedLink} target="_blank" rel="noreferrer" className="ui-btn ui-btn--sm">
-            Tracking ↗
+            Tracking <Icon name="external" size={13} />
           </a>
         )}
       </div>

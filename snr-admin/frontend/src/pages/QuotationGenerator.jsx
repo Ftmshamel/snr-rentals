@@ -155,7 +155,7 @@ function OutputBlock({ output, placeholder }) {
           onClick={handleCopy}
           className="ui-btn ui-btn--sm"
         >
-          {copied ? "✓ Copied" : "Copy"}
+          {copied ? "Copied" : "Copy"}
         </button>
       </div>
       <pre className="whitespace-pre-wrap bg-[rgba(255,255,255,0.7)] px-4 py-4 font-mono text-sm leading-relaxed text-[color:var(--color-black)]">
@@ -697,7 +697,7 @@ function BalanceQuote() {
                     key={`proof-${index}`}
                     type="button"
                     onClick={() => setLightbox(id)}
-                    className="rounded-row border-2 border-[color:var(--color-border)]"
+                    className="rounded-row border border-[color:var(--color-border)]"
                   >
                     <img
                       src={documentThumb(id, 400)}

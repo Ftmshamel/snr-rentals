@@ -12,6 +12,8 @@ import {
   useSignInModal,
 } from "../hooks/useMember.js";
 import { GoogleMark } from "./AccountButton.jsx";
+import Icon from "./Icon.jsx";
+import Logo from "./Logo.jsx";
 
 // One sign-in window for the whole site (rendered once in App). Google,
 // Facebook and email + password, whichever are enabled. It stays open with
@@ -125,7 +127,7 @@ export default function SignInModal() {
       <div className="signin" role="dialog" aria-modal="true" aria-labelledby="signin-title">
         {!waiting && (
           <button type="button" className="signin__close" aria-label="Close" onClick={closeSignIn}>
-            ✕
+            <Icon name="x" size={18} />
           </button>
         )}
 
@@ -137,14 +139,18 @@ export default function SignInModal() {
           </div>
         ) : (
           <>
-            <p className="signin__kicker">S&amp;R Rentals</p>
+            <div className="signin__brand">
+              <Logo size="sm" withTagline={false} />
+            </div>
             <h2 id="signin-title" className="signin__title">
               {mode === "create" ? "Create your account" : mode === "reset" ? "Reset your password" : "Sign in"}
             </h2>
             <p className="signin__lead">
               {mode === "reset"
                 ? "We'll email you a link to set a new password."
-                : "Earn a tier with every completed rental and get your member price automatically."}
+                : mode === "create"
+                  ? "Save your details and earn member discounts on every rental."
+                  : "Welcome back. Sign in to see your bookings and rewards."}
             </p>
 
             {mode !== "reset" && socials.length > 0 && (
@@ -236,15 +242,15 @@ export default function SignInModal() {
                   )}
                   {mode !== "signin" && (
                     <button type="button" onClick={() => setMode("signin")}>
-                      ← Back to sign in
+                      <Icon name="arrow-left" size={15} /> Back to sign in
                     </button>
                   )}
                 </div>
               </>
             )}
 
-            {error && <p className="bk-error signin__msg">✕ {error}</p>}
-            {notice && <p className="signin__ok signin__msg">✓ {notice}</p>}
+            {error && <p className="bk-error signin__msg"><Icon name="info" size={16} /> {error}</p>}
+            {notice && <p className="signin__ok signin__msg"><Icon name="check" size={16} /> {notice}</p>}
             <p className="signin__fine">Optional. You can always book as a guest.</p>
           </>
         )}

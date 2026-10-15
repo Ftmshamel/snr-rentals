@@ -5,6 +5,7 @@ import { useMember } from "../hooks/useMember.js";
 import { ACTIVE, shortDate, spotlightBooking } from "../components/RentalSpotlight.jsx";
 import RiderMap from "../components/RiderMap.jsx";
 import DeliveryDetailsForm, { EMPTY_DELIVERY, deliveryMissing } from "../components/DeliveryDetailsForm.jsx";
+import Icon from "../components/Icon.jsx";
 
 // /track — a renter looks up their booking by reference code: where it is in
 // the rental (approved → out for delivery → delivered → returned), the live
@@ -122,7 +123,7 @@ function ReturnPickup({ booking, onSaved }) {
             </button>
           </div>
           {!same && <DeliveryDetailsForm idPrefix="return" value={details} onChange={setDetails} showErrors={showErrors} />}
-          {state.error && <div className="bk-error">✕ {state.error}</div>}
+          {state.error && <div className="bk-error"><Icon name="info" size={16} /> {state.error}</div>}
           <div className="bk-track__actions">
             <button type="button" className="btn btn--outline" onClick={() => setEditing(false)}>
               Cancel
@@ -202,7 +203,7 @@ function Result({ booking, onUpdated, onPick }) {
           <div className="bk-panel-label">Hi{booking.firstName ? ` ${booking.firstName}` : ""}! Your booking</div>
           <h2 className="bk-panel__title bk-track__camera">{booking.camera}</h2>
           <p className="bk-track__muted">
-            {booking.mode === "delivery" ? "Delivery" : "Pick-up"} {formatDate(booking.pickUpDate, booking.pickUpTime)} → return{" "}
+            {booking.mode === "delivery" ? "Delivery" : "Pick-up"} {formatDate(booking.pickUpDate, booking.pickUpTime)} <Icon name="arrow-right" size={13} /> return{" "}
             {formatDate(booking.returnDate, booking.returnTime)}
           </p>
           {booking.unitSerial && (
@@ -357,7 +358,7 @@ export default function TrackBooking() {
             >
               <strong>{b.camera}</strong>
               <span>
-                {shortDate(b.pickUpDate)} → {shortDate(b.returnDate)}
+                {shortDate(b.pickUpDate)} <Icon name="arrow-right" size={13} /> {shortDate(b.returnDate)}
               </span>
               <em>{b.stage?.label}</em>
             </button>
@@ -384,7 +385,7 @@ export default function TrackBooking() {
           {state.loading ? "Checking…" : "Track"}
         </button>
       </form>
-      {state.error && <div className="bk-error bk-track__error">✕ {state.error}</div>}
+      {state.error && <div className="bk-error bk-track__error"><Icon name="info" size={16} /> {state.error}</div>}
       {state.booking && (
         <Result
           booking={state.booking}

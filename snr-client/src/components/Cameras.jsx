@@ -5,6 +5,7 @@ import ProductCard from "./ProductCard.jsx";
 import GearGrid from "./GearGrid.jsx";
 import useReveal from "../hooks/useReveal.js";
 import useLockBodyScroll from "../hooks/useLockBodyScroll.js";
+import Icon from "./Icon.jsx";
 
 function CameraDetails({ camera, onClose }) {
   const assets = getCameraAssets(camera);
@@ -30,7 +31,7 @@ function CameraDetails({ camera, onClose }) {
             onClick={onClose}
             aria-label="Close details"
           >
-            ✕
+            <Icon name="x" size={18} />
           </button>
         </div>
 

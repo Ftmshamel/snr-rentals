@@ -82,7 +82,6 @@ function Landing() {
         <Hero />
         <Marquee />
         <Cameras />
-        <Marquee reverse />
         <HowToRent />
         <Rewards />
         <Terms />

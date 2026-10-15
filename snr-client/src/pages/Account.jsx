@@ -8,6 +8,7 @@ import { getCameraAssets } from "../data/assets.js";
 import { CONTACT } from "../data/content.js";
 import { claimBooking, openSignIn, refreshMe, signOut, useMember } from "../hooks/useMember.js";
 import { perkLines } from "../utils/loyalty.js";
+import Icon from "../components/Icon.jsx";
 
 // Member pages, each with one job:
 //   /account   My rentals — every booking, with its progress and a Track link
@@ -102,7 +103,7 @@ function RentalCard({ booking, cameras }) {
           <span className={`dash-stage dash-stage--${booking.stage?.key}`}>{booking.stage?.label}</span>
         </div>
         <p className="mp-rental__when">
-          <strong>{shortDate(booking.pickUpDate)}</strong> {time12(booking.pickUpTime)} →{" "}
+          <strong>{shortDate(booking.pickUpDate)}</strong> {time12(booking.pickUpTime)} <Icon name="arrow-right" size={13} />{" "}
           <strong>{shortDate(booking.returnDate, true)}</strong> {time12(booking.returnTime)} ·{" "}
           {booking.mode === "delivery" ? "Lalamove delivery" : "Pick-up"}
         </p>
@@ -128,7 +129,7 @@ function RentalCard({ booking, cameras }) {
             {booking.savings > 0 && <em> · saved {peso(booking.savings)}</em>}
           </span>
           <a href={`/track?ref=${encodeURIComponent(booking.ref)}`} className="btn btn--solid btn--sm">
-            {ACTIVE.has(booking.stage?.key) ? "Track →" : "Details"}
+            {ACTIVE.has(booking.stage?.key) ? <>Track <Icon name="arrow-right" size={14} /></> : "Details"}
           </a>
         </div>
       </div>
@@ -162,8 +163,8 @@ function ClaimForm() {
           {state.busy ? "Adding…" : "Add"}
         </button>
       </div>
-      {state.error && <p className="bk-error">✕ {state.error}</p>}
-      {state.done && <p className="dash-ok">✓ {state.done}</p>}
+      {state.error && <p className="bk-error"><Icon name="info" size={16} /> {state.error}</p>}
+      {state.done && <p className="dash-ok"><Icon name="check" size={16} strokeWidth={3} /> {state.done}</p>}
     </form>
   );
 }
@@ -224,10 +225,10 @@ function MyRentals({ me }) {
           <section className="dash-panel mh-help">
             <span className="dash-panel__kicker">Need help with a rental?</span>
             <a href={CONTACT.facebookUrl} target="_blank" rel="noreferrer" className="mh-action">
-              <span>✉</span> Message us on Facebook
+              <span><Icon name="mail" size={16} /></span> Message us on Facebook
             </a>
             <a href={CONTACT.phoneHref} className="mh-action">
-              <span>☎</span> Call {CONTACT.phone}
+              <span><Icon name="phone" size={16} /></span> Call {CONTACT.phone}
             </a>
           </section>
         </aside>
@@ -340,7 +341,7 @@ function MemberPage({ render }) {
   } else if (!member.me) {
     body = (
       <div className="dash dash-center">
-        <p className="bk-error">✕ {member.error || "Couldn't load your account."}</p>
+        <p className="bk-error"><Icon name="info" size={16} /> {member.error || "Couldn't load your account."}</p>
         <button type="button" className="btn btn--outline" onClick={refreshMe}>
           Try again
         </button>

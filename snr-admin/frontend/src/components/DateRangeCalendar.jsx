@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { formatISODateLocal, parseISODate, todayISOLocal } from "../utils/dateHelpers.js";
+import Icon from "./Icon.jsx";
 
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
@@ -75,7 +76,7 @@ export default function DateRangeCalendar({ start, end, onChange }) {
           aria-label="Previous month"
           className="ui-btn ui-btn--icon"
         >
-          ←
+          <Icon name="arrow-left" size={16} />
         </button>
         <h2 className="ui-title font-display text-base">{title}</h2>
         <button
@@ -84,7 +85,7 @@ export default function DateRangeCalendar({ start, end, onChange }) {
           aria-label="Next month"
           className="ui-btn ui-btn--icon"
         >
-          →
+          <Icon name="arrow-right" size={16} />
         </button>
       </div>
 
@@ -115,7 +116,7 @@ export default function DateRangeCalendar({ start, end, onChange }) {
           const isEdge = isStart || isEnd;
 
           const classes = [
-            "min-h-[2.5rem] rounded-cell border-2 flex items-center justify-center",
+            "min-h-[2.5rem] rounded-cell border flex items-center justify-center",
             "font-mono text-sm cursor-pointer transition-colors",
           ];
           if (isEdge) {

@@ -47,13 +47,13 @@ export default {
         cell: "10px",
       },
       boxShadow: {
-        // Hard offset shadows — no blur — are the signature of the theme.
-        card: "10px 12px 0 rgba(0, 0, 0, 0.2)",
-        "card-hover": "14px 18px 0 rgba(0, 0, 0, 0.25)",
-        panel: "7px 8px 0 rgba(0, 0, 0, 0.18)",
-        btn: "5px 6px 0 rgba(0, 0, 0, 0.25)",
-        "btn-hover": "9px 11px 0 rgba(0, 0, 0, 0.25)",
-        sm2: "4px 5px 0 rgba(0, 0, 0, 0.16)",
+        // Soft, low shadows — the calm theme (Oct 2026) retired the hard offsets.
+        card: "0 1px 2px rgba(16, 16, 16, 0.04), 0 4px 14px rgba(16, 16, 16, 0.05)",
+        "card-hover": "0 2px 4px rgba(16, 16, 16, 0.05), 0 10px 24px rgba(16, 16, 16, 0.08)",
+        panel: "0 1px 2px rgba(16, 16, 16, 0.05)",
+        btn: "none",
+        "btn-hover": "none",
+        sm2: "0 1px 2px rgba(16, 16, 16, 0.05)",
       },
       transitionTimingFunction: {
         pop: "cubic-bezier(0.22, 1, 0.36, 1)",

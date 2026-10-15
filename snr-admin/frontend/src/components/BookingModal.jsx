@@ -16,6 +16,7 @@ import {
   documentThumb,
   documentView,
 } from "../utils/documentRefs.js";
+import Icon from "./Icon.jsx";
 
 const DOC_FIELDS = [
   { label: "1st ID", key: "1st_ID" },
@@ -715,7 +716,7 @@ export default function BookingModal({
             onClick={handleClose}
             className="ml-4 p-1 text-[color:var(--color-dark-gray)] hover:text-[color:var(--color-ink)]"
           >
-            ✕
+            <Icon name="x" size={16} />
           </button>
         </div>
 
@@ -772,7 +773,7 @@ export default function BookingModal({
               <div className="ml-auto flex items-center gap-3">
                 {hasSaved && (
                   <span className="font-mono text-xs text-green-600">
-                    Saved ✓
+                    Saved
                   </span>
                 )}
                 <button
@@ -927,7 +928,7 @@ function ViewBody({
               onClick={copyReference}
               className="ui-btn ui-btn--sm shrink-0"
             >
-              {refCopied ? "Copied ✓" : "Copy"}
+              {refCopied ? "Copied" : "Copy"}
             </button>
           </div>
           {booking.REPEAT_RENTER && booking.REPEAT_REF && (
@@ -1154,7 +1155,7 @@ function ViewBody({
                   <img
                     src={documentThumb(id, 400)}
                     alt={label}
-                    className="w-full rounded-row border-2 border-[color:var(--color-border)] object-cover"
+                    className="w-full rounded-row border border-[color:var(--color-border)] object-cover"
                   />
                 </button>
               ))}
@@ -1210,7 +1211,7 @@ function ViewBody({
               </button>
               {contractOpen && (
                 <div className="border-t-2 border-[rgba(58,58,58,0.2)] px-3 py-4">
-                  <h3 className="text-center text-sm font-black tracking-wider">
+                  <h3 className="text-center text-sm font-bold tracking-wider">
                     EQUIPMENT RENTAL AGREEMENT
                   </h3>
                   <div className="mt-4 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
@@ -1308,7 +1309,7 @@ function EditForm({
     <div className="space-y-4">
       {legacy && (
         <div className="border border-amber-300 bg-amber-50 px-3 py-2 font-mono text-[11px] text-amber-700">
-          ⚠ Legacy entry — rental fee is fixed and will not be auto-calculated.
+          <Icon name="info" size={14} /> Legacy entry — rental fee is fixed and will not be auto-calculated.
           Edit the amount manually if needed.
         </div>
       )}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { apiPostJson } from "../utils/api.js";
 import { BUSINESS, CONTACT } from "../data/content.js";
 import { BookingTopBar } from "./PublicBooking.jsx";
+import Icon from "../components/Icon.jsx";
 
 // Privacy Policy (RA 10173 — Data Privacy Act of 2012) and the form renters
 // use to ask for a copy, a correction or the deletion of their data. A
@@ -31,7 +32,7 @@ function RequestForm() {
   if (state.done) {
     return (
       <div className="pp-done" role="status">
-        <strong>✓ Request received.</strong> {state.done}
+        <strong><Icon name="check" size={15} strokeWidth={3} /> Request received.</strong> {state.done}
       </div>
     );
   }
@@ -67,7 +68,7 @@ function RequestForm() {
           details.
         </p>
       )}
-      {state.error && <div className="bk-error">✕ {state.error}</div>}
+      {state.error && <div className="bk-error"><Icon name="info" size={16} /> {state.error}</div>}
       <button type="submit" className="btn btn--solid" disabled={state.loading}>
         {state.loading ? "Sending…" : "Send request"}
       </button>

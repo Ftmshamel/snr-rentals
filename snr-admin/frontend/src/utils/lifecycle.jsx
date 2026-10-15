@@ -99,7 +99,7 @@ export function StageBadge({ booking, className = "" }) {
   const stage = getStage(booking);
   return (
     <span
-      className={`inline-flex items-center whitespace-nowrap rounded-full border-2 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider ${stage.tone} ${className}`}
+      className={`inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider ${stage.tone} ${className}`}
     >
       {stage.label}
     </span>

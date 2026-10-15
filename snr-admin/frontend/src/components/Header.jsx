@@ -1,6 +1,7 @@
 import { Fragment, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { apiGetJson } from "../utils/api.js";
+import Icon from "./Icon.jsx";
 
 // Ordered the way a day's work flows: what's on today, the calendar, new
 // requests, all rentals — then stock — then money.
@@ -45,13 +46,13 @@ export default function Header({
   const links = NAV.filter((n) => !n.ownerOnly || role === "owner");
 
   return (
-    <header className="sticky top-0 z-40 border-b-4 border-[color:var(--color-ink)] bg-[rgba(238,238,234,0.9)] backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-[color:var(--color-line)] bg-[rgba(255,255,255,0.92)] backdrop-blur">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             {backTo ? (
               <Link to={backTo} className="ui-btn ui-btn--sm shrink-0">
-                ← Back
+                <Icon name="arrow-left" size={14} /> Back
               </Link>
             ) : null}
             <div className="flex min-w-0 flex-wrap items-baseline gap-2">
@@ -76,7 +77,7 @@ export default function Header({
                   className="ui-btn ui-btn--icon"
                   aria-label="Previous week"
                 >
-                  ←
+                  <Icon name="arrow-left" size={16} />
                 </button>
                 <span className="ui-num text-xs">{weekRangeLabel}</span>
                 <button
@@ -85,7 +86,7 @@ export default function Header({
                   className="ui-btn ui-btn--icon"
                   aria-label="Next week"
                 >
-                  →
+                  <Icon name="arrow-right" size={16} />
                 </button>
               </>
             ) : null}
@@ -156,10 +157,10 @@ export default function Header({
       </div>
 
       {unmirrored.length > 0 && (
-        <div className="border-t-4 border-[color:var(--color-danger)] bg-[rgba(255,241,240,0.95)] px-4 py-2.5 sm:px-6">
+        <div className="border-t border-[color:var(--color-danger)] bg-[rgba(255,241,240,0.95)] px-4 py-2.5 sm:px-6">
           <div className="mx-auto max-w-6xl">
             <div className="ui-kicker text-rose-800">
-              ⚠ {unmirrored.length} booking{unmirrored.length === 1 ? "" : "s"} did not sync
+              <Icon name="info" size={14} /> {unmirrored.length} booking{unmirrored.length === 1 ? "" : "s"} did not sync
             </div>
             <p className="mt-1 text-xs font-semibold text-[color:var(--color-ink)]">
               {unmirrored.length === 1 ? "This booking is" : "These bookings are"}{" "}

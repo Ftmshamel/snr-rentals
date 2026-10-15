@@ -242,6 +242,14 @@ writes a backup to `database-backups/`. Keep that pattern for new ones.
 
 - Admin is **light-only**. `ui-*` classes in `frontend/src/index.css` are the
   design system (`ui-panel`, `ui-btn`, `ui-input`, `ui-chip`, …). No `dark:` variants.
+- **Calm UI (since 2026-10-15), both apps.** White cards, 1px `--color-line`
+  borders, soft low shadows. Retired: hard offset shadows, 3–4px outlines, the
+  film grain, marquee strips, floating/bobbing cameras, scroll-reveal, hover
+  lifts. **No emoji or symbol glyphs (✓ ✕ → ⚠ …) as UI markers** — use
+  `components/Icon.jsx` (same file in the client and the admin; add a path
+  there for a new icon), or the `--icon-check` mask in CSS `::before`.
+  Typographic `—`, `·`, `₱` are fine. Message text the owner copies to
+  Messenger (QuotationGenerator) may keep its emoji.
 - Camera data (names, units, rates, add-ons, inclusions) is the Firestore
   `cameras` collection, read via `GET /api/catalog` by the admin
   (`hooks/useCameras.js`) and the public site (`src/data/catalog.js`). The

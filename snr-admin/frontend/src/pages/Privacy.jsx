@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Header from "../components/Header.jsx";
 import { apiDeleteJson, apiGetJson, apiPatchJson } from "../utils/api.js";
+import Icon from "../components/Icon.jsx";
 
 // Owner only. Requests renters file on the public Privacy page under the
 // Data Privacy Act (RA 10173): a copy of their data, a correction, or
@@ -73,7 +74,7 @@ function RequestCard({ request, onChanged }) {
             <div key={ref} className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-xs">{ref}</span>
               {erased[ref] ? (
-                <span className="text-xs font-bold">✓ Personal data erased</span>
+                <span className="text-xs font-bold"><Icon name="check" size={13} strokeWidth={3} /> Personal data erased</span>
               ) : (
                 <button type="button" className="ui-btn ui-btn--sm" disabled={Boolean(busy)} onClick={() => erase(ref)}>
                   {busy === ref ? "Erasing…" : "Erase personal data"}

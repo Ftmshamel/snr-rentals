@@ -1,4 +1,5 @@
 ﻿import { formatISODateLocal, todayISOLocal } from "../utils/dateHelpers.js";
+import Icon from "./Icon.jsx";
 
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
@@ -92,7 +93,7 @@ export default function MonthCalendar({
           className="ui-btn ui-btn--icon"
           aria-label="Previous month"
         >
-          ←
+          <Icon name="arrow-left" size={16} />
         </button>
         <h2 className="ui-title font-display text-lg">{title}</h2>
         <button
@@ -101,7 +102,7 @@ export default function MonthCalendar({
           className="ui-btn ui-btn--icon"
           aria-label="Next month"
         >
-          →
+          <Icon name="arrow-right" size={16} />
         </button>
       </div>
       <div className="mb-1 grid grid-cols-7 gap-1">
@@ -129,7 +130,7 @@ export default function MonthCalendar({
           const isSelected = selectedDate && iso === selectedDate;
 
           const cellClasses = [
-            "min-h-[3rem] rounded-cell border-2 flex items-center justify-center font-mono text-sm cursor-pointer transition-colors",
+            "min-h-[3rem] rounded-cell border flex items-center justify-center font-mono text-sm cursor-pointer transition-colors",
           ];
           if (isInRange) {
             cellClasses.push(
@@ -159,7 +160,7 @@ export default function MonthCalendar({
               <span className="flex flex-col items-center leading-none">
                 <span>{c.day}</span>
                 {hasPickup || hasDelivery || hasReturn ? (
-                  <span className="mt-1 flex flex-wrap justify-center gap-0.5 text-[8px] font-black tracking-wide">
+                  <span className="mt-1 flex flex-wrap justify-center gap-0.5 text-[8px] font-bold tracking-wide">
                     {[
                       hasPickup && "P",
                       hasDelivery && "D",

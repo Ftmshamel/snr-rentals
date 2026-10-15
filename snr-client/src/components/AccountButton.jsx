@@ -1,3 +1,4 @@
+import Icon from "./Icon.jsx";
 import { openSignIn, useMember, wasSignedIn } from "../hooks/useMember.js";
 
 // Header control: "Sign in" for guests, the renter's avatar + tier for
@@ -34,7 +35,7 @@ export default function AccountButton({ onNavigate, className = "" }) {
         openSignIn();
       }}
     >
-      <span aria-hidden="true">👤</span> Sign in
+      <Icon name="user" size={16} /> Sign in
     </button>
   );
 }

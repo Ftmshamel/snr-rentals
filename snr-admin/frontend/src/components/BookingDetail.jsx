@@ -68,7 +68,7 @@ export default function BookingDetail({
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="font-display text-base font-black text-[color:var(--color-black)]">
+                <div className="font-display text-base font-bold text-[color:var(--color-black)]">
                   {b.FACEBOOK_ACCOUNT_NAME || b.FULL_NAME || "—"}
                 </div>
                 <div className="mt-0.5 text-sm font-semibold text-[color:var(--color-dark-gray)]">

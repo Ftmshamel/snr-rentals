@@ -569,7 +569,7 @@ function CompositionBar({ segments, total }) {
   const base = total || segments.reduce((s, x) => s + Math.max(x.value, 0), 0) || 1;
   return (
     <div>
-      <div className="flex h-3 w-full overflow-hidden rounded-full border-2 border-[color:var(--color-border)]">
+      <div className="flex h-3 w-full overflow-hidden rounded-full border border-[color:var(--color-border)]">
         {segments.map((s) =>
           s.value > 0 ? (
             <div

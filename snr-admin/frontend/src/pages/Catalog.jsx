@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import Header from "../components/Header.jsx";
 import { useCameras } from "../hooks/useCameras.js";
 import { apiDeleteJson, apiPatchJson, apiPostJson } from "../utils/api.js";
+import Icon from "../components/Icon.jsx";
 
 // Owner-only editor for the camera catalogue (Firestore `cameras`). Everything
 // that prices or counts cameras — the public site, availability, fee
@@ -185,7 +186,7 @@ function CameraEditor({ camera, onClose, onSaved }) {
             onClick={onClose}
             className="text-[color:var(--color-dark-gray)] hover:text-[color:var(--color-ink)]"
           >
-            ✕
+            <Icon name="x" size={16} />
           </button>
         </div>
 
@@ -277,7 +278,7 @@ function CameraEditor({ camera, onClose, onSaved }) {
                     className="ui-btn ui-btn--sm ui-btn--danger"
                     aria-label="Remove serial"
                   >
-                    ✕
+                    <Icon name="x" size={16} />
                   </button>
                 </div>
               ))}
@@ -341,7 +342,7 @@ function CameraEditor({ camera, onClose, onSaved }) {
                       className="ui-btn ui-btn--sm ui-btn--danger"
                       aria-label="Remove tier"
                     >
-                      ✕
+                      <Icon name="x" size={16} />
                     </button>
                   </div>
                 );
@@ -420,7 +421,7 @@ function CameraEditor({ camera, onClose, onSaved }) {
                     className="ui-btn ui-btn--sm ui-btn--danger"
                     aria-label="Remove add-on"
                   >
-                    ✕
+                    <Icon name="x" size={16} />
                   </button>
                 </div>
               ))}

@@ -2,6 +2,7 @@ import { useCatalog } from "../data/catalog.js";
 import { openSignIn, useMember } from "../hooks/useMember.js";
 import useReveal from "../hooks/useReveal.js";
 import TierLadder from "./TierLadder.jsx";
+import Icon from "./Icon.jsx";
 
 // Landing-page section: the member tiers and how to join.
 export default function Rewards() {
@@ -27,7 +28,7 @@ export default function Rewards() {
       <div className="rewards__cta reveal" style={{ "--d": "240ms" }}>
         {member.status === "member" ? (
           <a href="/rewards" className="btn btn--solid">
-            View my rewards →
+            View my rewards <Icon name="arrow-right" size={16} />
           </a>
         ) : member.status === "off" ? (
           <a href="/book" className="btn btn--solid">

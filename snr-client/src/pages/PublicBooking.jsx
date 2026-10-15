@@ -10,6 +10,7 @@ import GearGrid, { GearImage } from "../components/GearGrid.jsx";
 import useLockBodyScroll from "../hooks/useLockBodyScroll.js";
 import { getIdToken, looksSignedIn, openSignIn, refreshMe, useMember, wasSignedIn } from "../hooks/useMember.js";
 import { memberPerks } from "../utils/loyalty.js";
+import Icon from "../components/Icon.jsx";
 import DeliveryDetailsForm, {
   EMPTY_DELIVERY,
   deliveryMissing,
@@ -792,7 +793,7 @@ function FileInput({ id, label, file, isProcessing, onChange }) {
       {file && (
         <div className="bk-file__saved">
           <div className="bk-file__saved-row">
-            <span className="bk-file__name">✓ {file.name}</span>
+            <span className="bk-file__name"><Icon name="check" size={14} strokeWidth={3} /> {file.name}</span>
             <button
               type="button"
               onClick={() => onChange(null)}
@@ -1088,7 +1089,7 @@ function SignaturePad({ value, onChange, signerName, contractName, onError, inva
         className="bk-signature__fullscreen-button"
         onClick={openFullscreenSignature}
       >
-        <span aria-hidden="true">↔</span>
+        <Icon name="arrows-h" size={20} />
         <span><strong>Sign Full Screen</strong><small>Opens in landscape for more writing room</small></span>
       </button>
       {invalid && <span className="bk-field__error">Signature is required</span>}
@@ -1107,7 +1108,7 @@ function SignaturePad({ value, onChange, signerName, contractName, onError, inva
             </div>
             <div className="bk-signature-fullscreen__actions">
               <button type="button" onClick={clearSignature}>Clear</button>
-              <button type="button" className="is-done" onClick={closeFullscreenSignature}>Done ✓</button>
+              <button type="button" className="is-done" onClick={closeFullscreenSignature}>Done</button>
             </div>
           </div>
           <canvas
@@ -1120,7 +1121,7 @@ function SignaturePad({ value, onChange, signerName, contractName, onError, inva
             onPointerCancel={stopDrawing}
             onPointerLeave={stopDrawing}
           />
-          <div className="bk-signature-fullscreen__baseline">SIGN ABOVE THIS LINE →</div>
+          <div className="bk-signature-fullscreen__baseline">SIGN ABOVE THIS LINE</div>
         </div>
       </div>
     </section>
@@ -1172,7 +1173,7 @@ function PreviewLightbox({ preview, onClose }) {
                 onClick={onClose}
                 aria-label="Close"
               >
-                ✕
+                <Icon name="x" size={18} />
               </button>
             </div>
 
@@ -1205,7 +1206,7 @@ function PreviewLightbox({ preview, onClose }) {
                 onClick={onClose}
                 aria-label="Close"
               >
-                ✕
+                <Icon name="x" size={18} />
               </button>
             </div>
             <div className="bk-lightbox__scroll">
@@ -1314,7 +1315,7 @@ function CopyButton({ text }) {
         }
       }}
     >
-      {copied ? "Copied ✓" : "Copy"}
+      {copied ? "Copied" : "Copy"}
     </button>
   );
 }
@@ -1372,7 +1373,7 @@ export function BookingTopBar() {
         <Logo size="sm" withTagline={false} />
       </a>
       <a href="/" className="bk-top__back">
-        ← Back to site
+        <Icon name="arrow-left" size={16} /> Back to site
       </a>
     </div>
   );
@@ -2151,7 +2152,7 @@ export default function PublicBooking() {
       ? "Checking availability…"
       : availabilityReady
         ? availabilityCount > 0
-          ? "Available for your schedule ✓"
+          ? "Available for your schedule"
           : "Not available for that schedule"
         : availability.state === "error"
           ? availability.error
@@ -2831,7 +2832,7 @@ export default function PublicBooking() {
                       ? free.available <= 0
                         ? "Not available for that schedule"
                         : `Only ${free.available} free for that schedule — you picked ${unitsWanted[item.camera]}`
-                      : "Available for your schedule ✓"
+                      : "Available for your schedule"
                     : free?.state === "loading"
                       ? "Checking availability…"
                       : free?.state === "error"
@@ -3359,7 +3360,7 @@ export default function PublicBooking() {
             {form.repeatRenter === "yes" &&
               (isRepeatVerified ? (
                 <div className="bk-repeat__verified">
-                  ✓ Verified — welcome back,{" "}
+                  <Icon name="check" size={15} strokeWidth={3} /> Verified — welcome back,{" "}
                   <strong>{form.repeatVerifiedName}</strong>! Your details are
                   on file, so just set your trip type and destination below.
                   You'll also skip the ID uploads later — only the proof of
@@ -3546,7 +3547,7 @@ export default function PublicBooking() {
         <div className="bk-stack">
           {isRepeatVerified ? (
             <div className="bk-repeat__verified bk-repeat__verified--standalone">
-              ✓ Verified repeat renter — we'll reuse the IDs on your record.
+              <Icon name="check" size={15} strokeWidth={3} /> Verified repeat renter — we'll reuse the IDs on your record.
               Nothing to upload here; tap Next.
             </div>
           ) : (
@@ -3742,7 +3743,7 @@ export default function PublicBooking() {
           <li>₱300 rush fee for same-day only</li>
         </ul>
         <p className="bk-sub bk-sub--small float-in" style={{ "--d": "540ms" }}>
-          Already booked? <a href="/track">Track your booking →</a>
+          Already booked? <a href="/track">Track your booking</a>
         </p>
         <MemberStrip member={member} />
       </header>
@@ -3756,7 +3757,7 @@ export default function PublicBooking() {
               className={`bk-step ${index === currentStep ? "is-current" : ""} ${stepComplete[index] ? "is-done" : ""} ${validatedSteps.has(index) && !stepComplete[index] ? "is-incomplete" : ""}`}
             >
               <span className="bk-step__num" aria-hidden="true">
-                {stepComplete[index] ? "✓" : index + 1}
+                {stepComplete[index] ? <Icon name="check" size={14} strokeWidth={3} /> : index + 1}
               </span>
               <span className="bk-step__label">{step}</span>
             </li>
@@ -3770,7 +3771,7 @@ export default function PublicBooking() {
           </div>
           {submitState.error && (
             <div className="bk-error" role="alert">
-              ✕ {submitState.error}
+              <Icon name="info" size={16} /> {submitState.error}
             </div>
           )}
         </div>
@@ -3782,7 +3783,7 @@ export default function PublicBooking() {
             disabled={currentStep === 0 || submitState.loading}
             className="btn btn--outline"
           >
-            ← Back
+            <Icon name="arrow-left" size={16} /> Back
           </button>
           <button
             type="button"
@@ -3790,11 +3791,11 @@ export default function PublicBooking() {
             disabled={submitState.loading}
             className="bk-nav__restart"
           >
-            ↺ Start Over
+            <Icon name="reset" size={16} /> Start Over
           </button>
           {currentStep < STEPS.length - 1 ? (
             <button type="button" onClick={handleNext} className="btn btn--solid">
-              Next →
+              Next <Icon name="arrow-right" size={16} />
             </button>
           ) : (
             <button type="submit" disabled={submitState.loading || hasProcessingFile} className="btn btn--solid">

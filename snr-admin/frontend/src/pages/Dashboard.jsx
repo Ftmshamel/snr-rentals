@@ -7,6 +7,7 @@ import BookingModal from "../components/BookingModal.jsx";
 import { useBookings } from "../hooks/useBookings.js";
 import { addDaysLocal, formatISODateLocal, todayISOLocal } from "../utils/dateHelpers.js";
 import { StageBadge, getStage, isDelivery } from "../utils/lifecycle.jsx";
+import Icon from "../components/Icon.jsx";
 
 // "What do we do today?" — the admin's home page. Every rental that needs a
 // hand on it today is listed under the step it is waiting for, and clicking
@@ -36,7 +37,7 @@ function lalamoveTag(booking, kind) {
   if (!isDelivery(booking)) return null;
   const booked = kind === "delivery" ? booking.LALAMOVE_DELIVERY_LINK : booking.LALAMOVE_RETURN_LINK;
   return booked ? (
-    <span className="rounded-full border-2 border-green-600 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-green-700">
+    <span className="rounded-full border border-green-600 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-green-700">
       Lalamove booked
     </span>
   ) : (
@@ -51,7 +52,7 @@ function lalamoveTag(booking, kind) {
 function prepareTag(booking) {
   if (!booking.UNIT_SERIAL) return null;
   return (
-    <span className="rounded-full border-2 border-[color:var(--color-ink)] px-2 py-0.5 font-mono text-[9px] font-bold uppercase">
+    <span className="rounded-full border border-[color:var(--color-ink)] px-2 py-0.5 font-mono text-[9px] font-bold uppercase">
       Prepare {booking.UNIT_SERIAL}
     </span>
   );
@@ -62,7 +63,7 @@ function Row({ booking, detail, onOpen, tag, showSerial = true }) {
     <button
       type="button"
       onClick={() => onOpen(booking)}
-      className="flex w-full items-center justify-between gap-3 rounded-[14px] border-2 border-[rgba(58,58,58,0.18)] bg-[rgba(255,255,255,0.65)] px-3 py-2.5 text-left transition hover:border-[color:var(--color-ink)]"
+      className="flex w-full items-center justify-between gap-3 rounded-[14px] border border-[rgba(58,58,58,0.18)] bg-[rgba(255,255,255,0.65)] px-3 py-2.5 text-left transition hover:border-[color:var(--color-ink)]"
     >
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
@@ -177,7 +178,7 @@ export default function Dashboard() {
             <h1 className="ui-title font-display text-3xl">Today</h1>
           </div>
           <Link to="/schedule" className="ui-btn ui-btn--sm">
-            Open calendar →
+            Open calendar <Icon name="arrow-right" size={14} />
           </Link>
         </div>
 
@@ -251,7 +252,7 @@ export default function Dashboard() {
             title="Need approval"
             hint={
               <Link to="/approvals" className="font-mono text-[10px] font-bold underline">
-                Open approvals →
+                Open approvals <Icon name="arrow-right" size={14} />
               </Link>
             }
             items={groups.pending}
