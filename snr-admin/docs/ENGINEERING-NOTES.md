@@ -518,7 +518,8 @@ Use PowerShell `System.Drawing` for resizing (see git history for the pattern).
   shadows carry the same values. Icons come from `components/Icon.jsx` (one
   copy per app) — never emoji or ✓/✕/→ glyphs. Camera tiles
   (`ProductCard.jsx`, member home `mh-cam`) use a fixed 4:3 photo box so image
-  and text stay in proportion; phones show two columns.
+  and text stay in proportion. Landing grid: 5 per row on desktop, 4 under
+  1100px, 3 under 900px, 2 on phones.
 
 - **`ui-*` classes** (`frontend/src/index.css`) are the design system: `ui-panel`,
   `ui-card`, `ui-btn`, `ui-input`, `ui-chip`, `ui-table`, `ui-modal`. The admin is
