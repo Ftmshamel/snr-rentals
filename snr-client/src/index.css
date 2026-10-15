@@ -1446,47 +1446,166 @@ a.contact-card.is-visible:hover {
 
 /* ============================================================
    Footer
+   Four columns (about + DTI badge, explore, for renters, contact) over a
+   thin legal bar. No logo art — the business name is set in type.
    ============================================================ */
 
 .footer {
-  background: var(--color-footer);
+  background: #fafaf8;
   border-top: 1px solid var(--color-line);
   margin-top: 3rem;
+  color: var(--color-ink);
 }
 
 .footer__inner {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 3rem 1.5rem 2.2rem;
-  text-align: center;
+  padding: 3rem 1.5rem 1.5rem;
+}
+
+.footer__grid {
   display: grid;
-  gap: 0.9rem;
-  justify-items: center;
+  grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr));
+  gap: 2rem 2.5rem;
 }
 
-.footer__areas,
-.footer__socials {
-  font-size: 0.92rem;
-  font-weight: 600;
+.footer__name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
-.footer__socials a,
-.footer__areas a {
-  text-decoration: none;
-  border-bottom: 1px solid var(--color-line);
-  transition: opacity 0.2s ease;
-}
-
-.footer__socials a:hover,
-.footer__areas a:hover {
-  opacity: 0.6;
-}
-
-.footer__copy {
-  font-size: 0.78rem;
-  font-weight: 500;
+.footer__blurb {
+  margin-top: 0.5rem;
+  max-width: 34ch;
+  font-size: 0.88rem;
+  line-height: 1.6;
   color: var(--color-dark-gray);
-  margin-top: 0.6rem;
+}
+
+.footer__heading {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+  margin-bottom: 0.85rem;
+}
+
+.footer__col ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.footer__col a,
+.footer__fine a {
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.footer__col a:hover,
+.footer__fine a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.footer__contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.footer__contact .icon {
+  color: var(--color-muted);
+  flex-shrink: 0;
+}
+
+.footer__dti {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 0.6rem 0.9rem 0.6rem 0.65rem;
+  background: #fff;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+}
+
+.footer__dti-logo {
+  width: auto;
+  height: 40px;
+}
+
+.footer__dti-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.footer__dti-no {
+  font-size: 0.74rem;
+  color: var(--color-dark-gray);
+  font-variant-numeric: tabular-nums;
+}
+
+.footer__bottom {
+  margin-top: 2.5rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--color-line);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.4rem 1.5rem;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+
+@media (max-width: 900px) {
+  .footer__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .footer__about { grid-column: 1 / -1; }
+}
+
+@media (max-width: 560px) {
+  .footer__inner { padding: 2.4rem 1.25rem 1.25rem; }
+  .footer__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.75rem 1.25rem; }
+  .footer__grid > .footer__col:last-child { grid-column: 1 / -1; }
+  .footer__bottom { flex-direction: column; }
+}
+
+/* Slim version under the booking, track and member pages. */
+.footer--compact {
+  margin-top: 2.5rem;
+  background: transparent;
+}
+
+.footer__inner--compact {
+  padding: 1.4rem 1rem 1.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem 1.5rem;
+}
+
+.footer__dti--sm {
+  margin-top: 0;
+  padding: 0.4rem 0.7rem 0.4rem 0.5rem;
+  gap: 0.55rem;
+}
+
+.footer__dti--sm .footer__dti-logo { height: 30px; }
+
+.footer__fine {
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+
+@media (max-width: 560px) {
+  .footer__inner--compact { flex-direction: column; text-align: center; }
 }
 
 /* ============================================================
@@ -1704,28 +1823,6 @@ a.contact-card.is-visible:hover {
     transition-duration: 0.01ms !important;
   }
 
-}
-
-.footer__legal {
-  font-size: 0.8rem;
-  font-weight: 600;
-  line-height: 1.6;
-}
-
-.footer__legal a {
-  text-decoration: none;
-  border-bottom: 1px solid var(--color-line);
-}
-
-.footer--compact {
-  margin-top: 2.5rem;
-  background: transparent;
-  border-top: 2px solid rgba(58, 58, 58, 0.25);
-}
-
-.footer--compact .footer__inner {
-  padding: 1.4rem 1rem 1.6rem;
-  gap: 0.2rem;
 }
 
 /* Cookie consent (Google Analytics) */

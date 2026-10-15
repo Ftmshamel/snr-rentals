@@ -6,7 +6,6 @@ export const CONTACT = {
   phoneHref: "tel:+639120161865",
   areas: "Bulacan / Manila / Laguna",
   facebookName: "Camera for Rent - S&R Rentals",
-  // TODO: replace with the real Facebook page URL before publishing
   facebookUrl: "https://www.facebook.com/profile.php?id=61586923391156",
   instagramHandle: "@snr.rentals",
   instagramUrl: "https://www.instagram.com/snr.rentals",
@@ -77,7 +76,7 @@ export const HOW_TO_RENT = [
       "We operate around Bulacan, Manila, and Laguna only. Pickup and delivery options depend on your area:",
     bullets: [
       "Bulacan: Maasim, San Ildefonso pickup or delivery",
-      "Manila & Cavite: Delivery only",
+      "Manila: Delivery only",
       "Laguna: Malamig, Biñan pickup or DLSU Laguna or delivery",
     ],
     note: "Before release, settle the remaining balance, pay the ₱1,000 refundable security deposit, and sign the lease contract. For delivery, we book a Lalamove rider for drop-off and return, and you can follow the rider on the Track page — delays past the agreed schedule are still charged as extended hours.",
@@ -141,7 +140,7 @@ export const FAQS = [
   },
   {
     q: "What are the pickup or delivery options per area?",
-    a: "Bulacan: Maasim, San Ildefonso pickup or delivery. Manila & Cavite: Delivery only. Laguna: Malamig, Biñan pickup or DLSU Laguna or delivery.",
+    a: "Bulacan: Maasim, San Ildefonso pickup or delivery. Manila: Delivery only. Laguna: Malamig, Biñan pickup or DLSU Laguna or delivery.",
   },
   {
     q: "Who handles the delivery?",
